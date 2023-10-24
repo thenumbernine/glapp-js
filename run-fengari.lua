@@ -14,7 +14,9 @@ xpcall(function()
 
 	-- TODO while we're here, connect gles3 calls to webgl
 
-	assert(assert(loadfile'glapp/tests/info.lua')())
+	--assert(assert(loadfile'glapp/tests/info.lua')())
+	assert(assert(loadfile'glapp/tests/test.lua')())
+	
 	print'done'
 end, function(err)
 	print(err..'\n'..debug.traceback())
