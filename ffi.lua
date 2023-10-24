@@ -72,32 +72,39 @@ local ctypes = {}
 local nextuniquenameindex = 0
 local function nextuniquename()
 	nextuniquenameindex = nextuniquenameindex + 1
-	return '#'..nextuniquenameindex 
+	return '#'..nextuniquenameindex
 end
 
 -- TODO rename to struct/union?
+-- name is optional, it could be nameless for typedef'd or anonymous nested structs
+-- size is optional, it'll be computed for structs, it'll be manually set for primitives
+-- fields is optional, it will only exist for structs
+-- isunion is optional, goes with fields for unions vs structs
+-- mt is optional, is the metatype of this ctype
 ffi.ctype = setmetatable({}, {
 	__call = function(mt, name)
 		local o = setmetatable({}, mt)
-		-- name is optional, it could be nameless for typedef'd or anonymous nested structs
 		if not name then
 			name = nextuniquename()
 		end
 		o.name = name
 		ctypes[o.name] = o
-		-- size is optional, it'll be computed for structs, it'll be manually set for primitives
-		-- fields is optional, it will only exist for structs
 		return o
 	end,
 })
 ffi.ctype.__index = ffi.ctype
 function ffi.ctype:calcSize()
+	if self.size then return end
 	-- calculate size here
 	self.size = 0
 	-- TODO alignment ...
 	for _,field in ipairs(self.fields) do
 		assert(field.type)
-		self.size = self.size + ffi.sizeof(field.type)
+		if self.isunion then
+			self.size = math.max(self.size, ffi.sizeof(field.type))
+		else
+			self.size = self.size + ffi.sizeof(field.type)
+		end
 	end
 	self.size = math.max(1, self.size)
 end
@@ -107,16 +114,19 @@ end
 local function addprim(name, size)
 	local primtype = ffi.ctype(name)
 	primtype.size = size
+	primtype.isprim = true
 end
 
+-- TODO type parser needs to handle 'unsigned', 'signed'
+addprim('void', 0)
 addprim('char', 1)
-addprim('sigend char', 1)
+addprim('signed char', 1)
 addprim('unsigned char', 1)
 addprim('short', 2)
-addprim('sigend short', 2)
+addprim('signed short', 2)
 addprim('unsigned short', 2)
 addprim('int', 4)
-addprim('sigend int', 4)
+addprim('signed int', 4)
 addprim('unsigned int', 4)
 addprim('intptr_t', 8)
 addprim('float', 4)
@@ -133,37 +143,56 @@ addprim('uint64_t', 8)
 
 ffi.typedefs = {}
 
-local function nexttoken(str)
+local function consume(str)
 	str = trim(str)
-	if #str == 0 then return nil, '' end
+	if #str == 0 then return end
 	-- symbols, first-come first-serve, interpret largest to smallest
 	for _,symbol in ipairs{'(', ')', '[', ']', '{', '}', ',', ';'} do
 		if str:match('^'..patescape(symbol)) then
-			return str:sub(#symbol+1), symbol, 'symbol'
+			local token = str:sub(#symbol+1)
+--print('consume', token, symbol, 'symbol')
+			return token, symbol, 'symbol'
 		end
 	end
 	-- keywords
 	for _,keyword in ipairs{'typedef', 'struct', 'union'} do
 		if str:match('^'..keyword) and (str:match('^'..keyword..'$') or str:match('^'..keyword..'[^_a-zA-Z0-9]')) then
-			return str:sub(#keyword+1), keyword, 'keyword'
+			local token = str:sub(#keyword+1)
+--print('consume', token, keyword, 'keyword')
+			return token, keyword, 'keyword'
 		end
 	end
 	-- names
 	local name = str:match('^([_a-zA-Z][_a-zA-Z0-9]*)')
 	if name then
-		return str:sub(#name+1), name, 'name'
+		local token = str:sub(#name+1)
+--print('consume', token, name, 'name')
+		return token, name, 'name'
 	end
 	-- numbers
 	local d = str:match'^(%d+)'
 	if d then
-		return str:sub(#d+1), d, 'number'
+		local token = str:sub(#d+1)
+--print('consume', token, d, 'number')
+		return token, d, 'number'
 	end
-	
+
 	error("unknown token "..str)
 end
 
 local function getctype(typename)
+	local sofar = {}
 	while true do
+		if sofar[typename] then
+			error(
+				"found a typedef loop.\n"
+				..require 'ext.tolua'{
+					sofar = sofar,
+					typedefs = ffi.typedefs,
+				}
+			)
+		end
+		sofar[typename] = true
 		local typedef = ffi.typedefs[typename]
 		if not typedef then break end
 		typename = typedef
@@ -171,7 +200,7 @@ local function getctype(typename)
 
 	local ctype = ctypes[typename]
 	if not ctype then
-		error("don't know ctype "..require 'ext.tolua'(typename))
+		error("don't know ctype "..tostring(typename))
 	end
 
 	assert(getmetatable(ctype) == ffi.ctype, "got a non-ctype object when looking for "..typename)
@@ -181,77 +210,94 @@ end
 -- assumes 'struct' or 'union' has already been parsed
 -- doesn't assert closing ';' (since it could be used in typedef)
 local function parsestruct(str, isunion)
-	local ctype = ffi.ctype()
+	local ctype
+
+	local token, tokentype
+	str, token, tokentype = consume(str)
+	if tokentype == 'name' then
+		ctype = ffi.ctype((isunion and 'union' or 'struct')..' '..token)
+		str, token, tokentype = consume(str)
+	else
+		ctype = ffi.ctype()
+	end
 	ctype.fields = setmetatable({}, tablemt)
 	ctype.isunion = isunion
-	
-	local token, tokentype
-	str, token, tokentype = nexttoken(str)
-	if tokentype == 'name' then
-		ctype.name = token
-		str, token, tokentype = nexttoken(str)
-	end
 	assert(token == '{')
-	
-	while true do
-		str, token, tokentype = nexttoken(str)
-		if token == '}' then break end
 
-print('field first token', token, tokentype)
-		if token == 'struct'
+	while true do
+		str, token, tokentype = consume(str)
+--print('field first token', token, tokentype)
+		if token == '}' then
+			break
+		elseif token == 'struct'
 		or token == 'union'
 		then
 			-- nameless struct/union's within struct/union's ...
-			-- or even if they have names, the names should get ignored?  
+			-- or even if they have names, the names should get ignored?
 			-- or how long does the scope of the name of an inner struct in C last?
-			
+
 			local nestedtype
 			str, nestedtype = parsestruct(str, token == 'union')
 			assert(getmetatable(nestedtype) == ffi.ctype)
 			ctype.fields:insert{name = '', type = nestedtype}	-- what kind of name should I use for nameless nested structs?
-			
-			str, token, tokentype = nexttoken(str)
+
+			str, token, tokentype = consume(str)
 			assert(token == ';', "expected ';', found "..tostring(token))
-		else
+		elseif tokentype == 'name' then
+
+			-- should these be keywords?
+			local signedness
+			if token == 'signed'
+			or token == 'unsigned'
+			then
+				signedness = token
+				str, token, tokentype = consume(str)
+			end
+
+			local name = token
+			if signedness then
+				name = signedness..' '..name
+			end
+
 			-- fields ...
 			-- TODO this should be 'parsetype' and work just like variable declarations
 			-- and should be interoperable with typedefs
 			-- except typedefs can't use comma-separated list (can they?)
-			assert(tokentype == 'name', "expected field type, found "..tostring(token)..", rest="..tostring(str))
-			local fieldtype = assert(getctype(token), "failed to get ctype")
+			local fieldtype = assert(getctype(name), "failed to get ctype")
 			assert(getmetatable(fieldtype) == ffi.ctype)
-		
+
 			while true do
-				str, token, tokentype = nexttoken(str)
+				str, token, tokentype = consume(str)
 				assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest="..tostring(str))
 				local fieldname = token
 				local field = {name = fieldname, type = fieldtype}
 				ctype.fields:insert(field)
-				
-				str, token, tokentype = nexttoken(str)
+
+				str, token, tokentype = consume(str)
 				while token == '[' do
-					str, token, tokentype = nexttoken(str)
+					str, token, tokentype = consume(str)
 					assert(tokentype == 'number', "expected array size")
 					local count = assert(tonumber(token))
 					assert(count > 0, "can we allow non-positive-sized arrays?")
 					field.count = count
-				
-					str, token, tokentype = nexttoken(str)
+
+					str, token, tokentype = consume(str)
 					assert(token == ']')
-					
-					str, token, tokentype = nexttoken(str)
+
+					str, token, tokentype = consume(str)
 				end
 
 				if token == ';' then
 					break
-				else
-					assert(token == ',', "expected , or ;")
+				elseif token ~= ',' then
+					error("expected , or ;")
 				end
 			end
+		else
+			error("got end of string")
 		end
 	end
-	ctype:calcSize()
-	
+
 	return str, ctype
 end
 
@@ -259,30 +305,41 @@ end
 local function parse(str)
 	local token, tokentype
 	while true do
-		str, token, tokentype = nexttoken(str)
-		if not str then return end	-- done
-
+		str, token, tokentype = consume(str)
 		if token == 'typedef' then
 			-- next is either a previously declared typename or 'struct'/'union' followed by a struct/union def
-			str, token, tokentype = nexttoken(str)
-			
+			str, token, tokentype = consume(str)
+
 			local srctype
 			if tokentype == 'name' then
-				srctype = getctype(token)
-			-- alright I'm reaching the limit of non-state-based tokenizers ... 
+				local signedness
+				if token == 'signed'
+				or token == 'unsigned'
+				then
+					signedness = token
+					str, token, tokentype = consume(str)
+				end
+
+				local name = token
+				if signedness then
+					name = signedness..' '..name
+				end
+
+				srctype = getctype(name)
+			-- alright I'm reaching the limit of non-state-based tokenizers ...
 			elseif token == 'struct'
 			or token == 'union'
 			then
 				str, srctype = parsestruct(str, token == 'union')
 			end
 
-			str, token, tokentype = nexttoken(str)
+			str, token, tokentype = consume(str)
 			assert(tokentype == 'name')
 			assert(not ffi.typedefs[token], 'typedef '..token..' is already used')
 			ffi.typedefs[token] = srctype.name
 
-			str, token, tokentype = nexttoken(str)
-			
+			str, token, tokentype = consume(str)
+
 			-- TODO ... token could be [
 			-- in which case we don't just have a typedef
 			--  we have a new ctype of only an array
@@ -293,23 +350,31 @@ local function parse(str)
 		then
 			local ctype
 			str, ctype = parsestruct(str, token == 'union')
-			str, token, tokentype = nexttoken(str)
+			str, token, tokentype = consume(str)
 			assert(token == ';')
+		elseif not token then
+			break
+		else
+			error("got eof with rest="..tostring(str))
 		end
 	end
+--print'parse done'
 end
 
 function ffi.cdef(str)
-	print("ffi.cdef("..tostring(str)..")")
-	
+--print("ffi.cdef("..tostring(str)..")")
+
 	-- TODO ... hmm ... luajit's lj_cparse ...
-	-- I can compile that to emscripten ... 
+	-- I can compile that to emscripten ...
 	-- hmm ...
 	str = removeCommentsAndApplyContinuations(str)
-	local ast = parse(str)
+	parse(str)
+--print'ffi.cdef done'
+--print(debug.traceback())
 end
 
 function ffi.sizeof(ctype)
+print('ffi.sizeof('..tostring(ctype)..')')
 	if type(ctype) == 'string' then
 		-- TODO proper tokenizer for C types
 		local typename = trim(ctype)
@@ -318,9 +383,10 @@ function ffi.sizeof(ctype)
 			return tonumber(ar) * ffi.sizeof(base)
 		end
 		ctype = assert(getctype(typename), "couldn't find ctype "..typename)
-	else
-		assert(getmetatable(ctype) == ffi.ctype, "ffi.sizeof object is not a ctype")
 	end
+	assert(getmetatable(ctype) == ffi.ctype, "ffi.sizeof object is not a ctype")
+	ctype:calcSize()
+print('...returning '..ctype.size)
 	return ctype.size
 end
 
@@ -339,7 +405,7 @@ local ffiblob = setmetatable({}, {
 		return o
 	end,
 })
-ffiblob.__index = ffiblob 
+ffiblob.__index = ffiblob
 
 function ffi.new(typename, value)
 	typename = trim(typename)
@@ -373,13 +439,26 @@ function ffi.string(ptr)
 	))
 end
 
+-- not in the luajit ffi api
 -- lua-string to ffiblob
 function ffi.stringBuffer(str)
 	str = tostring(str)
-	-- ... starting to think I should just allocate all my ffi memory as a giant js buffer 
+	-- ... starting to think I should just allocate all my ffi memory as a giant js buffer
 	return ffiblob('char', #str+1, function(i)
 		return str:byte(i+1) or 0
 	end)
+end
+
+function ffi.metatype(ctype, mt)
+	if type(ctype) == 'string' then
+		ctype = assert(getctype(ctype), "couldn't find ctype "..ctype)
+	end
+	assert(getmetatable(ctype) == ffi.ctype, "ffi.sizeof object is not a ctype")
+	if ctype.mt then
+		error("already called ffi.metatype on type "..tostring(ctype.name))
+	end
+	-- TODO only metatype on structs/unions?
+	ctype.mt = mt
 end
 
 --[[

@@ -75,6 +75,7 @@ function sdl.SDL_GetError() end	-- TODO return a ffiblob / ptr of a string of th
 local canvas
 
 function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
+print('SDL_CreateWindow', title, x, y, w, h, flags)	
 	local window = js.global.window
 
 	window:scrollTo(0,1)
