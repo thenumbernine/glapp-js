@@ -454,11 +454,33 @@ function ffi.metatype(ctype, mt)
 		ctype = assert(getctype(ctype), "couldn't find ctype "..ctype)
 	end
 	assert(getmetatable(ctype) == ffi.ctype, "ffi.sizeof object is not a ctype")
+
+	assert(ctype.fields, "can only call ctype on structs/unions")
+
+	-- only metatype on structs/unions
 	if ctype.mt then
 		error("already called ffi.metatype on type "..tostring(ctype.name))
 	end
-	-- TODO only metatype on structs/unions?
-	ctype.mt = mt
+	-- modify it to include __call ...
+	local copy = {}
+	for k,v in pairs(mt) do copy[k] = v end
+	mt = copy
+
+	-- now fill in args
+	mt.__call = function(t, ...)
+		print('calling ctor on '..ctype.name..' with', ...)
+		for i,field in ipairs(fields) do
+			-- assign t.buffer to the value of select(i, ...)
+		end
+	end
+
+	-- TODO store old __index
+	-- and give this a new __index
+	-- which first looks up any field names, tries to write to them
+	-- and if it fails then goes to __index
+
+	ctype.mt = setmetatable({}, mt)
+	return ctype.mt
 end
 
 --[[
