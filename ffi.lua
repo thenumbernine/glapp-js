@@ -119,15 +119,17 @@ args:
 	isunion = goes with fields for unions vs structs
 	baseType = for typedefs or for arrays
 	arrayCount = if the type is an array of another type
-	isprim = if this is a primitive type
 	size = defined for prims, computed for structs, it'll be manually set for primitives
 	getset = suffix of DataView member getter/setter for primitives 
 	mt = is the metatype of this ctype
+	isPrimitive = if this is a primitive type
+	isPointer = is a pointer of the base type
 
 usage: (TODO subclasses?)
-primitives: name isprim size get set
+primitives: name isPrimitive size get set
 typedef: name baseType
 array: [name] baseType arrayCount
+pointer: baseType isPointer
 struct: [name] fields [isunion]
 --]]
 ffi.CType = class()
@@ -145,12 +147,16 @@ function ffi.CType:init(args)
 	self.isunion = args.isunion
 	self.baseType = args.baseType
 	self.arrayCount = args.arrayCount
-	self.isprim = args.isprim
+	self.isPrimitive = args.isPrimitive
+	self.isPointer = args.isPointer 
 	self.mt = args.mt
 
 	assert(not (self.arrayCount and self.fields), "can't have an array of a struct - split these into two CTypes")
 
-	if self.isprim then
+	if self.isPointer then
+		assert(self.baseType)
+		self.size = ctypes.intptr_t.size
+	elseif self.isPrimitive then
 		-- primitive type? expects size
 		self.size = args.size
 		local getset = args.getset 
@@ -239,7 +245,7 @@ function ffi.CType:assign(blob, offset, ...)
 			end
 		else
 		-- TODO handle arrays?	
-			assert(self.isprim)
+			assert(self.isPrimitive)
 			local v = ...
 			local vt = type(v)
 			if vt ~= 'number' then
@@ -255,19 +261,19 @@ assert(blob.dataview)
 end
 
 
-ffi.CType{name='void', size=0, isprim=true}	-- let's all admit that a void* is really a char*
-ffi.CType{name='int8_t', size=1, isprim=true, getset='Int8'}
-ffi.CType{name='uint8_t', size=1, isprim=true, getset='Uint8'}
-ffi.CType{name='int16_t', size=2, isprim=true, getset='Int16'}
-ffi.CType{name='uint16_t', size=2, isprim=true, getset='Uint16'}
-ffi.CType{name='int32_t', size=4, isprim=true, getset='Int32'}
-ffi.CType{name='uint32_t', size=4, isprim=true, getset='Uint32'}
-ffi.CType{name='int64_t', size=8, isprim=true, getset='BigInt64'}	-- why Big?
-ffi.CType{name='uint64_t', size=8, isprim=true, getset='BigUint64'}
+ffi.CType{name='void', size=0, isPrimitive=true}	-- let's all admit that a void* is really a char*
+ffi.CType{name='int8_t', size=1, isPrimitive=true, getset='Int8'}
+ffi.CType{name='uint8_t', size=1, isPrimitive=true, getset='Uint8'}
+ffi.CType{name='int16_t', size=2, isPrimitive=true, getset='Int16'}
+ffi.CType{name='uint16_t', size=2, isPrimitive=true, getset='Uint16'}
+ffi.CType{name='int32_t', size=4, isPrimitive=true, getset='Int32'}
+ffi.CType{name='uint32_t', size=4, isPrimitive=true, getset='Uint32'}
+ffi.CType{name='int64_t', size=8, isPrimitive=true, getset='BigInt64'}	-- why Big?
+ffi.CType{name='uint64_t', size=8, isPrimitive=true, getset='BigUint64'}
 
-ffi.CType{name='float', size=4, isprim=true, getset='Float32'}
-ffi.CType{name='double', size=8, isprim=true, getset='Float64'}
---ffi.CType{name='long double', size=16, isprim=true}	-- no get/set in Javascript DataView ... hmm ...
+ffi.CType{name='float', size=4, isPrimitive=true, getset='Float32'}
+ffi.CType{name='double', size=8, isPrimitive=true, getset='Float64'}
+--ffi.CType{name='long double', size=16, isPrimitive=true}	-- no get/set in Javascript DataView ... hmm ...
 
 -- add these as typedefs
 ffi.CType{name='char', baseType=assert(ctypes.uint8_t)}	-- char default is unsigned, right?
@@ -291,10 +297,10 @@ local function consume(str)
 	str = trim(str)
 	if #str == 0 then return end
 	-- symbols, first-come first-serve, interpret largest to smallest
-	for _,symbol in ipairs{'(', ')', '[', ']', '{', '}', ',', ';', '='} do
+	for _,symbol in ipairs{'(', ')', '[', ']', '{', '}', ',', ';', '=', '*'} do
 		if str:match('^'..patescape(symbol)) then
 			local rest = str:sub(#symbol+1)
---print('consume', rest, symbol, 'symbol')
+--print('consume', symbol, 'symbol')
 			return rest, symbol, 'symbol'
 		end
 	end
@@ -308,7 +314,7 @@ local function consume(str)
 	} do
 		if str:match('^'..keyword) and (str:match('^'..keyword..'$') or str:match('^'..keyword..'[^_a-zA-Z0-9]')) then
 			local rest = str:sub(#keyword+1)
---print('consume', rest, keyword, 'keyword')
+--print('consume', keyword, 'keyword')
 			return rest, keyword, 'keyword'
 		end
 	end
@@ -316,7 +322,7 @@ local function consume(str)
 	local name = str:match('^([_a-zA-Z][_a-zA-Z0-9]*)')
 	if name then
 		local rest = str:sub(#name+1)
---print('consume', rest, name, 'name')
+--print('consume', name, 'name')
 		return rest, name, 'name'
 	end
 	
@@ -326,7 +332,7 @@ local function consume(str)
 	local d = str:match'^(0x[0-9a-fA-F]+)'
 	if d then
 		local rest = str:sub(#d+1)
---print('consume', rest, d, 'number')
+--print('consume', d, 'number')
 		return rest, d, 'number'
 	end
 
@@ -335,7 +341,7 @@ local function consume(str)
 	local d = str:match'^(%d+)'
 	if d then
 		local rest = str:sub(#d+1)
---print('consume', rest, d, 'number')
+--print('consume', d, 'number')
 		return rest, d, 'number'
 	end
 
@@ -345,7 +351,7 @@ end
 -- follow typedef baseType lookups to the origin and return that
 local function getctype(typename)
 	local ctype = ctypes[typename]
-	assert(ctype, "failed to find type "..tostring(typename))
+	if not ctype then return end
 
 	if (ctype.baseType and not ctype.arrayCount) then
 		local sofar = {}
@@ -358,37 +364,41 @@ local function getctype(typename)
 			ctype = ctype.baseType
 		until not (ctype.baseType and not ctype.arrayCount)
 	end
-
-	if not ctype then
-		error("don't know ctype "..tostring(typename))
-	end
-
---assert(getmetatable(ctype) == ffi.CType, "got a non-ctype object when looking for "..typename)
 	return ctype
 end
 
 -- assumes 'struct' or 'union' has already been parsed
 -- doesn't assert closing ';' (since it could be used in typedef)
 local function parseStruct(str, isunion)
-
 	local token, tokentype
 	str, token, tokentype = consume(str)
 	
-	local ctype
-	do
-		local name
-		if tokentype == 'name' then
-			name = (isunion and 'union' or 'struct')..' '..token
-			str, token, tokentype = consume(str)
-		end
-		ctype = ffi.CType{
-			name = name,
-			fields = newtable(),
-			isunion = isunion,
-		}
+	local name
+	if tokentype == 'name' then
+		name = (isunion and 'union' or 'struct')..' '..token
+		str, token, tokentype = consume(str)
 	end
-	assert(token == '{')
+	
+	if token ~= '{' then
+		if not name then
+			error("struct/union expected name or {")
+		end
 
+		local ctype = getctype(name)
+		assert(ctype, "couldn't find type "..tostring(name))
+		-- TODO in the case of typedef calling this
+		-- the 'struct XXX' might not yet exist ...
+		-- hmm ...	
+		return str, token, tokentype, ctype
+	end
+
+	-- struct [name] { ...
+	local ctype = ffi.CType{
+		name = name,	-- auto-generate a name for the anonymous struct/union
+		fields = newtable(),
+		isunion = isunion,
+	}
+	
 	while true do
 		str, token, tokentype = consume(str)
 --print('field first token', token, tokentype)
@@ -397,18 +407,26 @@ local function parseStruct(str, isunion)
 		elseif token == 'struct'
 		or token == 'union'
 		then
+			-- TODO
+			-- if the next token is a { then parse a stuct
+			-- if the next token is a name then ...
+			-- 	if the next after that is { then parse a struct
+			--  if the next after that is not then it's a "struct" typename...
+
 			-- nameless struct/union's within struct/union's ...
 			-- or even if they have names, the names should get ignored?
 			-- or how long does the scope of the name of an inner struct in C last?
 
 			local nestedtype
-			str, nestedtype = parseStruct(str, token == 'union')
+			str, token, tokentype, nestedtype = parseStruct(str, token == 'union')
 --assert(getmetatable(nestedtype) == ffi.CType)
 --assert(nestedtype.size)
-			ctype.fields:insert(Field{name = '', type = nestedtype})
+			ctype.fields:insert(Field{
+				name = '',
+				type = nestedtype,
+			})
 			-- what kind of name should I use for nameless nested structs?
 
-			str, token, tokentype = consume(str)
 			assert(token == ';', "expected ;, found "..tostring(token))
 		elseif tokentype == 'name' then
 
@@ -430,11 +448,22 @@ local function parseStruct(str, isunion)
 			-- TODO this should be 'parsetype' and work just like variable declarations
 			-- and should be interoperable with typedefs
 			-- except typedefs can't use comma-separated list (can they?)
-			local fieldtype = assert(getctype(name), "failed to get ctype")
---assert(getmetatable(fieldtype) == ffi.CType)
---assert(fieldtype.size, "ctype "..tostring(name).." has no size!")
+			local baseFieldType = assert(getctype(name), "couldn't find type "..name)
+--assert(getmetatable(baseFieldType) == ffi.CType)
+--assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
+
 			while true do
 				str, token, tokentype = consume(str)
+				
+				local fieldtype = baseFieldType
+				while token == '*' do
+					fieldtype = ffi.CType{
+						baseType = fieldtype,
+						isPointer = true,
+					}
+					str, token, tokentype = consume(str)
+				end
+
 				assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest "..tostring(str))
 				local fieldname = token
 				local field = Field{
@@ -467,19 +496,43 @@ local function parseStruct(str, isunion)
 			error("got end of string")
 		end
 	end
-
 	ctype:finalize()
 
-	return str, ctype
+	-- consume the next and forward it
+	-- needed to handle 'struct alreadyDefinedType' above
+	str, token, tokentype = consume(str)
+
+	return str, token, tokentype, ctype
 end
 
--- assumes "enum" is already parsed
 local function parseEnum(str)
 	local token, tokentype
+	str, token, tokentype = consume(str)	-- skip past "enum"
+
+	local name
+	if tokentype == 'name' then
+		name = 'enum '..token
+		str, token, tokentype = consume(str)
+	end
+
+	if token ~= '{' then
+		if not name then
+			error("enum expected name or {")
+		end
+
+		local ctype = getctype(name)
+		assert(ctype, "couldn't find type "..tostring(name))
+		-- TODO in the case of typedef calling this
+		-- the 'enum XXX' might not yet exist ...
+		-- hmm ...	
+		return str, token, tokentype, ctype
+	end
+
 	str, token, tokentype = consume(str)
-	assert(token == '{')
-	
-	str, token, tokentype = consume(str)
+	local ctype = ffi.CType{
+		name = name,
+		baseType = assert(ctypes.uint32_t),
+	}
 
 	local value = 0
 	while true do
@@ -489,7 +542,7 @@ local function parseEnum(str)
 		str, token, tokentype = consume(str)
 		if token == '=' then
 			str, token, tokentype = consume(str)
-			assert(tokentype == 'number', "expected value to be a number")
+			assert(tokentype == 'number', "expected value to be a number, found "..tostring(token).." rest "..tostring(str))
 			value = token
 			
 			str, token, tokentype = consume(str)
@@ -508,8 +561,10 @@ local function parseEnum(str)
 		
 		if not gotComma then error("expected , found "..tostring(token).." rest is "..tostring(str)) end
 	end
+	
+	str, token, tokentype = consume(str)
 
-	return str
+	return str, token, tokentype, ctype
 end
 
 -- assumes comments and \'s are removed
@@ -535,18 +590,26 @@ local function parse(str)
 				if signedness then
 					name = signedness..' '..name
 				end
-
-				srctype = getctype(name)
+				srctype = assert(getctype(name), "couldn't find type "..name)
+				
+				str, token, tokentype = consume(str)
 			
 			-- alright I'm reaching the limit of non-state-based tokenizers ...
 			elseif tokentype == 'keyword' then
 				if token == 'struct'
 				or token == 'union'
 				then
-					str, srctype = parseStruct(str, token == 'union')
+					-- TODO this still could either be ...
+					--  ... a named struct declaration
+					--  ... an anonymous struct declaration
+					--  ... a 'struct ____' typename
+					-- and we can't know until after we read the '{'
+
+					str, token, tokentype, srctype = parseStruct(str, token == 'union')
+					assert(srctype)
 				elseif token == 'enum' then
-					str = parseEnum(str)
-					srctype = assert(ctypes.uint32_t)	-- all enums are ints uints? 
+					str, token, tokentype, srctype = parseEnum(str)
+					assert(srctype)
 				else
 					error("got unknown keyword: "..tostring(token))
 				end
@@ -554,9 +617,18 @@ local function parse(str)
 				error("here")
 			end
 
-			-- get the typedef name
-			str, token, tokentype = consume(str)
-			assert(tokentype == 'name')
+			while token == '*' do
+				srctype = ffi.CType{
+					baseType = srctype,
+					isPointer = true,
+				}
+				str, token, tokentype = consume(str)
+			end
+
+			-- assume the current token is the typedef name
+			if tokentype ~= 'name' then
+				error("expected name, found "..token.." rest "..str)
+			end
 			
 			-- make a typedef type
 			ffi.CType{
@@ -575,16 +647,14 @@ local function parse(str)
 		or token == 'struct'
 		then
 			local ctype
-			str, ctype = parseStruct(str, token == 'union')
-			str, token, tokentype = consume(str)
+			str, token, tokentype, ctype = parseStruct(str, token == 'union')
 			assert(token == ';')
 		elseif token == 'enum' then
-			str = parseEnum(str)
-			str, token, tokentype = consume(str)
+			str, token, tokentype, ctype = parseEnum(str)
 			assert(token == ';')
 		elseif token == 'extern' then
 			str, token, tokentype = consume(str)
-			local ctype = getctype(token)
+			local ctype = assert(getctype(token), "couldn't find type "..token)
 			
 			str, token, tokentype = consume(str)
 			local name = token
@@ -621,7 +691,7 @@ function ffi.sizeof(ctype)
 		if basetype then
 			return tonumber(ar) * ffi.sizeof(basetype)
 		end
-		ctype = assert(getctype(typename), "couldn't find ctype "..typename)
+		ctype = assert(getctype(typename), "couldn't find type "..typename)
 	end
 	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
 --assert(ctype.size, "need to calculate a size")
@@ -667,7 +737,7 @@ function CData.__index(self, key)
 			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = mt.type.baseType
 			local fieldOffset = mt.offset + index * mt.type.size
-			if fieldType.isprim then
+			if fieldType.isPrimitive then
 				return fieldtype.get(mt.blob.dataview, fieldOffset)
 			else
 				return CData(mt.blob, fieldType, fieldOffset)
@@ -682,7 +752,7 @@ function CData.__index(self, key)
 		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
 		local fieldType = field.type
 		local fieldOffset = mt.offset + field.offset
-		if fieldType.isprim then
+		if fieldType.isPrimitive then
 			return fieldType.get(mt.blob.dataview, fieldOffset)
 		else
 			return CData(mt.blob, fieldType, fieldOffset)
@@ -703,7 +773,7 @@ function CData.__newindex(self, key, value)
 			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = mt.type.baseType
 			local fieldOffset = mt.offset + index * mt.type.size
-			if fieldType.isprim then
+			if fieldType.isPrimitive then
 				return fieldtype.set(mt.blob.dataview, fieldOffset, value)
 			else
 				error("can't assign to non-primitive type "..tostring(mt))
@@ -718,7 +788,7 @@ function CData.__newindex(self, key, value)
 		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
 		local fieldType = field.type
 		local fieldOffset = mt.offset + field.offset
-		if fieldType.isprim then
+		if fieldType.isPrimitive then
 			return fieldType.set(mt.blob.dataview, fieldOffset, value)
 		else
 			error("can't assign to non-primitive type "..tostring(mt))
@@ -761,14 +831,14 @@ function ffi.new(ctype, ...)
 			-- TODO also change the ctype to an array-of-base-type?
 			-- so that ffi.sizeof will work ...
 			ar = assert(tonumber(ar))
-			ctype = assert(getctype(basetype), "couldn't find ctype "..basetype)
+			ctype = assert(getctype(basetype), "couldn't find type "..basetype)
 			-- make an array-type of the base type
 			ctype = ffi.CType{
 				baseType = ctype,
 				arrayCount = ar,
 			}
 		else
-			ctype = assert(getctype(typename), "couldn't find ctype "..typename)
+			ctype = assert(getctype(typename), "couldn't find type "..typename)
 		end
 	end
 	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
@@ -823,7 +893,7 @@ end
 
 function ffi.metatype(ctype, mt)
 	if type(ctype) == 'string' then
-		ctype = assert(getctype(ctype), "couldn't find ctype "..ctype)
+		ctype = assert(getctype(ctype), "couldn't find type "..ctype)
 	end
 	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
 
