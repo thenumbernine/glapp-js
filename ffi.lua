@@ -181,7 +181,7 @@ function ffi.CType:finalize()
 	end
 
 	assert(self.fields, "failed to finalize for type "..tostring(self))
-print('finalize '..self.name)	
+--print('finalize '..self.name)	
 	-- struct/union
 	self.size = 0
 	-- TODO alignment ...
@@ -196,11 +196,11 @@ print('finalize '..self.name)
 			self.size = self.size + ffi.sizeof(field.type)
 		end
 		-- TODO alignment here
-print(field)
+--print(field)
 	end
 	-- make sure we take up at least something - no zero-sized arrays (right?)
 	self.size = math.max(1, self.size)
-print('...'..self.name..' has size '..self.size)
+--print('...'..self.name..' has size '..self.size)
 
 	-- this is all flattened anonymous fields
 	-- and that means a mechanism for offsetting into nested struct-of-(anonymous)-struct fields
@@ -208,7 +208,7 @@ print('...'..self.name..' has size '..self.size)
 	local function addFields(fields, baseOffset)
 		for _,field in ipairs(fields) do
 			local fieldOffset = field.offset + baseOffset
-print('has field '..field.name..' at offset '..fieldOffset..' of type '..tostring(field.type))
+--print('has field '..field.name..' at offset '..fieldOffset..' of type '..tostring(field.type))
 			if field.type.anonymous then
 				addFields(field.type.fields, fieldOffset)
 			else
@@ -572,30 +572,71 @@ local CData = setmetatable({}, {
 -- so that means I can't use self: for CData ...
 function CData.__index(self, key)
 	local mt = getmetatable(self)
-	-- array ...
 	local ctype = mt.type
 	if ctype.baseType then
 		if ctype.arrayCount then
+			-- array ...
 			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
-			return CData(
-				mt.blob,
-				mt.type.baseType,
-				mt.offset + index * mt.type.size
-			)
+			local fieldType = mt.type.baseType
+			local fieldOffset = mt.offset + index * mt.type.size
+			if fieldType.isprim then
+				return fieldtype.get(mt.dataview, fieldOffset)
+			else
+				return CData(mt.blob, fieldType, fieldOffset)
+			end
 		else
-			error("TODO don't allow pointers to hold typedefs")
+			-- typedef
+			error("don't allow pointers to hold typedefs")
 		end
 	elseif ctype.fields then
+		-- struct/union
 		local field = ctype.fieldForName[key]
 		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
-		-- TODO offset into ...
-		return CData(
-			mt.blob,
-			field.type,
-			mt.offset + field.offset
-		)
+		local fieldType = field.type
+		local fieldOffset = mt.offset + field.offset
+		if fieldType.isprim then
+			return fieldType.get(mt.dataview, fieldOffset)
+		else
+			return CData(mt.blob, fieldType, fieldOffset)
+		end
 	else
 		error("can't index cdata of type "..tostring(self))
+	end
+end
+function CData.__newindex(self, key, value)
+	if type(value) ~= 'number' then
+		error("can't assign non-primitive values.  got "..require 'ext.tolua'(value))
+	end
+	local mt = getmetatable(self)
+	local ctype = mt.type
+	if ctype.baseType then
+		if ctype.arrayCount then
+			-- array
+			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
+			local fieldType = mt.type.baseType
+			local fieldOffset = mt.offset + index * mt.type.size
+			if fieldType.isprim then
+				return fieldtype.set(mt.dataview, fieldOffset, value)
+			else
+				error("can't assign to non-primitive type "..tostring(mt))
+			end		
+		else
+			-- typedef
+			error("don't allow pointers to hold typedefs")
+		end
+	elseif ctype.fields then
+		-- struct/union
+		local field = ctype.fieldForName[key]
+		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
+		local fieldType = field.type
+		local fieldOffset = mt.offset + field.offset
+		if fieldType.isprim then
+			return fieldType.set(mt.dataview, fieldOffset, value)
+		else
+			error("can't assign to non-primitive type "..tostring(mt))
+		end
+	else
+		error("can't assign cdata of type "..tostring(self))
 	end
 end
 function CData:add(index)
