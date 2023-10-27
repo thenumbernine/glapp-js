@@ -1,13 +1,27 @@
-local ffi = {}
+-- also in ext.class
+local function class()
+	local cl = setmetatable({}, {
+		__call = function(mt, ...)
+			local o = setmetatable({}, mt)
+			if o.init then o:init(...) end
+			return o
+		end,
+	})
+	cl.__index = cl
+	return cl
+end
 
-ffi.os = 'Web'
-ffi.arch = 'x64'
-
--- put ffi.cdef functions here
-ffi.C = {}
+local function defaultConcat(a,b)
+	return tostring(a) .. tostring(b)
+end
 
 -- also in ext/table.lua
 local tablemt = {__index = table}
+
+-- also in ext/table.lua as 'table()'
+local function newtable(...)
+	return setmetatable({}, tablemt)
+end
 
 -- also in ext/string.lua
 local function trim(str)
@@ -51,6 +65,15 @@ function removeCommentsAndApplyContinuations(code)
 	return code
 end
 
+
+local ffi = {}
+
+ffi.os = 'Web'
+ffi.arch = 'x64'
+
+-- put ffi.cdef functions here
+ffi.C = {}
+
 -- helper function for the webgl shim layer equivalent of the ffi .so header files
 -- ... instead of ffi.cdef
 -- NOTICE this field deviates from luajit ffi
@@ -75,73 +98,191 @@ local function nextuniquename()
 	return '#'..nextuniquenameindex
 end
 
--- TODO rename to struct/union?
--- name is optional, it could be nameless for typedef'd or anonymous nested structs
--- size is optional, it'll be computed for structs, it'll be manually set for primitives
--- fields is optional, it will only exist for structs
--- isunion is optional, goes with fields for unions vs structs
--- mt is optional, is the metatype of this ctype
-ffi.ctype = setmetatable({}, {
-	__call = function(mt, name)
-		local o = setmetatable({}, mt)
-		if not name then
-			name = nextuniquename()
+local Field = class() 
+function Field:init(args)
+	self.name = assert(args.name)
+	assert(type(self.name) == 'string')
+	self.type = assert(args.type)
+--assert(getmetatable(self.type) == ffi.CType)
+	self.offset = 0	-- TODO calculate this
+end
+function Field:__tostring()
+	return '[@'..self.offset..' '..self.type.name..' '..self.name..']'
+end
+Field.__concat = defaultConcat
+
+--[[
+args:
+	name = it could be nameless for typedef'd or anonymous nested structs
+	anonymous = true for name == nil for nested anonymous structs/unions
+	fields = it will only exist for structs
+	isunion = goes with fields for unions vs structs
+	baseType = for typedefs or for arrays
+	arrayCount = if the type is an array of another type
+	isprim = if this is a primitive type
+	size = defined for prims, computed for structs, it'll be manually set for primitives
+	getset = suffix of DataView member getter/setter for primitives 
+	mt = is the metatype of this ctype
+
+usage: (TODO subclasses?)
+primitives: name isprim size get set
+typedef: name baseType
+array: [name] baseType arrayCount
+struct: [name] fields [isunion]
+--]]
+ffi.CType = class()
+function ffi.CType:init(args)
+	args = args or {}
+	self.name = args.name
+	if not self.name then
+		self.name = nextuniquename()
+		self.anonymous = true
+	end
+	assert(not ctypes[self.name], "tried to redefine "..tostring(self.name))
+	ctypes[self.name] = self
+
+	self.fields = args.fields
+	self.isunion = args.isunion
+	self.baseType = args.baseType
+	self.arrayCount = args.arrayCount
+	self.isprim = args.isprim
+	self.mt = args.mt
+
+	assert(not (self.arrayCount and self.fields), "can't have an array of a struct - split these into two CTypes")
+
+	if self.isprim then
+		-- primitive type? expects size
+		self.size = args.size
+		local getset = args.getset 
+		if getset then
+			local gettername = 'get'..getset
+			self.get = js.global.DataView.prototype[gettername] or error("failed to find getter "..gettername)
+			local settername = 'set'..getset
+			self.set = js.global.DataView.prototype[settername] or error("failed to find setter "..settername)
 		end
-		o.name = name
-		ctypes[o.name] = o
-		return o
-	end,
-})
-ffi.ctype.__index = ffi.ctype
-function ffi.ctype:calcSize()
+	elseif self.arrayCount then
+		-- array type? calculate
+		self.size = self.baseType.size * self.arrayCount
+	elseif not self.fields then
+		-- typedef?
+		self.size = assert(self.baseType.size, "failed to find size for baseType "..tostring(self.baseType))
+	else
+		-- struct?
+		assert(self.fields)
+		-- expect :finalize to be called later
+	end
+end
+function ffi.CType:finalize()
 	if self.size then return end
-	-- calculate size here
+
+	if self.arrayCount then
+		self.size = self.baseType.size * self.arrayCount
+		return
+	end
+
+	assert(self.fields, "failed to finalize for type "..tostring(self))
+print('finalize '..self.name)	
+	-- struct/union
 	self.size = 0
 	-- TODO alignment ...
 	for _,field in ipairs(self.fields) do
 		assert(field.type)
+		assert(field.type.size)
 		if self.isunion then
+			field.offset = 0
 			self.size = math.max(self.size, ffi.sizeof(field.type))
 		else
+			field.offset = self.size
 			self.size = self.size + ffi.sizeof(field.type)
 		end
+		-- TODO alignment here
+print(field)
 	end
+	-- make sure we take up at least something - no zero-sized arrays (right?)
 	self.size = math.max(1, self.size)
+print('...'..self.name..' has size '..self.size)
+
+	-- this is all flattened anonymous fields
+	-- and that means a mechanism for offsetting into nested struct-of-(anonymous)-struct fields
+	self.fieldForName = {}
+	local function addFields(fields, baseOffset)
+		for _,field in ipairs(fields) do
+			local fieldOffset = field.offset + baseOffset
+print('has field '..field.name..' at offset '..fieldOffset..' of type '..tostring(field.type))
+			if field.type.anonymous then
+				addFields(field.type.fields, fieldOffset)
+			else
+				assert(field.name and #field.name > 0)
+				self.fieldForName[field.name] = {
+					type = field.type,
+					offset = fieldOffset,
+				}		
+			end
+		end
+	end
+	addFields(self.fields, 0)
+end
+function ffi.CType:__tostring()
+	return tostring(self.name)
+end
+function ffi.CType:assign(blob, offset, ...)
+	if select('#', ...) > 0 then
+		if self.fields then
+			if self.isunion then
+				-- then only assign to the first entry? hmmm ...
+				self.fields[1].type:assign(blob, offset, ...)
+			else
+				for i=1,math.min(#self.fields, select('#', ...)) do
+					local field = self.fields[i]
+					field.type:assign(blob, offset + field.offset, (select(i, ...)))
+				end
+			end
+		else
+		-- TODO handle arrays?	
+			assert(self.isprim)
+			local v = ...
+			local vt = type(v)
+			if vt ~= 'number' then
+				error("can't convert "..vt.." to number")
+			end
+assert(self.set, "expected primitive to have a setter")
+assert(blob.dataview)			
+			self.set(blob.dataview, offset, v)
+--print('TODO *('..tostring(self)..')(ptr+'..tostring(offset)..') = '..tostring(v))
+--print(debug.traceback())
+		end
+	end
 end
 
 
+ffi.CType{name='void', size=0, isprim=true}	-- let's all admit that a void* is really a char*
+ffi.CType{name='int8_t', size=1, isprim=true, getset='Int8'}
+ffi.CType{name='uint8_t', size=1, isprim=true, getset='Uint8'}
+ffi.CType{name='int16_t', size=2, isprim=true, getset='Int16'}
+ffi.CType{name='uint16_t', size=2, isprim=true, getset='Uint16'}
+ffi.CType{name='int32_t', size=4, isprim=true, getset='Int32'}
+ffi.CType{name='uint32_t', size=4, isprim=true, getset='Uint32'}
+ffi.CType{name='int64_t', size=8, isprim=true, getset='BigInt64'}	-- why Big?
+ffi.CType{name='uint64_t', size=8, isprim=true, getset='BigUint64'}
 
-local function addprim(name, size)
-	local primtype = ffi.ctype(name)
-	primtype.size = size
-	primtype.isprim = true
-end
+ffi.CType{name='float', size=4, isprim=true, getset='Float32'}
+ffi.CType{name='double', size=8, isprim=true, getset='Float64'}
+--ffi.CType{name='long double', size=16, isprim=true}	-- no get/set in Javascript DataView ... hmm ...
 
--- TODO type parser needs to handle 'unsigned', 'signed'
-addprim('void', 0)
-addprim('char', 1)
-addprim('signed char', 1)
-addprim('unsigned char', 1)
-addprim('short', 2)
-addprim('signed short', 2)
-addprim('unsigned short', 2)
-addprim('int', 4)
-addprim('signed int', 4)
-addprim('unsigned int', 4)
-addprim('intptr_t', 8)
-addprim('float', 4)
-addprim('double', 4)
-addprim('long double', 8)
-addprim('int8_t', 1)
-addprim('uint8_t', 1)
-addprim('int16_t', 2)
-addprim('uint16_t', 2)
-addprim('int32_t', 4)
-addprim('uint32_t', 4)
-addprim('int64_t', 8)
-addprim('uint64_t', 8)
-
-ffi.typedefs = {}
+-- add these as typedefs
+ffi.CType{name='char', baseType=assert(ctypes.uint8_t)}	-- char default is unsigned, right?
+ffi.CType{name='signed char', baseType=assert(ctypes.int8_t)}
+ffi.CType{name='unsigned char', baseType=assert(ctypes.uint8_t)}
+ffi.CType{name='short', baseType=assert(ctypes.int16_t)}
+ffi.CType{name='signed short', baseType=assert(ctypes.int16_t)}
+ffi.CType{name='unsigned short', baseType=assert(ctypes.uint16_t)}
+ffi.CType{name='int', baseType=assert(ctypes.int32_t)}
+ffi.CType{name='signed int', baseType=assert(ctypes.int32_t)}
+ffi.CType{name='unsigned int', baseType=assert(ctypes.uint32_t)}
+ffi.CType{name='intptr_t', baseType=assert(ctypes.int64_t)}
+ffi.CType{name='uintptr_t', baseType=assert(ctypes.uint64_t)}
+ffi.CType{name='ssize_t', baseType=assert(ctypes.int64_t)}
+ffi.CType{name='size_t', baseType=assert(ctypes.uint64_t)}
 
 local function consume(str)
 	str = trim(str)
@@ -180,48 +321,51 @@ local function consume(str)
 	error("unknown token "..str)
 end
 
+-- follow typedef baseType lookups to the origin and return that
 local function getctype(typename)
-	local sofar = {}
-	while true do
-		if sofar[typename] then
-			error(
-				"found a typedef loop.\n"
-				..require 'ext.tolua'{
-					sofar = sofar,
-					typedefs = ffi.typedefs,
-				}
-			)
-		end
-		sofar[typename] = true
-		local typedef = ffi.typedefs[typename]
-		if not typedef then break end
-		typename = typedef
+	local ctype = ctypes[typename]
+	assert(ctype, "failed to find type "..tostring(typename))
+
+	if (ctype.baseType and not ctype.arrayCount) then
+		local sofar = {}
+		-- if it has a baseType and no arrayCount then it's just a typedef ...
+		repeat
+			if sofar[ctype] then
+				error"found a typedef loop"
+			end
+			sofar[ctypes] = true
+			ctype = ctype.baseType
+		until not (ctype.baseType and not ctype.arrayCount)
 	end
 
-	local ctype = ctypes[typename]
 	if not ctype then
 		error("don't know ctype "..tostring(typename))
 	end
 
-	assert(getmetatable(ctype) == ffi.ctype, "got a non-ctype object when looking for "..typename)
+--assert(getmetatable(ctype) == ffi.CType, "got a non-ctype object when looking for "..typename)
 	return ctype
 end
 
 -- assumes 'struct' or 'union' has already been parsed
 -- doesn't assert closing ';' (since it could be used in typedef)
 local function parsestruct(str, isunion)
-	local ctype
 
 	local token, tokentype
 	str, token, tokentype = consume(str)
-	if tokentype == 'name' then
-		ctype = ffi.ctype((isunion and 'union' or 'struct')..' '..token)
-		str, token, tokentype = consume(str)
-	else
-		ctype = ffi.ctype()
+	
+	local ctype
+	do
+		local name
+		if tokentype == 'name' then
+			name = (isunion and 'union' or 'struct')..' '..token
+			str, token, tokentype = consume(str)
+		end
+		ctype = ffi.CType{
+			name = name,
+			fields = newtable(),
+			isunion = isunion,
+		}
 	end
-	ctype.fields = setmetatable({}, tablemt)
-	ctype.isunion = isunion
 	assert(token == '{')
 
 	while true do
@@ -238,8 +382,10 @@ local function parsestruct(str, isunion)
 
 			local nestedtype
 			str, nestedtype = parsestruct(str, token == 'union')
-			assert(getmetatable(nestedtype) == ffi.ctype)
-			ctype.fields:insert{name = '', type = nestedtype}	-- what kind of name should I use for nameless nested structs?
+--assert(getmetatable(nestedtype) == ffi.CType)
+--assert(nestedtype.size)
+			ctype.fields:insert(Field{name = '', type = nestedtype})
+			-- what kind of name should I use for nameless nested structs?
 
 			str, token, tokentype = consume(str)
 			assert(token == ';', "expected ';', found "..tostring(token))
@@ -264,13 +410,16 @@ local function parsestruct(str, isunion)
 			-- and should be interoperable with typedefs
 			-- except typedefs can't use comma-separated list (can they?)
 			local fieldtype = assert(getctype(name), "failed to get ctype")
-			assert(getmetatable(fieldtype) == ffi.ctype)
-
+--assert(getmetatable(fieldtype) == ffi.CType)
+--assert(fieldtype.size, "ctype "..tostring(name).." has no size!")
 			while true do
 				str, token, tokentype = consume(str)
 				assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest="..tostring(str))
 				local fieldname = token
-				local field = {name = fieldname, type = fieldtype}
+				local field = Field{
+					name = fieldname,
+					type = fieldtype,
+				}
 				ctype.fields:insert(field)
 
 				str, token, tokentype = consume(str)
@@ -297,6 +446,8 @@ local function parsestruct(str, isunion)
 			error("got end of string")
 		end
 	end
+
+	ctype:finalize()
 
 	return str, ctype
 end
@@ -335,8 +486,10 @@ local function parse(str)
 
 			str, token, tokentype = consume(str)
 			assert(tokentype == 'name')
-			assert(not ffi.typedefs[token], 'typedef '..token..' is already used')
-			ffi.typedefs[token] = srctype.name
+			ffi.CType{
+				name = token,
+				baseType = srctype,
+			}
 
 			str, token, tokentype = consume(str)
 
@@ -363,62 +516,150 @@ end
 
 function ffi.cdef(str)
 --print("ffi.cdef("..tostring(str)..")")
-
 	-- TODO ... hmm ... luajit's lj_cparse ...
 	-- I can compile that to emscripten ...
 	-- hmm ...
 	str = removeCommentsAndApplyContinuations(str)
 	parse(str)
 --print'ffi.cdef done'
---print(debug.traceback())
 end
 
 function ffi.sizeof(ctype)
-print('ffi.sizeof('..tostring(ctype)..')')
+--print('ffi.sizeof('..tostring(ctype)..')')
+	-- TODO matches ffi.new ...
 	if type(ctype) == 'string' then
-		-- TODO proper tokenizer for C types
 		local typename = trim(ctype)
-		local base, ar = typename:match'^(.+)%s*%[(%d+)%]$'
-		if base then
-			return tonumber(ar) * ffi.sizeof(base)
+		local basetype, ar = typename:match'^(.+)%s*%[(%d+)%]$'
+		if basetype then
+			return tonumber(ar) * ffi.sizeof(basetype)
 		end
 		ctype = assert(getctype(typename), "couldn't find ctype "..typename)
 	end
-	assert(getmetatable(ctype) == ffi.ctype, "ffi.sizeof object is not a ctype")
-	ctype:calcSize()
-print('...returning '..ctype.size)
+	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
+--assert(ctype.size, "need to calculate a size")
+--print('ffi.sizeof('..tostring(ctype)..') = '..ctype.size)
 	return ctype.size
 end
 
-local ffiblob = setmetatable({}, {
-	__call = function(mt, typename, count, gen)
-		local o = setmetatable({}, mt)
-		o.typename = assert(typename, "expected typename")
-		local size = count * ffi.sizeof(typename)
-		o.size = size
-		o.buffer = js.new(js.global.Uint8Array, size)
-		if gen then
-			for i=0,size-1 do
-				o.buffer[i] = gen(i)
-			end
-		end
-		return o
-	end,
-})
-ffiblob.__index = ffiblob
-
-function ffi.new(typename, value)
-	typename = trim(typename)
-	local base = typename:match'^(.+)%s*%[%?%]$'
-	if base then
-		return ffiblob(base, value)
-	end
-
-	-- TODO translate typedefs here first
-	return ffiblob(typename, 1)
+local MemoryBlob = class()
+function MemoryBlob:init(size)
+	self.buffer = js.new(js.global.ArrayBuffer, size)
+	self.dataview = js.new(js.global.DataView, self.buffer)
 end
 
--- TODO ptr has to be a ffiblob
+-- metatable assigned *after* init for CData
+local CData = setmetatable({}, {
+	__call = function(mt, blob, ctype, offset)
+		-- NOTICE unlike most class()'s, 'o' doesn't yet have access to its mt during construction
+		local o = {}	-- 
+		
+		-- now 'o's __index will be overridden so it can be treated like a C pointer
+		local omt = {}
+		for k,v in pairs(mt) do
+			omt[k] = v
+		end
+		
+		-- hide these from user ... but how?
+		omt.blob = assert(blob)
+		omt.type = ctype or ctypes.uint8_t
+		omt.offset = offset or 0	
+		omt.isCData = true
+		
+		return setmetatable(o, omt)
+	end,
+})
+-- hmm __index is overridden for the user's api
+-- so that means I can't use self: for CData ...
+function CData.__index(self, key)
+	local mt = getmetatable(self)
+	-- array ...
+	local ctype = mt.type
+	if ctype.baseType then
+		if ctype.arrayCount then
+			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
+			return CData(
+				mt.blob,
+				mt.type.baseType,
+				mt.offset + index * mt.type.size
+			)
+		else
+			error("TODO don't allow pointers to hold typedefs")
+		end
+	elseif ctype.fields then
+		local field = ctype.fieldForName[key]
+		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
+		-- TODO offset into ...
+		return CData(
+			mt.blob,
+			field.type,
+			mt.offset + field.offset
+		)
+	else
+		error("can't index cdata of type "..tostring(self))
+	end
+end
+function CData:add(index)
+	local mt = getmetatable(self)
+	return CData(
+		mt.blob,
+		mt.type,
+		mt.offset + index * mt.type.size
+	)
+end
+function CData.__add(a,b)
+	local ma = getmetatable(a)
+	local mb = getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	if pa and nb then
+		return CData.add(a, b)
+	elseif pb and na then
+		return CData.add(b, a)
+	else
+		error("don't know how to add")
+	end
+end
+
+function ffi.new(ctype, ...)
+	-- [[ same as in ffi.sizeof:
+	if type(ctype) == 'string' then
+		-- TODO proper tokenizer for C types
+		local typename = trim(ctype)
+		local basetype, ar = typename:match'^(.+)%s*%[(%d+)%]$'
+		if basetype then
+			-- TODO also change the ctype to an array-of-base-type?
+			-- so that ffi.sizeof will work ...
+			ar = assert(tonumber(ar))
+			ctype = assert(getctype(basetype), "couldn't find ctype "..basetype)
+			-- make an array-type of the base type
+			ctype = ffi.CType{
+				baseType = ctype,
+				arrayCount = ar,
+			}
+		else
+			ctype = assert(getctype(typename), "couldn't find ctype "..typename)
+		end
+	end
+	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
+	--]]
+
+	-- TODO return a pointer?
+	-- or how will sizeof handle pointers?
+	-- or should I return a pointer-to-fixed-size-array, which auto converts to pointer to base type upon arithmetic?
+	local blob = MemoryBlob(ctype.size)
+
+	local ptr = CData(blob, ctype)
+
+	if select('#', ...) > 0 then
+		ctype:assign(blob, 0, ...)
+	end
+
+	return ptr
+end
+
+-- TODO ptr has to be a MemoryBlob
 local function strlen(buffer)
 	for i=0,buffer.length-1 do
 		if buffer[i] == 0 then
@@ -429,7 +670,7 @@ local function strlen(buffer)
 end
 
 -- string-to-lua here
--- TODO ptr has to be a ffiblob
+-- TODO ptr has to be a MemoryBlob
 function ffi.string(ptr)
 	if ptr == ffi.null then
 		return '(null)'
@@ -440,20 +681,22 @@ function ffi.string(ptr)
 end
 
 -- not in the luajit ffi api
--- lua-string to ffiblob
+-- lua-string to MemoryBlob
 function ffi.stringBuffer(str)
 	str = tostring(str)
 	-- ... starting to think I should just allocate all my ffi memory as a giant js buffer
-	return ffiblob('char', #str+1, function(i)
-		return str:byte(i+1) or 0
-	end)
+	local blob = MemoryBlob(#str+1)
+	for i=1,#str do
+		blob.buffer[i-1] = str:byte(i)
+	end
+	blob.buffer[#str] = 0
 end
 
 function ffi.metatype(ctype, mt)
 	if type(ctype) == 'string' then
 		ctype = assert(getctype(ctype), "couldn't find ctype "..ctype)
 	end
-	assert(getmetatable(ctype) == ffi.ctype, "ffi.sizeof object is not a ctype")
+	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
 
 	assert(ctype.fields, "can only call ctype on structs/unions")
 
@@ -467,11 +710,17 @@ function ffi.metatype(ctype, mt)
 	mt = copy
 
 	-- now fill in args
+	-- TODO same as ffi.new('ctype', ...) ?
 	mt.__call = function(t, ...)
-		print('calling ctor on '..ctype.name..' with', ...)
-		for i,field in ipairs(fields) do
-			-- assign t.buffer to the value of select(i, ...)
-		end
+--print('calling ctor on '..ctype.name..' with', ...)
+		local blob = MemoryBlob(ctype.size)
+		local ptr = CData(blob, ctype)
+		
+		-- TODO instead of ctype:assign, use ptr:set ?
+		-- TODO double check that in ffi you can use cdata operator= to duplicate ffi.new / metatype-ctor behavior
+		ctype:assign(blob, 0, ...)
+		
+		return ptr
 	end
 
 	-- TODO store old __index

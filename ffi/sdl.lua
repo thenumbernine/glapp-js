@@ -1,19 +1,16 @@
 local ffi = require 'ffi'
 
-ffi.ctype(
-	'struct SDL_Event'
-)
-ffi.typedefs['SDL_Event'] = 'struct SDL_Event'
+ffi.cdef[[
+typedef struct SDL_Event { int unknown; } SDL_Event;
+typedef struct SDL_GLContext { int unknown; } SDL_GLContext;
+typedef struct SDL_Window { int unknown; } SDL_Window;
 
-ffi.ctype(
-	'struct SDL_GLContext'
-)
-ffi.typedefs['SDL_GLContext'] = 'struct SDL_GLContext'
-
-ffi.ctype(
-	'struct SDL_Window'
-)
-ffi.typedefs['SDL_Window'] = 'struct SDL_Window'
+typedef struct SDL_version {
+   uint8_t major;
+   uint8_t minor;
+   uint8_t patch;
+} SDL_version;
+]]
 
 
 local sdl = {}
@@ -136,5 +133,11 @@ end
 function sdl.SDL_GL_DeleteContext(ctx) return 0 end
 function sdl.SDL_GL_SetAttribute(key, value) return 0 end
 function sdl.SDL_GL_SetSwapInterval(enable) return 0 end
+
+function sdl.SDL_GetVersion(version)
+	version[0].major = 2
+	version[0].minor = 0
+	version[0].patch = 0
+end
 
 return sdl
