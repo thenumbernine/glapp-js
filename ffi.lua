@@ -279,6 +279,9 @@ ffi.CType{name='unsigned short', baseType=assert(ctypes.uint16_t)}
 ffi.CType{name='int', baseType=assert(ctypes.int32_t)}
 ffi.CType{name='signed int', baseType=assert(ctypes.int32_t)}
 ffi.CType{name='unsigned int', baseType=assert(ctypes.uint32_t)}
+ffi.CType{name='long', baseType=assert(ctypes.int64_t)}
+ffi.CType{name='signed long', baseType=assert(ctypes.int64_t)}
+ffi.CType{name='unsigned long', baseType=assert(ctypes.uint64_t)}
 ffi.CType{name='intptr_t', baseType=assert(ctypes.int64_t)}
 ffi.CType{name='uintptr_t', baseType=assert(ctypes.uint64_t)}
 ffi.CType{name='ssize_t', baseType=assert(ctypes.int64_t)}
@@ -288,34 +291,52 @@ local function consume(str)
 	str = trim(str)
 	if #str == 0 then return end
 	-- symbols, first-come first-serve, interpret largest to smallest
-	for _,symbol in ipairs{'(', ')', '[', ']', '{', '}', ',', ';'} do
+	for _,symbol in ipairs{'(', ')', '[', ']', '{', '}', ',', ';', '='} do
 		if str:match('^'..patescape(symbol)) then
-			local token = str:sub(#symbol+1)
---print('consume', token, symbol, 'symbol')
-			return token, symbol, 'symbol'
+			local rest = str:sub(#symbol+1)
+--print('consume', rest, symbol, 'symbol')
+			return rest, symbol, 'symbol'
 		end
 	end
 	-- keywords
-	for _,keyword in ipairs{'typedef', 'struct', 'union'} do
+	for _,keyword in ipairs{
+		'typedef',
+		'struct',
+		'union',
+		'enum',
+		'extern',
+	} do
 		if str:match('^'..keyword) and (str:match('^'..keyword..'$') or str:match('^'..keyword..'[^_a-zA-Z0-9]')) then
-			local token = str:sub(#keyword+1)
---print('consume', token, keyword, 'keyword')
-			return token, keyword, 'keyword'
+			local rest = str:sub(#keyword+1)
+--print('consume', rest, keyword, 'keyword')
+			return rest, keyword, 'keyword'
 		end
 	end
 	-- names
 	local name = str:match('^([_a-zA-Z][_a-zA-Z0-9]*)')
 	if name then
-		local token = str:sub(#name+1)
---print('consume', token, name, 'name')
-		return token, name, 'name'
+		local rest = str:sub(#name+1)
+--print('consume', rest, name, 'name')
+		return rest, name, 'name'
 	end
-	-- numbers
+	
+	-- hexadecimal integer numbers
+	-- match before decimal
+	-- TODO make sure the next char is a separator (not a word)
+	local d = str:match'^(0x[0-9a-fA-F]+)'
+	if d then
+		local rest = str:sub(#d+1)
+--print('consume', rest, d, 'number')
+		return rest, d, 'number'
+	end
+
+	-- decimal integer numbers
+	-- TODO make sure the next char is a separator (not a word)
 	local d = str:match'^(%d+)'
 	if d then
-		local token = str:sub(#d+1)
---print('consume', token, d, 'number')
-		return token, d, 'number'
+		local rest = str:sub(#d+1)
+--print('consume', rest, d, 'number')
+		return rest, d, 'number'
 	end
 
 	error("unknown token "..str)
@@ -348,7 +369,7 @@ end
 
 -- assumes 'struct' or 'union' has already been parsed
 -- doesn't assert closing ';' (since it could be used in typedef)
-local function parsestruct(str, isunion)
+local function parseStruct(str, isunion)
 
 	local token, tokentype
 	str, token, tokentype = consume(str)
@@ -381,14 +402,14 @@ local function parsestruct(str, isunion)
 			-- or how long does the scope of the name of an inner struct in C last?
 
 			local nestedtype
-			str, nestedtype = parsestruct(str, token == 'union')
+			str, nestedtype = parseStruct(str, token == 'union')
 --assert(getmetatable(nestedtype) == ffi.CType)
 --assert(nestedtype.size)
 			ctype.fields:insert(Field{name = '', type = nestedtype})
 			-- what kind of name should I use for nameless nested structs?
 
 			str, token, tokentype = consume(str)
-			assert(token == ';', "expected ';', found "..tostring(token))
+			assert(token == ';', "expected ;, found "..tostring(token))
 		elseif tokentype == 'name' then
 
 			-- should these be keywords?
@@ -414,7 +435,7 @@ local function parsestruct(str, isunion)
 --assert(fieldtype.size, "ctype "..tostring(name).." has no size!")
 			while true do
 				str, token, tokentype = consume(str)
-				assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest="..tostring(str))
+				assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest "..tostring(str))
 				local fieldname = token
 				local field = Field{
 					name = fieldname,
@@ -452,6 +473,45 @@ local function parsestruct(str, isunion)
 	return str, ctype
 end
 
+-- assumes "enum" is already parsed
+local function parseEnum(str)
+	local token, tokentype
+	str, token, tokentype = consume(str)
+	assert(token == '{')
+	
+	str, token, tokentype = consume(str)
+
+	local value = 0
+	while true do
+		assert(tokentype == 'name', "enum expected name, got "..tostring(token).." rest is "..str)
+		local name = token
+
+		str, token, tokentype = consume(str)
+		if token == '=' then
+			str, token, tokentype = consume(str)
+			assert(tokentype == 'number', "expected value to be a number")
+			value = token
+			
+			str, token, tokentype = consume(str)
+		end
+	
+		ffi.C[name] = value
+		value = value + 1
+
+		local gotComma
+		if token == ',' then
+			gotComma = true
+			str, token, tokentype = consume(str)
+		end
+
+		if token == '}' then break end
+		
+		if not gotComma then error("expected , found "..tostring(token).." rest is "..tostring(str)) end
+	end
+
+	return str
+end
+
 -- assumes comments and \'s are removed
 local function parse(str)
 	local token, tokentype
@@ -477,15 +537,28 @@ local function parse(str)
 				end
 
 				srctype = getctype(name)
+			
 			-- alright I'm reaching the limit of non-state-based tokenizers ...
-			elseif token == 'struct'
-			or token == 'union'
-			then
-				str, srctype = parsestruct(str, token == 'union')
+			elseif tokentype == 'keyword' then
+				if token == 'struct'
+				or token == 'union'
+				then
+					str, srctype = parseStruct(str, token == 'union')
+				elseif token == 'enum' then
+					str = parseEnum(str)
+					srctype = assert(ctypes.uint32_t)	-- all enums are ints uints? 
+				else
+					error("got unknown keyword: "..tostring(token))
+				end
+			else
+				error("here")
 			end
 
+			-- get the typedef name
 			str, token, tokentype = consume(str)
 			assert(tokentype == 'name')
+			
+			-- make a typedef type
 			ffi.CType{
 				name = token,
 				baseType = srctype,
@@ -502,13 +575,28 @@ local function parse(str)
 		or token == 'struct'
 		then
 			local ctype
-			str, ctype = parsestruct(str, token == 'union')
+			str, ctype = parseStruct(str, token == 'union')
+			str, token, tokentype = consume(str)
+			assert(token == ';')
+		elseif token == 'enum' then
+			str = parseEnum(str)
+			str, token, tokentype = consume(str)
+			assert(token == ';')
+		elseif token == 'extern' then
+			str, token, tokentype = consume(str)
+			local ctype = getctype(token)
+			
+			str, token, tokentype = consume(str)
+			local name = token
+
+			-- TODO create ffi.C[name] as a pointer to this data
+			
 			str, token, tokentype = consume(str)
 			assert(token == ';')
 		elseif not token then
 			break
 		else
-			error("got eof with rest="..tostring(str))
+			error("got eof with rest "..tostring(str))
 		end
 	end
 --print'parse done'
@@ -580,7 +668,7 @@ function CData.__index(self, key)
 			local fieldType = mt.type.baseType
 			local fieldOffset = mt.offset + index * mt.type.size
 			if fieldType.isprim then
-				return fieldtype.get(mt.dataview, fieldOffset)
+				return fieldtype.get(mt.blob.dataview, fieldOffset)
 			else
 				return CData(mt.blob, fieldType, fieldOffset)
 			end
@@ -595,7 +683,7 @@ function CData.__index(self, key)
 		local fieldType = field.type
 		local fieldOffset = mt.offset + field.offset
 		if fieldType.isprim then
-			return fieldType.get(mt.dataview, fieldOffset)
+			return fieldType.get(mt.blob.dataview, fieldOffset)
 		else
 			return CData(mt.blob, fieldType, fieldOffset)
 		end
@@ -616,7 +704,7 @@ function CData.__newindex(self, key, value)
 			local fieldType = mt.type.baseType
 			local fieldOffset = mt.offset + index * mt.type.size
 			if fieldType.isprim then
-				return fieldtype.set(mt.dataview, fieldOffset, value)
+				return fieldtype.set(mt.blob.dataview, fieldOffset, value)
 			else
 				error("can't assign to non-primitive type "..tostring(mt))
 			end		
@@ -631,7 +719,7 @@ function CData.__newindex(self, key, value)
 		local fieldType = field.type
 		local fieldOffset = mt.offset + field.offset
 		if fieldType.isprim then
-			return fieldType.set(mt.dataview, fieldOffset, value)
+			return fieldType.set(mt.blob.dataview, fieldOffset, value)
 		else
 			error("can't assign to non-primitive type "..tostring(mt))
 		end

@@ -19,5 +19,5 @@ xpcall(function()
 	
 	print'done'
 end, function(err)
-	print(err..'\n'..debug.traceback())
+	print(tostring(err)..'\n'..debug.traceback())
 end)
