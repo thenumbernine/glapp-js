@@ -216,6 +216,8 @@ function ffi.CType:finalize()
 			local fieldOffset = field.offset + baseOffset
 --print('has field '..field.name..' at offset '..fieldOffset..' of type '..tostring(field.type))
 			if field.type.anonymous then
+				-- TODO would be nice to get the string of the currently-parsed-struct here ...
+				assert(field.type.fields, "anonymous struct needs fields")
 				addFields(field.type.fields, fieldOffset)
 			else
 				assert(field.name and #field.name > 0)
