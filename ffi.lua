@@ -358,28 +358,46 @@ print('consume', d, 'number')
 		return rest, d, 'number'
 	end
 
-	local d = str:match"'.'" 
+	local d = str:match"^'\\.'"
 	if d then
-		local rest = str:sub(#d+1)
-		return rest, d:sub(2,2):byte(), 'char'
-	end
-
-	local d = str:match"'\\.'"
-	if d then
+		assert(#d == 4)
 		local rest = str:sub(#d+1)
 		local esc = d:sub(3,3)
-		if esc == 'r' then
+		if esc == 'b' then
+			d = ('\b'):byte()
+		elseif esc == 'n' then
+			d = ('\n'):byte()
+		elseif esc == 'r' then
 			d = ('\r'):byte()
 		elseif esc == 't' then
 			d = ('\t'):byte()
-		elseif esc == 'n' then
-			d = ('\n'):byte()
+		elseif esc == "'" then
+			d = ("'"):byte()
+		elseif esc == "\\" then
+			d = ("\\"):byte()
 		else
 			error("unknown escape code "..d)
 		end
 		return rest, d, 'char'	-- TODO escape?
 	end
-	
+
+	-- handle '.' after '\\.' so that '\'' gets handled correctly
+	local d = str:match"^'.'" 
+	if d then
+		assert(#d == 3)
+		local rest = str:sub(#d+1)
+		return rest, d:sub(2,2):byte(), 'char'
+	end
+
+	local d = str:match"^'\\x[0-9a-fA-F][0-9a-fA-F]'"
+	if d then
+		assert(#d == 6)
+		local rest = str:sub(#d+1)
+		local esc = tonumber(d:sub(4,5), 16)
+		assert(esc, "failed to parse hex char "..d)
+		return rest, esc, 'char'	-- TODO escape?
+	end
+
 	error("unknown token "..str)
 end
 
@@ -595,6 +613,7 @@ local function parseEnum(str)
 		assert(tokentype == 'name', "enum expected name, got "..tostring(token).." rest is "..str)
 		local name = token
 
+-- TODO need to handle arithmetic operations here ...
 		str, token, tokentype = consume(str)
 		if token == '=' then
 			str, token, tokentype = consume(str)
@@ -603,7 +622,8 @@ local function parseEnum(str)
 			
 			str, token, tokentype = consume(str)
 		end
-	
+
+print('setting enum '..tostring(name)..' = '..tostring(value))
 		ffi.C[name] = value
 		value = value + 1
 
