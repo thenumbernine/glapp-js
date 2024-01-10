@@ -351,13 +351,35 @@ print('consume', d, 'number')
 
 	-- decimal integer numbers
 	-- TODO make sure the next char is a separator (not a word)
-	local d = str:match'^(%d+)'
+	local d = str:match'^(%d+)' or str:match'^(%-%d+)'
 	if d then
 		local rest = str:sub(#d+1)
 print('consume', d, 'number')
 		return rest, d, 'number'
 	end
 
+	local d = str:match"'.'" 
+	if d then
+		local rest = str:sub(#d+1)
+		return rest, d:sub(2,2):byte(), 'char'
+	end
+
+	local d = str:match"'\\.'"
+	if d then
+		local rest = str:sub(#d+1)
+		local esc = d:sub(3,3)
+		if esc == 'r' then
+			d = ('\r'):byte()
+		elseif esc == 't' then
+			d = ('\t'):byte()
+		elseif esc == 'n' then
+			d = ('\n'):byte()
+		else
+			error("unknown escape code "..d)
+		end
+		return rest, d, 'char'	-- TODO escape?
+	end
+	
 	error("unknown token "..str)
 end
 
@@ -461,6 +483,11 @@ assert(nestedtype.size)
 				str, token, tokentype = consume(str)
 			end
 
+			--const-ness ... meh?
+			if token == 'const' then
+				str, token, tokentype = consume(str)
+			end
+
 			local name = token
 			if signedness then
 				name = signedness..' '..name
@@ -481,6 +508,10 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 				while token == '*' do
 					fieldtype = getptrtype(fieldtype)
 					str, token, tokentype = consume(str)
+					-- const-ness ... meh?
+					if token == 'const' then
+						str, token, tokentype = consume(str)
+					end
 				end
 
 				assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest "..tostring(str))
@@ -567,7 +598,7 @@ local function parseEnum(str)
 		str, token, tokentype = consume(str)
 		if token == '=' then
 			str, token, tokentype = consume(str)
-			assert(tokentype == 'number', "expected value to be a number, found "..tostring(token).." rest "..tostring(str))
+			assert(tokentype == 'number' or tokentype == 'char', "expected value to be a number or char, found "..tostring(token).." rest "..tostring(str))
 			value = token
 			
 			str, token, tokentype = consume(str)
