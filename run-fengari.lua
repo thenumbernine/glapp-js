@@ -12,6 +12,10 @@ xpcall(function()
 	_G.io = io
 	--]]
 
+	-- add DEBUG lines
+	-- needs io to exist first ...
+	--require 'ext.debug'
+
 	-- TODO while we're here, connect gles3 calls to webgl
 
 	--assert(assert(loadfile'glapp/tests/info.lua')())

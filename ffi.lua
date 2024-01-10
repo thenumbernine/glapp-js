@@ -103,7 +103,7 @@ function Field:init(args)
 	self.name = assert(args.name)
 	assert(type(self.name) == 'string')
 	self.type = assert(args.type)
---assert(getmetatable(self.type) == ffi.CType)
+assert(getmetatable(self.type) == ffi.CType)
 	self.offset = 0	-- TODO calculate this
 end
 function Field:__tostring()
@@ -137,8 +137,19 @@ function ffi.CType:init(args)
 	args = args or {}
 	self.name = args.name
 	if not self.name then
-		self.name = nextuniquename()
-		self.anonymous = true
+		-- if it's a pointer type ...
+		if args.baseType then
+			if args.arrayCount then
+				self.name = args.baseType.name..'[]'
+			elseif args.isPointer then
+				self.name = args.baseType.name..'*'
+			else
+				error("???")
+			end
+		else
+			self.name = nextuniquename()
+			self.anonymous = true
+		end
 	end
 	assert(not ctypes[self.name], "tried to redefine "..tostring(self.name))
 	ctypes[self.name] = self
@@ -187,7 +198,7 @@ function ffi.CType:finalize()
 	end
 
 	assert(self.fields, "failed to finalize for type "..tostring(self))
---print('finalize '..self.name)	
+print('finalize '..self.name)	
 	-- struct/union
 	self.size = 0
 	-- TODO alignment ...
@@ -202,11 +213,11 @@ function ffi.CType:finalize()
 			self.size = self.size + ffi.sizeof(field.type)
 		end
 		-- TODO alignment here
---print(field)
+print(field)
 	end
 	-- make sure we take up at least something - no zero-sized arrays (right?)
 	self.size = math.max(1, self.size)
---print('...'..self.name..' has size '..self.size)
+print('...'..self.name..' has size '..self.size)
 
 	-- this is all flattened anonymous fields
 	-- and that means a mechanism for offsetting into nested struct-of-(anonymous)-struct fields
@@ -214,7 +225,7 @@ function ffi.CType:finalize()
 	local function addFields(fields, baseOffset)
 		for _,field in ipairs(fields) do
 			local fieldOffset = field.offset + baseOffset
---print('has field '..field.name..' at offset '..fieldOffset..' of type '..tostring(field.type))
+print('has field '..field.name..' at offset '..fieldOffset..' of type '..tostring(field.type))
 			if field.type.anonymous then
 				-- TODO would be nice to get the string of the currently-parsed-struct here ...
 				assert(field.type.fields, "anonymous struct needs fields")
@@ -256,8 +267,8 @@ function ffi.CType:assign(blob, offset, ...)
 assert(self.set, "expected primitive to have a setter")
 assert(blob.dataview)			
 			self.set(blob.dataview, offset, v)
---print('TODO *('..tostring(self)..')(ptr+'..tostring(offset)..') = '..tostring(v))
---print(debug.traceback())
+print('TODO *('..tostring(self)..')(ptr+'..tostring(offset)..') = '..tostring(v))
+print(debug.traceback())
 		end
 	end
 end
@@ -302,7 +313,7 @@ local function consume(str)
 	for _,symbol in ipairs{'(', ')', '[', ']', '{', '}', ',', ';', '=', '*'} do
 		if str:match('^'..patescape(symbol)) then
 			local rest = str:sub(#symbol+1)
---print('consume', symbol, 'symbol')
+print('consume', symbol, 'symbol')
 			return rest, symbol, 'symbol'
 		end
 	end
@@ -316,7 +327,7 @@ local function consume(str)
 	} do
 		if str:match('^'..keyword) and (str:match('^'..keyword..'$') or str:match('^'..keyword..'[^_a-zA-Z0-9]')) then
 			local rest = str:sub(#keyword+1)
---print('consume', keyword, 'keyword')
+print('consume', keyword, 'keyword')
 			return rest, keyword, 'keyword'
 		end
 	end
@@ -324,7 +335,7 @@ local function consume(str)
 	local name = str:match('^([_a-zA-Z][_a-zA-Z0-9]*)')
 	if name then
 		local rest = str:sub(#name+1)
---print('consume', name, 'name')
+print('consume', name, 'name')
 		return rest, name, 'name'
 	end
 	
@@ -334,7 +345,7 @@ local function consume(str)
 	local d = str:match'^(0x[0-9a-fA-F]+)'
 	if d then
 		local rest = str:sub(#d+1)
---print('consume', d, 'number')
+print('consume', d, 'number')
 		return rest, d, 'number'
 	end
 
@@ -343,7 +354,7 @@ local function consume(str)
 	local d = str:match'^(%d+)'
 	if d then
 		local rest = str:sub(#d+1)
---print('consume', d, 'number')
+print('consume', d, 'number')
 		return rest, d, 'number'
 	end
 
@@ -367,6 +378,15 @@ local function getctype(typename)
 		until not (ctype.baseType and not ctype.arrayCount)
 	end
 	return ctype
+end
+
+local function getptrtype(baseType)
+	local ptrType = getctype(baseType.name..'*')
+	if ptrType then return ptrType end
+	return ffi.CType{
+		baseType = baseType,
+		isPointer = true,
+	}
 end
 
 -- assumes 'struct' or 'union' has already been parsed
@@ -403,7 +423,7 @@ local function parseStruct(str, isunion)
 	
 	while true do
 		str, token, tokentype = consume(str)
---print('field first token', token, tokentype)
+print('field first token', token, tokentype)
 		if token == '}' then
 			break
 		elseif token == 'struct'
@@ -421,8 +441,8 @@ local function parseStruct(str, isunion)
 
 			local nestedtype
 			str, token, tokentype, nestedtype = parseStruct(str, token == 'union')
---assert(getmetatable(nestedtype) == ffi.CType)
---assert(nestedtype.size)
+assert(getmetatable(nestedtype) == ffi.CType)
+assert(nestedtype.size)
 			ctype.fields:insert(Field{
 				name = '',
 				type = nestedtype,
@@ -451,18 +471,15 @@ local function parseStruct(str, isunion)
 			-- and should be interoperable with typedefs
 			-- except typedefs can't use comma-separated list (can they?)
 			local baseFieldType = assert(getctype(name), "couldn't find type "..name)
---assert(getmetatable(baseFieldType) == ffi.CType)
---assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
+assert(getmetatable(baseFieldType) == ffi.CType)
+assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 
 			while true do
 				str, token, tokentype = consume(str)
 				
 				local fieldtype = baseFieldType
 				while token == '*' do
-					fieldtype = ffi.CType{
-						baseType = fieldtype,
-						isPointer = true,
-					}
+					fieldtype = getptrtype(fieldtype)
 					str, token, tokentype = consume(str)
 				end
 
@@ -531,10 +548,16 @@ local function parseEnum(str)
 	end
 
 	str, token, tokentype = consume(str)
-	local ctype = ffi.CType{
-		name = name,
-		baseType = assert(ctypes.uint32_t),
-	}
+	local ctype
+	if name then
+		-- if it's enum XXX then do a typedef to the base enum type
+		ctype = ffi.CType{
+			name = name,
+			baseType = assert(ctypes.uint32_t),
+		}
+	else
+		ctype = ctypes.uint32_t
+	end
 
 	local value = 0
 	while true do
@@ -620,10 +643,7 @@ local function parse(str)
 			end
 
 			while token == '*' do
-				srctype = ffi.CType{
-					baseType = srctype,
-					isPointer = true,
-				}
+				srctype = getptrtype(srctype)
 				str, token, tokentype = consume(str)
 			end
 
@@ -671,21 +691,21 @@ local function parse(str)
 			error("got eof with rest "..tostring(str))
 		end
 	end
---print'parse done'
+print'parse done'
 end
 
 function ffi.cdef(str)
---print("ffi.cdef("..tostring(str)..")")
+print("ffi.cdef("..tostring(str)..")")
 	-- TODO ... hmm ... luajit's lj_cparse ...
 	-- I can compile that to emscripten ...
 	-- hmm ...
 	str = removeCommentsAndApplyContinuations(str)
 	parse(str)
---print'ffi.cdef done'
+print'ffi.cdef done'
 end
 
 function ffi.sizeof(ctype)
---print('ffi.sizeof('..tostring(ctype)..')')
+print('ffi.sizeof('..tostring(ctype)..')')
 	-- TODO matches ffi.new ...
 	if type(ctype) == 'string' then
 		local typename = trim(ctype)
@@ -696,8 +716,8 @@ function ffi.sizeof(ctype)
 		ctype = assert(getctype(typename), "couldn't find type "..typename)
 	end
 	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
---assert(ctype.size, "need to calculate a size")
---print('ffi.sizeof('..tostring(ctype)..') = '..ctype.size)
+assert(ctype.size, "need to calculate a size")
+print('ffi.sizeof('..tostring(ctype)..') = '..ctype.size)
 	return ctype.size
 end
 
@@ -913,7 +933,7 @@ function ffi.metatype(ctype, mt)
 	-- now fill in args
 	-- TODO same as ffi.new('ctype', ...) ?
 	mt.__call = function(t, ...)
---print('calling ctor on '..ctype.name..' with', ...)
+print('calling ctor on '..ctype.name..' with', ...)
 		local blob = MemoryBlob(ctype.size)
 		local ptr = CData(blob, ctype)
 		
