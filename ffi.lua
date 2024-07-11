@@ -98,7 +98,7 @@ local function nextuniquename()
 	return '#'..nextuniquenameindex
 end
 
-local Field = class() 
+local Field = class()
 function Field:init(args)
 	self.name = assert(args.name)
 	assert(type(self.name) == 'string')
@@ -120,7 +120,7 @@ args:
 	baseType = for typedefs or for arrays
 	arrayCount = if the type is an array of another type
 	size = defined for prims, computed for structs, it'll be manually set for primitives
-	getset = suffix of DataView member getter/setter for primitives 
+	getset = suffix of DataView member getter/setter for primitives
 	mt = is the metatype of this ctype
 	isPrimitive = if this is a primitive type
 	isPointer = is a pointer of the base type
@@ -159,7 +159,7 @@ function ffi.CType:init(args)
 	self.baseType = args.baseType
 	self.arrayCount = args.arrayCount
 	self.isPrimitive = args.isPrimitive
-	self.isPointer = args.isPointer 
+	self.isPointer = args.isPointer
 	self.mt = args.mt
 
 	assert(not (self.arrayCount and self.fields), "can't have an array of a struct - split these into two CTypes")
@@ -170,7 +170,7 @@ function ffi.CType:init(args)
 	elseif self.isPrimitive then
 		-- primitive type? expects size
 		self.size = args.size
-		local getset = args.getset 
+		local getset = args.getset
 		if getset then
 			local gettername = 'get'..getset
 			self.get = js.global.DataView.prototype[gettername] or error("failed to find getter "..gettername)
@@ -198,7 +198,7 @@ function ffi.CType:finalize()
 	end
 
 	assert(self.fields, "failed to finalize for type "..tostring(self))
-print('finalize '..self.name)	
+print('finalize '..self.name)
 	-- struct/union
 	self.size = 0
 	-- TODO alignment ...
@@ -235,7 +235,7 @@ print('has field '..field.name..' at offset '..fieldOffset..' of type '..tostrin
 				self.fieldForName[field.name] = {
 					type = field.type,
 					offset = fieldOffset,
-				}		
+				}
 			end
 		end
 	end
@@ -257,7 +257,7 @@ function ffi.CType:assign(blob, offset, ...)
 				end
 			end
 		else
-		-- TODO handle arrays?	
+		-- TODO handle arrays?
 			assert(self.isPrimitive)
 			local v = ...
 			local vt = type(v)
@@ -265,7 +265,7 @@ function ffi.CType:assign(blob, offset, ...)
 				error("can't convert "..vt.." to number")
 			end
 assert(self.set, "expected primitive to have a setter")
-assert(blob.dataview)			
+assert(blob.dataview)
 			self.set(blob.dataview, offset, v)
 print('TODO *('..tostring(self)..')(ptr+'..tostring(offset)..') = '..tostring(v))
 print(debug.traceback())
@@ -338,7 +338,7 @@ print('consume', keyword, 'keyword')
 print('consume', name, 'name')
 		return rest, name, 'name'
 	end
-	
+
 	-- hexadecimal integer numbers
 	-- match before decimal
 	-- TODO make sure the next char is a separator (not a word)
@@ -382,7 +382,7 @@ print('consume', d, 'number')
 	end
 
 	-- handle '.' after '\\.' so that '\'' gets handled correctly
-	local d = str:match"^'.'" 
+	local d = str:match"^'.'"
 	if d then
 		assert(#d == 3)
 		local rest = str:sub(#d+1)
@@ -434,13 +434,13 @@ end
 local function parseStruct(str, isunion)
 	local token, tokentype
 	str, token, tokentype = consume(str)
-	
+
 	local name
 	if tokentype == 'name' then
 		name = (isunion and 'union' or 'struct')..' '..token
 		str, token, tokentype = consume(str)
 	end
-	
+
 	if token ~= '{' then
 		if not name then
 			error("struct/union expected name or {")
@@ -450,7 +450,7 @@ local function parseStruct(str, isunion)
 		assert(ctype, "couldn't find type "..tostring(name))
 		-- TODO in the case of typedef calling this
 		-- the 'struct XXX' might not yet exist ...
-		-- hmm ...	
+		-- hmm ...
 		return str, token, tokentype, ctype
 	end
 
@@ -460,7 +460,7 @@ local function parseStruct(str, isunion)
 		fields = newtable(),
 		isunion = isunion,
 	}
-	
+
 	while true do
 		str, token, tokentype = consume(str)
 print('field first token', token, tokentype)
@@ -521,7 +521,7 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 
 			while true do
 				str, token, tokentype = consume(str)
-				
+
 				local fieldtype = baseFieldType
 				while token == '*' do
 					fieldtype = getptrtype(fieldtype)
@@ -543,7 +543,7 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 				str, token, tokentype = consume(str)
 				while token == '[' do
 					str, token, tokentype = consume(str)
-					assert(tokentype == 'number', "expected array size")
+					assert(tokentype == 'number', "expected array size, found "..tostring(tokentype)..' '..tostring(token))
 					local count = assert(tonumber(token))
 					assert(count > 0, "can we allow non-positive-sized arrays?")
 					field.count = count
@@ -592,7 +592,7 @@ local function parseEnum(str)
 		assert(ctype, "couldn't find type "..tostring(name))
 		-- TODO in the case of typedef calling this
 		-- the 'enum XXX' might not yet exist ...
-		-- hmm ...	
+		-- hmm ...
 		return str, token, tokentype, ctype
 	end
 
@@ -614,12 +614,13 @@ local function parseEnum(str)
 		local name = token
 
 -- TODO need to handle arithmetic operations here ...
+-- or just always make sure to evaluate them in whatever ffi libs that this port uses
 		str, token, tokentype = consume(str)
 		if token == '=' then
 			str, token, tokentype = consume(str)
 			assert(tokentype == 'number' or tokentype == 'char', "expected value to be a number or char, found "..tostring(token).." rest "..tostring(str))
 			value = token
-			
+
 			str, token, tokentype = consume(str)
 		end
 
@@ -634,10 +635,10 @@ print('setting enum '..tostring(name)..' = '..tostring(value))
 		end
 
 		if token == '}' then break end
-		
+
 		if not gotComma then error("expected , found "..tostring(token).." rest is "..tostring(str)) end
 	end
-	
+
 	str, token, tokentype = consume(str)
 
 	return str, token, tokentype, ctype
@@ -645,104 +646,118 @@ end
 
 -- assumes comments and \'s are removed
 local function parse(str)
-	local token, tokentype
-	while true do
-		str, token, tokentype = consume(str)
-		if token == 'typedef' then
-			-- next is either a previously declared typename or 'struct'/'union' followed by a struct/union def
+	local origstr = str
+	local origlen = #str
+	xpcall(function()
+		local token, tokentype
+		while true do
 			str, token, tokentype = consume(str)
+			if token == 'typedef' then
+				-- next is either a previously declared typename or 'struct'/'union' followed by a struct/union def
+				str, token, tokentype = consume(str)
 
-			local srctype
-			if tokentype == 'name' then
-				local signedness
-				if token == 'signed'
-				or token == 'unsigned'
-				then
-					signedness = token
+				local srctype
+				if tokentype == 'name' then
+					local signedness
+					if token == 'signed'
+					or token == 'unsigned'
+					then
+						signedness = token
+						str, token, tokentype = consume(str)
+					end
+
+					local name = token
+					if signedness then
+						name = signedness..' '..name
+					end
+					srctype = assert(getctype(name), "couldn't find type "..name)
+
+					str, token, tokentype = consume(str)
+
+				-- alright I'm reaching the limit of non-state-based tokenizers ...
+				elseif tokentype == 'keyword' then
+					if token == 'struct'
+					or token == 'union'
+					then
+						-- TODO this still could either be ...
+						--  ... a named struct declaration
+						--  ... an anonymous struct declaration
+						--  ... a 'struct ____' typename
+						-- and we can't know until after we read the '{'
+
+						str, token, tokentype, srctype = parseStruct(str, token == 'union')
+						assert(srctype)
+					elseif token == 'enum' then
+						str, token, tokentype, srctype = parseEnum(str)
+						assert(srctype)
+					else
+						error("got unknown keyword: "..tostring(token))
+					end
+				else
+					error("here")
+				end
+
+				while token == '*' do
+					srctype = getptrtype(srctype)
 					str, token, tokentype = consume(str)
 				end
 
+				-- assume the current token is the typedef name
+				if tokentype ~= 'name' then
+					error("expected name, found "..token.." rest "..str)
+				end
+
+				-- make a typedef type
+				ffi.CType{
+					name = token,
+					baseType = srctype,
+				}
+
+				str, token, tokentype = consume(str)
+
+				-- TODO ... token could be [
+				-- in which case we don't just have a typedef
+				--  we have a new ctype of only an array
+
+				assert(token == ';')
+			elseif token == 'union'
+			or token == 'struct'
+			then
+				local ctype
+				str, token, tokentype, ctype = parseStruct(str, token == 'union')
+				assert(token == ';')
+			elseif token == 'enum' then
+				str, token, tokentype, ctype = parseEnum(str)
+				assert(token == ';')
+			elseif token == 'extern' then
+				str, token, tokentype = consume(str)
+				local ctype = assert(getctype(token), "couldn't find type "..token)
+
+				str, token, tokentype = consume(str)
 				local name = token
-				if signedness then
-					name = signedness..' '..name
-				end
-				srctype = assert(getctype(name), "couldn't find type "..name)
-				
-				str, token, tokentype = consume(str)
-			
-			-- alright I'm reaching the limit of non-state-based tokenizers ...
-			elseif tokentype == 'keyword' then
-				if token == 'struct'
-				or token == 'union'
-				then
-					-- TODO this still could either be ...
-					--  ... a named struct declaration
-					--  ... an anonymous struct declaration
-					--  ... a 'struct ____' typename
-					-- and we can't know until after we read the '{'
 
-					str, token, tokentype, srctype = parseStruct(str, token == 'union')
-					assert(srctype)
-				elseif token == 'enum' then
-					str, token, tokentype, srctype = parseEnum(str)
-					assert(srctype)
-				else
-					error("got unknown keyword: "..tostring(token))
-				end
+				-- TODO create ffi.C[name] as a pointer to this data
+
+				str, token, tokentype = consume(str)
+				assert(token == ';')
+			elseif not token then
+				break
 			else
-				error("here")
+				error("got eof with rest "..tostring(str))
 			end
-
-			while token == '*' do
-				srctype = getptrtype(srctype)
-				str, token, tokentype = consume(str)
-			end
-
-			-- assume the current token is the typedef name
-			if tokentype ~= 'name' then
-				error("expected name, found "..token.." rest "..str)
-			end
-			
-			-- make a typedef type
-			ffi.CType{
-				name = token,
-				baseType = srctype,
-			}
-
-			str, token, tokentype = consume(str)
-
-			-- TODO ... token could be [
-			-- in which case we don't just have a typedef
-			--  we have a new ctype of only an array
-
-			assert(token == ';')
-		elseif token == 'union'
-		or token == 'struct'
-		then
-			local ctype
-			str, token, tokentype, ctype = parseStruct(str, token == 'union')
-			assert(token == ';')
-		elseif token == 'enum' then
-			str, token, tokentype, ctype = parseEnum(str)
-			assert(token == ';')
-		elseif token == 'extern' then
-			str, token, tokentype = consume(str)
-			local ctype = assert(getctype(token), "couldn't find type "..token)
-			
-			str, token, tokentype = consume(str)
-			local name = token
-
-			-- TODO create ffi.C[name] as a pointer to this data
-			
-			str, token, tokentype = consume(str)
-			assert(token == ';')
-		elseif not token then
-			break
-		else
-			error("got eof with rest "..tostring(str))
 		end
-	end
 print'parse done'
+	end, function(err)
+		local curlen = #str
+		local sofar = origstr:sub(1, -curlen)
+
+		local lastline = sofar:match('[^\n]*$') or ''
+		local lineno = select(2,sofar:gsub('\n', ''))
+		local colno = #lastline
+
+		return 'on line '..lineno..' col '..colno..'\n'
+			..err..'\n'..debug.traceback()
+	end)
 end
 
 function ffi.cdef(str)
@@ -782,20 +797,20 @@ end
 local CData = setmetatable({}, {
 	__call = function(mt, blob, ctype, offset)
 		-- NOTICE unlike most class()'s, 'o' doesn't yet have access to its mt during construction
-		local o = {}	-- 
-		
+		local o = {}	--
+
 		-- now 'o's __index will be overridden so it can be treated like a C pointer
 		local omt = {}
 		for k,v in pairs(mt) do
 			omt[k] = v
 		end
-		
+
 		-- hide these from user ... but how?
 		omt.blob = assert(blob)
 		omt.type = ctype or ctypes.uint8_t
-		omt.offset = offset or 0	
+		omt.offset = offset or 0
 		omt.isCData = true
-		
+
 		return setmetatable(o, omt)
 	end,
 })
@@ -850,7 +865,7 @@ function CData.__newindex(self, key, value)
 				return fieldtype.set(mt.blob.dataview, fieldOffset, value)
 			else
 				error("can't assign to non-primitive type "..tostring(mt))
-			end		
+			end
 		else
 			-- typedef
 			error("don't allow pointers to hold typedefs")
@@ -987,11 +1002,11 @@ function ffi.metatype(ctype, mt)
 print('calling ctor on '..ctype.name..' with', ...)
 		local blob = MemoryBlob(ctype.size)
 		local ptr = CData(blob, ctype)
-		
+
 		-- TODO instead of ctype:assign, use ptr:set ?
 		-- TODO double check that in ffi you can use cdata operator= to duplicate ffi.new / metatype-ctor behavior
 		ctype:assign(blob, 0, ...)
-		
+
 		return ptr
 	end
 
