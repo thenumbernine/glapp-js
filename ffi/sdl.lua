@@ -1,24 +1,7 @@
 local ffi = require 'ffi'
 
 ffi.cdef[[
-
 // fengari-specific:
-struct SDL_Window {};
-struct SDL_Thread {};
-struct SDL_Renderer {};
-struct SDL_Texture {};
-struct SDL_iconv_t {};
-struct SDL_SysWMmsg {};
-struct SDL_Cursor {};
-struct SDL_Joystick {};
-
-enum { SDL_INIT_VIDEO = 0x20 };
-enum { SDL_INIT_JOYSTICK = 0x00000200 };
-enum { SDL_DISABLE = 0 };
-enum { SDL_ENABLE = 1 };
-enum { SDL_WINDOWPOS_CENTERED = 0x2fff0000 };
-
-typedef enum { SDL_FALSE = 0, SDL_TRUE = 1 } SDL_bool;
 
 typedef int8_t Sint8;
 typedef uint8_t Uint8;
@@ -28,6 +11,64 @@ typedef int32_t Sint32;
 typedef uint32_t Uint32;
 typedef int64_t Sint64;
 typedef uint64_t Uint64;
+
+struct SDL_Window {};
+struct SDL_Thread {};
+struct SDL_Renderer {};
+struct SDL_Texture {};
+struct SDL_iconv_t {};
+struct SDL_SysWMmsg {};
+struct SDL_Cursor {};
+struct SDL_Joystick {};
+typedef Sint32 SDL_JoystickID;
+typedef enum {
+	SDL_JOYSTICK_TYPE_UNKNOWN,
+	SDL_JOYSTICK_TYPE_GAMECONTROLLER,
+	SDL_JOYSTICK_TYPE_WHEEL,
+	SDL_JOYSTICK_TYPE_ARCADE_STICK,
+	SDL_JOYSTICK_TYPE_FLIGHT_STICK,
+	SDL_JOYSTICK_TYPE_DANCE_PAD,
+	SDL_JOYSTICK_TYPE_GUITAR,
+	SDL_JOYSTICK_TYPE_DRUM_KIT,
+	SDL_JOYSTICK_TYPE_ARCADE_PAD,
+	SDL_JOYSTICK_TYPE_THROTTLE
+} SDL_JoystickType;
+typedef enum {
+	SDL_JOYSTICK_POWER_UNKNOWN = -1,
+	SDL_JOYSTICK_POWER_EMPTY,
+	SDL_JOYSTICK_POWER_LOW,
+	SDL_JOYSTICK_POWER_MEDIUM,
+	SDL_JOYSTICK_POWER_FULL,
+	SDL_JOYSTICK_POWER_WIRED,
+	SDL_JOYSTICK_POWER_MAX
+} SDL_JoystickPowerLevel;
+
+typedef Sint64 SDL_TouchID;
+typedef Sint64 SDL_FingerID;
+typedef enum {
+	SDL_TOUCH_DEVICE_INVALID = -1,
+	SDL_TOUCH_DEVICE_DIRECT,
+	SDL_TOUCH_DEVICE_INDIRECT_ABSOLUTE,
+	SDL_TOUCH_DEVICE_INDIRECT_RELATIVE
+} SDL_TouchDeviceType;
+typedef struct SDL_Finger {
+	SDL_FingerID id;
+	float x;
+	float y;
+	float pressure;
+} SDL_Finger;
+enum { SDL_TOUCH_MOUSEID = -1 };
+enum { SDL_MOUSE_TOUCHID = -1 };
+
+typedef Sint64 SDL_GestureID;
+
+enum { SDL_INIT_VIDEO = 0x20 };
+enum { SDL_INIT_JOYSTICK = 0x00000200 };
+enum { SDL_DISABLE = 0 };
+enum { SDL_ENABLE = 1 };
+enum { SDL_WINDOWPOS_CENTERED = 0x2fff0000 };
+
+typedef enum { SDL_FALSE = 0, SDL_TRUE = 1 } SDL_bool;
 
 typedef Sint32 SDL_Keycode;
 enum { SDLK_SCANCODE_MASK = 1073741824 };
@@ -620,6 +661,144 @@ typedef enum {
 	SDL_USEREVENT = 0x8000,
 	SDL_LASTEVENT = 0xFFFF
 } SDL_EventType;
+
+typedef struct {
+	Uint32 format;
+	int w;
+	int h;
+	int refresh_rate;
+	void *driverdata;
+} SDL_DisplayMode;
+typedef struct SDL_Window SDL_Window;
+typedef enum {
+	SDL_WINDOW_FULLSCREEN = 0x00000001,
+	SDL_WINDOW_OPENGL = 0x00000002,
+	SDL_WINDOW_SHOWN = 0x00000004,
+	SDL_WINDOW_HIDDEN = 0x00000008,
+	SDL_WINDOW_BORDERLESS = 0x00000010,
+	SDL_WINDOW_RESIZABLE = 0x00000020,
+	SDL_WINDOW_MINIMIZED = 0x00000040,
+	SDL_WINDOW_MAXIMIZED = 0x00000080,
+	SDL_WINDOW_MOUSE_GRABBED = 0x00000100,
+	SDL_WINDOW_INPUT_FOCUS = 0x00000200,
+	SDL_WINDOW_MOUSE_FOCUS = 0x00000400,
+	SDL_WINDOW_FULLSCREEN_DESKTOP = 0x00001001,	//( SDL_WINDOW_FULLSCREEN | 0x00001000 ),
+	SDL_WINDOW_FOREIGN = 0x00000800,
+	SDL_WINDOW_ALLOW_HIGHDPI = 0x00002000,
+	SDL_WINDOW_MOUSE_CAPTURE = 0x00004000,
+	SDL_WINDOW_ALWAYS_ON_TOP = 0x00008000,
+	SDL_WINDOW_SKIP_TASKBAR = 0x00010000,
+	SDL_WINDOW_UTILITY = 0x00020000,
+	SDL_WINDOW_TOOLTIP = 0x00040000,
+	SDL_WINDOW_POPUP_MENU = 0x00080000,
+	SDL_WINDOW_KEYBOARD_GRABBED = 0x00100000,
+	SDL_WINDOW_VULKAN = 0x10000000,
+	SDL_WINDOW_METAL = 0x20000000,
+	SDL_WINDOW_INPUT_GRABBED = 0x00000100,	//SDL_WINDOW_MOUSE_GRABBED
+} SDL_WindowFlags;
+enum { SDL_WINDOWPOS_UNDEFINED_MASK = 0x1FFF0000 };
+enum { SDL_WINDOWPOS_CENTERED_MASK = 0x2FFF0000 };
+typedef enum {
+	SDL_WINDOWEVENT_NONE,
+	SDL_WINDOWEVENT_SHOWN,
+	SDL_WINDOWEVENT_HIDDEN,
+	SDL_WINDOWEVENT_EXPOSED,
+	SDL_WINDOWEVENT_MOVED,
+	SDL_WINDOWEVENT_RESIZED,
+	SDL_WINDOWEVENT_SIZE_CHANGED,
+	SDL_WINDOWEVENT_MINIMIZED,
+	SDL_WINDOWEVENT_MAXIMIZED,
+	SDL_WINDOWEVENT_RESTORED,
+	SDL_WINDOWEVENT_ENTER,
+	SDL_WINDOWEVENT_LEAVE,
+	SDL_WINDOWEVENT_FOCUS_GAINED,
+	SDL_WINDOWEVENT_FOCUS_LOST,
+	SDL_WINDOWEVENT_CLOSE,
+	SDL_WINDOWEVENT_TAKE_FOCUS,
+	SDL_WINDOWEVENT_HIT_TEST,
+	SDL_WINDOWEVENT_ICCPROF_CHANGED,
+	SDL_WINDOWEVENT_DISPLAY_CHANGED
+} SDL_WindowEventID;
+typedef enum {
+	SDL_DISPLAYEVENT_NONE,
+	SDL_DISPLAYEVENT_ORIENTATION,
+	SDL_DISPLAYEVENT_CONNECTED,
+	SDL_DISPLAYEVENT_DISCONNECTED,
+	SDL_DISPLAYEVENT_MOVED
+} SDL_DisplayEventID;
+typedef enum {
+	SDL_ORIENTATION_UNKNOWN,
+	SDL_ORIENTATION_LANDSCAPE,
+	SDL_ORIENTATION_LANDSCAPE_FLIPPED,
+	SDL_ORIENTATION_PORTRAIT,
+	SDL_ORIENTATION_PORTRAIT_FLIPPED
+} SDL_DisplayOrientation;
+typedef enum {
+	SDL_FLASH_CANCEL,
+	SDL_FLASH_BRIEFLY,
+	SDL_FLASH_UNTIL_FOCUSED
+} SDL_FlashOperation;
+typedef void *SDL_GLContext;
+typedef enum {
+	SDL_GL_RED_SIZE,
+	SDL_GL_GREEN_SIZE,
+	SDL_GL_BLUE_SIZE,
+	SDL_GL_ALPHA_SIZE,
+	SDL_GL_BUFFER_SIZE,
+	SDL_GL_DOUBLEBUFFER,
+	SDL_GL_DEPTH_SIZE,
+	SDL_GL_STENCIL_SIZE,
+	SDL_GL_ACCUM_RED_SIZE,
+	SDL_GL_ACCUM_GREEN_SIZE,
+	SDL_GL_ACCUM_BLUE_SIZE,
+	SDL_GL_ACCUM_ALPHA_SIZE,
+	SDL_GL_STEREO,
+	SDL_GL_MULTISAMPLEBUFFERS,
+	SDL_GL_MULTISAMPLESAMPLES,
+	SDL_GL_ACCELERATED_VISUAL,
+	SDL_GL_RETAINED_BACKING,
+	SDL_GL_CONTEXT_MAJOR_VERSION,
+	SDL_GL_CONTEXT_MINOR_VERSION,
+	SDL_GL_CONTEXT_EGL,
+	SDL_GL_CONTEXT_FLAGS,
+	SDL_GL_CONTEXT_PROFILE_MASK,
+	SDL_GL_SHARE_WITH_CURRENT_CONTEXT,
+	SDL_GL_FRAMEBUFFER_SRGB_CAPABLE,
+	SDL_GL_CONTEXT_RELEASE_BEHAVIOR,
+	SDL_GL_CONTEXT_RESET_NOTIFICATION,
+	SDL_GL_CONTEXT_NO_ERROR,
+	SDL_GL_FLOATBUFFERS
+} SDL_GLattr;
+typedef enum {
+	SDL_GL_CONTEXT_PROFILE_CORE = 0x0001,
+	SDL_GL_CONTEXT_PROFILE_COMPATIBILITY = 0x0002,
+	SDL_GL_CONTEXT_PROFILE_ES = 0x0004
+} SDL_GLprofile;
+typedef enum {
+	SDL_GL_CONTEXT_DEBUG_FLAG = 0x0001,
+	SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG = 0x0002,
+	SDL_GL_CONTEXT_ROBUST_ACCESS_FLAG = 0x0004,
+	SDL_GL_CONTEXT_RESET_ISOLATION_FLAG = 0x0008
+} SDL_GLcontextFlag;
+typedef enum {
+	SDL_GL_CONTEXT_RELEASE_BEHAVIOR_NONE = 0x0000,
+	SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH = 0x0001
+} SDL_GLcontextReleaseFlag;
+typedef enum {
+	SDL_GL_CONTEXT_RESET_NO_NOTIFICATION = 0x0000,
+	SDL_GL_CONTEXT_RESET_LOSE_CONTEXT = 0x0001
+} SDL_GLContextResetNotification;
+
+typedef struct SDL_version {
+	Uint8 major;
+	Uint8 minor;
+	Uint8 patch;
+} SDL_version;
+enum { SDL_MAJOR_VERSION = 2 };
+enum { SDL_MINOR_VERSION = 28 };
+enum { SDL_PATCHLEVEL = 3 };
+enum { SDL_COMPILEDVERSION = 4803 };
+
 typedef struct SDL_CommonEvent {
 	Uint32 type;
 	Uint32 timestamp;
@@ -660,7 +839,7 @@ typedef struct SDL_TextEditingEvent {
 	Uint32 type;
 	Uint32 timestamp;
 	Uint32 windowID;
-	char text[(32)];
+	char text[32];
 	Sint32 start;
 	Sint32 length;
 } SDL_TextEditingEvent;
@@ -677,7 +856,7 @@ typedef struct SDL_TextInputEvent {
 	Uint32 type;
 	Uint32 timestamp;
 	Uint32 windowID;
-	char text[(32)];
+	char text[32];
 } SDL_TextInputEvent;
 typedef struct SDL_MouseMotionEvent {
 	Uint32 type;
@@ -919,10 +1098,8 @@ typedef union SDL_Event {
 	SDL_MultiGestureEvent mgesture;
 	SDL_DollarGestureEvent dgesture;
 	SDL_DropEvent drop;
-	Uint8 padding[sizeof(void *) <= 8 ? 56 : sizeof(void *) == 16 ? 64 : 3 * sizeof(void *)];
+	Uint8 padding[56];	//[sizeof(void *) <= 8 ? 56 : sizeof(void *) == 16 ? 64 : 3 * sizeof(void *)];
 } SDL_Event;
-;
-
 ]]
 
 local sdl = {}
@@ -1053,7 +1230,7 @@ function sdl.SDL_GetVersion(version)
 end
 
 -- returns the # of events
-function SDL_PollEvent(event)
+function sdl.SDL_PollEvent(event)
 	return 0
 end
 

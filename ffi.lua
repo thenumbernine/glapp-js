@@ -44,6 +44,7 @@ function removeCommentsAndApplyContinuations(code)
 	until false
 
 	-- remove all /* */ blocks first
+	-- re-insert their \n's to keep the line numbers the same
 	repeat
 		local i = code:find('/*',1,true)
 		if not i then break end
@@ -51,14 +52,15 @@ function removeCommentsAndApplyContinuations(code)
 		if not j then
 			error("found /* with no */")
 		end
-		code = code:sub(1,i-1)..code:sub(j+2)
+		local numlines = select(2, code:sub(i,j+1):gsub('\n', ''))
+		code = code:sub(1,i-1)..('\n'):rep(numlines)..code:sub(j+2)
 	until false
 
 	-- remove all // \n blocks first
 	repeat
 		local i = code:find('//',1,true)
 		if not i then break end
-		local j = code:find('\n',i+2,true) or #code
+		local j = code:find('\n',i+2,true) or #code+1
 		code = code:sub(1,i-1)..code:sub(j)
 	until false
 
@@ -152,6 +154,7 @@ function ffi.CType:init(args)
 		end
 	end
 	assert(not ctypes[self.name], "tried to redefine "..tostring(self.name))
+print('setting ctype '..self.name)
 	ctypes[self.name] = self
 
 	self.fields = args.fields
@@ -198,7 +201,7 @@ function ffi.CType:finalize()
 	end
 
 	assert(self.fields, "failed to finalize for type "..tostring(self))
-print('finalize '..self.name)
+--DEBUG:print('finalize '..self.name)
 	-- struct/union
 	self.size = 0
 	-- TODO alignment ...
@@ -213,11 +216,11 @@ print('finalize '..self.name)
 			self.size = self.size + ffi.sizeof(field.type)
 		end
 		-- TODO alignment here
-print(field)
+--DEBUG:print(field)
 	end
 	-- make sure we take up at least something - no zero-sized arrays (right?)
 	self.size = math.max(1, self.size)
-print('...'..self.name..' has size '..self.size)
+--DEBUG:print('...'..self.name..' has size '..self.size)
 
 	-- this is all flattened anonymous fields
 	-- and that means a mechanism for offsetting into nested struct-of-(anonymous)-struct fields
@@ -225,7 +228,7 @@ print('...'..self.name..' has size '..self.size)
 	local function addFields(fields, baseOffset)
 		for _,field in ipairs(fields) do
 			local fieldOffset = field.offset + baseOffset
-print('has field '..field.name..' at offset '..fieldOffset..' of type '..tostring(field.type))
+--DEBUG:print('has field '..field.name..' at offset '..fieldOffset..' of type '..tostring(field.type))
 			if field.type.anonymous then
 				-- TODO would be nice to get the string of the currently-parsed-struct here ...
 				assert(field.type.fields, "anonymous struct needs fields")
@@ -267,8 +270,8 @@ function ffi.CType:assign(blob, offset, ...)
 assert(self.set, "expected primitive to have a setter")
 assert(blob.dataview)
 			self.set(blob.dataview, offset, v)
-print('TODO *('..tostring(self)..')(ptr+'..tostring(offset)..') = '..tostring(v))
-print(debug.traceback())
+--DEBUG:print('TODO *('..tostring(self)..')(ptr+'..tostring(offset)..') = '..tostring(v))
+--DEBUG:print(debug.traceback())
 		end
 	end
 end
@@ -313,7 +316,7 @@ local function consume(str)
 	for _,symbol in ipairs{'(', ')', '[', ']', '{', '}', ',', ';', '=', '*'} do
 		if str:match('^'..patescape(symbol)) then
 			local rest = str:sub(#symbol+1)
-print('consume', symbol, 'symbol')
+--DEBUG:print('consume', symbol, 'symbol')
 			return rest, symbol, 'symbol'
 		end
 	end
@@ -327,7 +330,7 @@ print('consume', symbol, 'symbol')
 	} do
 		if str:match('^'..keyword) and (str:match('^'..keyword..'$') or str:match('^'..keyword..'[^_a-zA-Z0-9]')) then
 			local rest = str:sub(#keyword+1)
-print('consume', keyword, 'keyword')
+--DEBUG:print('consume', keyword, 'keyword')
 			return rest, keyword, 'keyword'
 		end
 	end
@@ -335,7 +338,7 @@ print('consume', keyword, 'keyword')
 	local name = str:match('^([_a-zA-Z][_a-zA-Z0-9]*)')
 	if name then
 		local rest = str:sub(#name+1)
-print('consume', name, 'name')
+--DEBUG:print('consume', name, 'name')
 		return rest, name, 'name'
 	end
 
@@ -345,7 +348,7 @@ print('consume', name, 'name')
 	local d = str:match'^(0x[0-9a-fA-F]+)'
 	if d then
 		local rest = str:sub(#d+1)
-print('consume', d, 'number')
+--DEBUG:print('consume', d, 'number')
 		return rest, d, 'number'
 	end
 
@@ -354,7 +357,7 @@ print('consume', d, 'number')
 	local d = str:match'^(%d+)' or str:match'^(%-%d+)'
 	if d then
 		local rest = str:sub(#d+1)
-print('consume', d, 'number')
+--DEBUG:print('consume', d, 'number')
 		return rest, d, 'number'
 	end
 
@@ -463,7 +466,7 @@ local function parseStruct(str, isunion)
 
 	while true do
 		str, token, tokentype = consume(str)
-print('field first token', token, tokentype)
+--DEBUG:print('field first token', token, tokentype)
 		if token == '}' then
 			break
 		elseif token == 'struct'
@@ -624,7 +627,7 @@ local function parseEnum(str)
 			str, token, tokentype = consume(str)
 		end
 
-print('setting enum '..tostring(name)..' = '..tostring(value))
+--DEBUG:print('setting enum '..tostring(name)..' = '..tostring(value))
 		ffi.C[name] = value
 		value = value + 1
 
@@ -648,7 +651,7 @@ end
 local function parse(str)
 	local origstr = str
 	local origlen = #str
-	xpcall(function()
+	assert(xpcall(function()
 		local token, tokentype
 		while true do
 			str, token, tokentype = consume(str)
@@ -746,7 +749,7 @@ local function parse(str)
 				error("got eof with rest "..tostring(str))
 			end
 		end
-print'parse done'
+--DEBUG:print'parse done'
 	end, function(err)
 		local curlen = #str
 		local sofar = origstr:sub(1, -curlen)
@@ -757,21 +760,21 @@ print'parse done'
 
 		return 'on line '..lineno..' col '..colno..'\n'
 			..err..'\n'..debug.traceback()
-	end)
+	end))
 end
 
 function ffi.cdef(str)
-print("ffi.cdef("..tostring(str)..")")
+--DEBUG:print("ffi.cdef("..tostring(str)..")")
 	-- TODO ... hmm ... luajit's lj_cparse ...
 	-- I can compile that to emscripten ...
 	-- hmm ...
 	str = removeCommentsAndApplyContinuations(str)
 	parse(str)
-print'ffi.cdef done'
+--DEBUG:print'ffi.cdef done'
 end
 
 function ffi.sizeof(ctype)
-print('ffi.sizeof('..tostring(ctype)..')')
+--DEBUG:print('ffi.sizeof('..tostring(ctype)..')')
 	-- TODO matches ffi.new ...
 	if type(ctype) == 'string' then
 		local typename = trim(ctype)
@@ -783,7 +786,7 @@ print('ffi.sizeof('..tostring(ctype)..')')
 	end
 	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
 assert(ctype.size, "need to calculate a size")
-print('ffi.sizeof('..tostring(ctype)..') = '..ctype.size)
+--DEBUG:print('ffi.sizeof('..tostring(ctype)..') = '..ctype.size)
 	return ctype.size
 end
 
@@ -999,7 +1002,7 @@ function ffi.metatype(ctype, mt)
 	-- now fill in args
 	-- TODO same as ffi.new('ctype', ...) ?
 	mt.__call = function(t, ...)
-print('calling ctor on '..ctype.name..' with', ...)
+--DEBUG:print('calling ctor on '..ctype.name..' with', ...)
 		local blob = MemoryBlob(ctype.size)
 		local ptr = CData(blob, ctype)
 
