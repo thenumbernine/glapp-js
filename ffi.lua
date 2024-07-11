@@ -142,7 +142,7 @@ function ffi.CType:init(args)
 		-- if it's a pointer type ...
 		if args.baseType then
 			if args.arrayCount then
-				self.name = args.baseType.name..'[]'
+				self.name = args.baseType.name..'['..args.arrayCount..']'
 			elseif args.isPointer then
 				self.name = args.baseType.name..'*'
 			else
@@ -259,9 +259,21 @@ function ffi.CType:assign(blob, offset, ...)
 					field.type:assign(blob, offset + field.offset, (select(i, ...)))
 				end
 			end
+		elseif self.arrayCount then
+			-- handle arrays
+			local v = ...
+			if type(v) == 'table' then
+				for i=1, #v do
+					self.baseType:assign(blob, offset + (i-1) * self.baseType.size, v[i])
+				end
+			else
+				for i=1, select('#', ...) do
+					local vi = select(i, ...)
+					self.baseType:assign(blob, offset + (i-1) * self.baseType.size, vi)
+				end
+			end
 		else
-		-- TODO handle arrays?
-			assert(self.isPrimitive)
+			assert(self.isPrimitive, "assigning to a non-primitive...")
 			local v = ...
 			local vt = type(v)
 			if vt ~= 'number' then
@@ -535,7 +547,7 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 					end
 				end
 
-				assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest "..tostring(str))
+				assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest "..tostring(token))
 				local fieldname = token
 				local field = Field{
 					name = fieldname,
@@ -560,7 +572,7 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 				if token == ';' then
 					break
 				elseif token ~= ',' then
-					error("expected , or ;")
+					error("expected , or ;, found "..tostring(tokentype).." "..tostring(token))
 				end
 			end
 		else
@@ -922,12 +934,15 @@ function ffi.new(ctype, ...)
 			-- TODO also change the ctype to an array-of-base-type?
 			-- so that ffi.sizeof will work ...
 			ar = assert(tonumber(ar))
-			ctype = assert(getctype(basetype), "couldn't find type "..basetype)
-			-- make an array-type of the base type
-			ctype = ffi.CType{
-				baseType = ctype,
-				arrayCount = ar,
-			}
+			-- see if the array type was already made
+			ctype = getctype(basetype..'['..ar..']')
+			-- if not then make the array-type 
+			if not ctype then 
+				ctype = ffi.CType{
+					baseType = assert(getctype(basetype), "couldn't find type "..basetype),
+					arrayCount = ar,
+				}
+			end
 		else
 			ctype = assert(getctype(typename), "couldn't find type "..typename)
 		end
