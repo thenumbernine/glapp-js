@@ -890,13 +890,48 @@ local function toctype(ctype, allowVarArray, ...)
 			didHandleVarArray = true
 		end
 	end
-	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
+	assert(getmetatable(ctype) == ffi.CType, "object is not a ctype or string")
 	return ctype, didHandleVarArray
 end
 
+local oldtype = _G.type
+local function getTypeAndMT(o)
+	local mt = getmetatable(o)
+	local t = oldtype(o)
+	if mt and mt.isCData then t = 'cdata' end
+	return t, mt
+end
+local newtype = function(o)
+	return (getTypeAndMT(o))
+end
+type = newtype
+
+-- casts a string, cdata, or CType to a CType
+local function toctypefromdata(ctype)
+--print('toctypefromdata', ctype)
+	local t, mt = getTypeAndMT(ctype)
+	if t == 'cdata' then
+		ctype = assert(mt.type)
+	end
+	return toctype(ctype)
+end
+
+-- convert string, cdata, or ctype to ctype
+function ffi.typeof(x)
+	local t = type(x)
+	if x ~= 'cdata'
+	and x ~= 'string'
+	and getmetatable(ctype) ~= ffi.CType
+	then
+		error('bad argument to ffi.typeof (ctype expected, got '..t..')')
+	end
+--print('ffi.typeof result', x)
+	return (toctypefromdata(x))
+end
+
 function ffi.sizeof(ctype)
---DEBUG:print('ffi.sizeof('..tostring(ctype)..')')
-	ctype = toctype(ctype)
+--print('ffi.sizeof', ctype)
+	ctype = toctypefromdata(ctype)
 assert(ctype.size, "need to calculate a size")
 --DEBUG:print('ffi.sizeof('..tostring(ctype)..') = '..ctype.size)
 	return ctype.size
@@ -1128,14 +1163,6 @@ function ffi.metatype(ctype, mt)
 	ctype.mt = setmetatable({}, mt)
 	return ctype.mt
 end
-
-local oldtype = _G.type
-local newtype = function(o)
-	local mt = getmetatable(o)
-	if mt and mt.isCData then return 'cdata' end
-	return oldtype(o)
-end
-type = newtype
 
 local function cdataToHex(d)
 	local dv = getmetatable(d).blob.dataview
