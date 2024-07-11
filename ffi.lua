@@ -326,7 +326,9 @@ local function consume(str)
 	str = trim(str)
 	if #str == 0 then return end
 	-- symbols, first-come first-serve, interpret largest to smallest
-	for _,symbol in ipairs{'(', ')', '[', ']', '{', '}', ',', ';', '=', '*'} do
+	for _,symbol in ipairs{'(', ')', '[', ']', '{', '}', ',', ';', '=', '*',
+		'?',	-- special for luajit
+	} do
 		if str:match('^'..patescape(symbol)) then
 			local rest = str:sub(#symbol+1)
 --DEBUG:print('consume', symbol, 'symbol')
@@ -460,7 +462,9 @@ end
 
 -- parse a ffi.cast or ffi.new 
 -- similar to struct but without the loop over multiple named vars with the same base type
-local function parseType(str)
+local function parseType(str, allowVarArray)
+--print('parseType', str, allowVarArray)
+	local gotVarArray
 	str, token, tokentype = consume(str)
 
 	-- should these be keywords?
@@ -477,7 +481,16 @@ local function parseType(str)
 		str, token, tokentype = consume(str)
 	end
 
+	local structunion
+	if token == 'struct' or token == 'union' then
+		structunion = token
+		str, token, tokentype = consume(str)
+	end
+
 	local name = token
+	if structunion then
+		name = structunion..' '..name
+	end
 	if signedness then
 		name = signedness..' '..name
 	end
@@ -503,19 +516,24 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 
 	while token == '[' do
 		str, token, tokentype = consume(str)
-		assert(tokentype == 'number', "expected array size, found "..tostring(tokentype)..' '..tostring(token))
-		local count = assert(tonumber(token))
-		assert(count > 0, "can we allow non-positive-sized arrays?")
-		fieldtype = makeArrayType(fieldtype, count)
+		local count
+		if allowVarArray and token == '?' then
+			gotVarArray = true
+		else
+			assert(tokentype == 'number', "expected array size, found "..tostring(tokentype)..' '..tostring(token))
+			count = assert(tonumber(token))
+			assert(count > 0, "can we allow non-positive-sized arrays?")
+			fieldtype = getArrayType(fieldtype, count)
+		end
 
 		str, token, tokentype = consume(str)
 		assert(token == ']')
-
 		str, token, tokentype = consume(str)
 	end
 
-	assert(str:match'^%s*$')
-	return fieldtype
+	assert(not str or str:match'^%s*$', 'done parsing type with this left: '..tostring(str))
+--print('got type', fieldtype, gotVarArray)
+	return fieldtype, gotVarArray 
 end
 
 -- assumes 'struct' or 'union' has already been parsed
@@ -862,30 +880,14 @@ end
 
 -- if ctype is a string then make it into a CType object
 -- otherwise make sure it's a CType object
-local function toctype(ctype, canHandleVarArray, ...)
+local function toctype(ctype, allowVarArray, ...)
 	local didHandleVarArray
 	if type(ctype) == 'string' then
-		-- TODO proper tokenizer for C types
-		
-		local typename = trim(ctype)
-		local baseTypeName, ar = typename:match'^(.+)%s*%[(%d+)%]$'	-- TODO how about instead of [%d] how about a %q[] around an arbitrary expression, and evalute it?
-		if not baseTypeName and canHandleVarArray then
-			-- TODO merge this with the above case
-			baseTypeName = typename:match'^(.+)%s*%[%?%]$'
-			if baseTypeName then
-				ar = assert(tonumber((...)))
-				didHandleVarArray = true
-			end
-		end
-		if baseTypeName then
-			-- TODO also change the ctype to an array-of-base-type?
-			-- so that ffi.sizeof will work ...
-			ar = assert(tonumber(ar))
-			-- see if the array type was already made
-			local baseType = assert(getctype(baseTypeName), "couldn't find type "..baseTypeName)
-			ctype = getArrayType(baseType, ar)
-		else
-			ctype = assert(getctype(typename), "couldn't find type "..typename)
+		ctype, gotVarArray = parseType(ctype, allowVarArray)
+		if gotVarArray then
+			local count = assert(tonumber((...)))
+			ctype = getArrayType(ctype, count)
+			didHandleVarArray = true
 		end
 	end
 	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
@@ -959,7 +961,7 @@ function CData.__index(self, key)
 			return CData(mt.blob, fieldType, fieldOffset)
 		end
 	else
-		error("can't index cdata of type "..tostring(self))
+		error("can't index cdata of type "..tostring(mt.type))
 	end
 end
 function CData.__newindex(self, key, value)
@@ -1001,7 +1003,7 @@ function CData.__newindex(self, key, value)
 			error("can't assign to non-primitive type "..tostring(mt))
 		end
 	else
-		error("can't assign cdata of type "..tostring(self))
+		error("can't assign cdata of type "..tostring(mt.type))
 	end
 end
 function CData:add(index)
@@ -1184,6 +1186,6 @@ end
 --[[
 because nil and anything else (userdata, object, etc) will always be false in vanilla lua ...
 --]]
-ffi.null = {}--ffi.new'void*'
+ffi.null = ffi.new'void*'
 
 return ffi
