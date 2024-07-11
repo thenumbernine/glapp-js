@@ -154,7 +154,7 @@ function ffi.CType:init(args)
 		end
 	end
 	assert(not ctypes[self.name], "tried to redefine "..tostring(self.name))
-print('setting ctype '..self.name)
+--DEBUG:print('setting ctype '..self.name)
 	ctypes[self.name] = self
 
 	self.fields = args.fields
@@ -250,6 +250,7 @@ end
 function ffi.CType:assign(blob, offset, ...)
 	if select('#', ...) > 0 then
 		if self.fields then
+			-- structs
 			if self.isunion then
 				-- then only assign to the first entry? hmmm ...
 				self.fields[1].type:assign(blob, offset, ...)
@@ -260,7 +261,7 @@ function ffi.CType:assign(blob, offset, ...)
 				end
 			end
 		elseif self.arrayCount then
-			-- handle arrays
+			-- arrays
 			local v = ...
 			if type(v) == 'table' then
 				for i=1, #v do
@@ -444,6 +445,79 @@ local function getptrtype(baseType)
 	}
 end
 
+local function getArrayType(baseType, ar)
+	local ctype = getctype(baseType.name..'['..ar..']')
+--DEBUG:print('looking for ctype name', baseType.name..'['..ar..'], got', ctype)
+	-- if not then make the array-type
+	if not ctype then
+		ctype = ffi.CType{
+			baseType = baseType,
+			arrayCount = ar,
+		}
+	end
+	return ctype
+end
+
+-- parse a ffi.cast or ffi.new 
+-- similar to struct but without the loop over multiple named vars with the same base type
+local function parseType(str)
+	str, token, tokentype = consume(str)
+
+	-- should these be keywords?
+	local signedness
+	if token == 'signed'
+	or token == 'unsigned'
+	then
+		signedness = token
+		str, token, tokentype = consume(str)
+	end
+
+	--const-ness ... meh?
+	if token == 'const' then
+		str, token, tokentype = consume(str)
+	end
+
+	local name = token
+	if signedness then
+		name = signedness..' '..name
+	end
+
+	-- fields ...
+	-- TODO this should be 'parsetype' and work just like variable declarations
+	-- and should be interoperable with typedefs
+	-- except typedefs can't use comma-separated list (can they?)
+	local baseFieldType = assert(getctype(name), "couldn't find type "..name)
+assert(getmetatable(baseFieldType) == ffi.CType)
+assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
+
+	str, token, tokentype = consume(str)
+	local fieldtype = baseFieldType
+	while token == '*' do
+		fieldtype = getptrtype(fieldtype)
+		str, token, tokentype = consume(str)
+		-- const-ness ... meh?
+		if token == 'const' then
+			str, token, tokentype = consume(str)
+		end
+	end
+
+	while token == '[' do
+		str, token, tokentype = consume(str)
+		assert(tokentype == 'number', "expected array size, found "..tostring(tokentype)..' '..tostring(token))
+		local count = assert(tonumber(token))
+		assert(count > 0, "can we allow non-positive-sized arrays?")
+		fieldtype = makeArrayType(fieldtype, count)
+
+		str, token, tokentype = consume(str)
+		assert(token == ']')
+
+		str, token, tokentype = consume(str)
+	end
+
+	assert(str:match'^%s*$')
+	return fieldtype
+end
+
 -- assumes 'struct' or 'union' has already been parsed
 -- doesn't assert closing ';' (since it could be used in typedef)
 local function parseStruct(str, isunion)
@@ -561,6 +635,7 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 					assert(tokentype == 'number', "expected array size, found "..tostring(tokentype)..' '..tostring(token))
 					local count = assert(tonumber(token))
 					assert(count > 0, "can we allow non-positive-sized arrays?")
+					-- TODO shouldn't we be modifying field.type to be an array-type with array 'count' ?
 					field.count = count
 
 					str, token, tokentype = consume(str)
@@ -785,18 +860,41 @@ function ffi.cdef(str)
 --DEBUG:print'ffi.cdef done'
 end
 
-function ffi.sizeof(ctype)
---DEBUG:print('ffi.sizeof('..tostring(ctype)..')')
-	-- TODO matches ffi.new ...
+-- if ctype is a string then make it into a CType object
+-- otherwise make sure it's a CType object
+local function toctype(ctype, canHandleVarArray, ...)
+	local didHandleVarArray
 	if type(ctype) == 'string' then
+		-- TODO proper tokenizer for C types
+		
 		local typename = trim(ctype)
-		local basetype, ar = typename:match'^(.+)%s*%[(%d+)%]$'
-		if basetype then
-			return tonumber(ar) * ffi.sizeof(basetype)
+		local baseTypeName, ar = typename:match'^(.+)%s*%[(%d+)%]$'	-- TODO how about instead of [%d] how about a %q[] around an arbitrary expression, and evalute it?
+		if not baseTypeName and canHandleVarArray then
+			-- TODO merge this with the above case
+			baseTypeName = typename:match'^(.+)%s*%[%?%]$'
+			if baseTypeName then
+				ar = assert(tonumber((...)))
+				didHandleVarArray = true
+			end
 		end
-		ctype = assert(getctype(typename), "couldn't find type "..typename)
+		if baseTypeName then
+			-- TODO also change the ctype to an array-of-base-type?
+			-- so that ffi.sizeof will work ...
+			ar = assert(tonumber(ar))
+			-- see if the array type was already made
+			local baseType = assert(getctype(baseTypeName), "couldn't find type "..baseTypeName)
+			ctype = getArrayType(baseType, ar)
+		else
+			ctype = assert(getctype(typename), "couldn't find type "..typename)
+		end
 	end
 	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
+	return ctype, didHandleVarArray
+end
+
+function ffi.sizeof(ctype)
+--DEBUG:print('ffi.sizeof('..tostring(ctype)..')')
+	ctype = toctype(ctype)
 assert(ctype.size, "need to calculate a size")
 --DEBUG:print('ffi.sizeof('..tostring(ctype)..') = '..ctype.size)
 	return ctype.size
@@ -821,7 +919,7 @@ local CData = setmetatable({}, {
 		end
 
 		-- hide these from user ... but how?
-		omt.blob = assert(blob)
+		omt.blob = blob	-- should be a MemoryBlob or nil
 		omt.type = ctype or ctypes.uint8_t
 		omt.offset = offset or 0
 		omt.isCData = true
@@ -839,9 +937,9 @@ function CData.__index(self, key)
 			-- array ...
 			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = mt.type.baseType
-			local fieldOffset = mt.offset + index * mt.type.size
+			local fieldOffset = mt.offset + index * ctype.baseType.size
 			if fieldType.isPrimitive then
-				return fieldtype.get(mt.blob.dataview, fieldOffset)
+				return fieldType.get(mt.blob.dataview, fieldOffset)
 			else
 				return CData(mt.blob, fieldType, fieldOffset)
 			end
@@ -874,10 +972,16 @@ function CData.__newindex(self, key, value)
 		if ctype.arrayCount then
 			-- array
 			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
-			local fieldType = mt.type.baseType
-			local fieldOffset = mt.offset + index * mt.type.size
+			local fieldType = ctype.baseType
+			local fieldOffset = mt.offset + index * ctype.baseType.size
 			if fieldType.isPrimitive then
-				return fieldtype.set(mt.blob.dataview, fieldOffset, value)
+--DEBUG:		return select(2, assert(xpcall(function()
+					return fieldType.set(mt.blob.dataview, fieldOffset, value)
+--DEBUG:		end, function(err)
+--DEBUG:			return 'setting '..tostring(fieldType.name)..' offset='..tostring(fieldOffset)..' value='..tostring(value)..' buffersize='..tostring(mt.blob.dataview.byteLength)..'\n'
+--DEBUG:				..tostring(err)..'\n'
+--DEBUG:				..debug.traceback()
+--DEBUG:		end)))
 			else
 				error("can't assign to non-primitive type "..tostring(mt))
 			end
@@ -924,54 +1028,41 @@ function CData.__add(a,b)
 	end
 end
 
-function ffi.new(ctype, ...)
-	-- [[ same as in ffi.sizeof:
-	if type(ctype) == 'string' then
-		-- TODO proper tokenizer for C types
-		local typename = trim(ctype)
-		local basetype, ar = typename:match'^(.+)%s*%[(%d+)%]$'
-		if basetype then
-			-- TODO also change the ctype to an array-of-base-type?
-			-- so that ffi.sizeof will work ...
-			ar = assert(tonumber(ar))
-			-- see if the array type was already made
-			ctype = getctype(basetype..'['..ar..']')
-			-- if not then make the array-type 
-			if not ctype then 
-				ctype = ffi.CType{
-					baseType = assert(getctype(basetype), "couldn't find type "..basetype),
-					arrayCount = ar,
-				}
-			end
-		else
-			ctype = assert(getctype(typename), "couldn't find type "..typename)
-		end
+function ffi.cast(ctype, src)
+	ctype = toctype(ctype)
+
+	if type(src) == 'string' then
+		-- in luajit doing this gives you access to the string's own underlying buffer
+		-- TODO eventually pull that out of Fengari
+		-- until then, make a new buffer and return the pointer to it
+		src = ffi.stringBuffer(src)
+		local srcmt = getmetatable(src)
+		return CData(srcmt.blob, ctype, srcmt.offset)
+	elseif type(src) == 'nil' then
+		return CData(nil, ctype, 0)
+	else	-- expect it to be cdata
+		local srcmt = getmetatable(src)
+		return CData(srcmt.blob, ctype, srcmt.offset)
 	end
-	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
-	--]]
+end
+
+function ffi.new(ctype, ...)
+	local didHandleVarArray
+	ctype, didHandleVarArray = toctype(ctype, true, ...)
 
 	-- TODO return a pointer?
 	-- or how will sizeof handle pointers?
 	-- or should I return a pointer-to-fixed-size-array, which auto converts to pointer to base type upon arithmetic?
+--DEBUG:print('for type', ctype.name, 'allocating blob', ctype.size)
 	local blob = MemoryBlob(ctype.size)
 
 	local ptr = CData(blob, ctype)
 
-	if select('#', ...) > 0 then
+	if not didHandleVarArray and select('#', ...) > 0 then
 		ctype:assign(blob, 0, ...)
 	end
 
 	return ptr
-end
-
--- TODO ptr has to be a MemoryBlob
-local function strlen(buffer)
-	for i=0,buffer.length-1 do
-		if buffer[i] == 0 then
-			return i
-		end
-	end
-	return buffer.length
 end
 
 -- string-to-lua here
@@ -980,21 +1071,20 @@ function ffi.string(ptr)
 	if ptr == ffi.null then
 		return '(null)'
 	end
-	return tostring(js.new(js.global.TextDecoder):decode(
-		ptr.buffer:subarray(0, strlen(ptr.buffer))
-	))
+	local ptrmt = assert(getmetatable(ptr))
+	local blob = assert(ptrmt.blob)
+	return tostring(js.new(js.global.TextDecoder):decode(blob.dataview))
 end
 
 -- not in the luajit ffi api
--- lua-string to MemoryBlob
+-- lua-string/js-string to cdata
 function ffi.stringBuffer(str)
+--DEBUG:print('ffi.stringBuffer', str)
 	str = tostring(str)
-	-- ... starting to think I should just allocate all my ffi memory as a giant js buffer
-	local blob = MemoryBlob(#str+1)
-	for i=1,#str do
-		blob.buffer[i-1] = str:byte(i)
-	end
-	blob.buffer[#str] = 0
+--DEBUG:print('...after tostring', str)	
+	local dst = ffi.new('char[?]', #str+1)
+	ffi.copy(dst, str)
+	return dst
 end
 
 function ffi.metatype(ctype, mt)
@@ -1037,9 +1127,63 @@ function ffi.metatype(ctype, mt)
 	return ctype.mt
 end
 
+local oldtype = _G.type
+local newtype = function(o)
+	local mt = getmetatable(o)
+	if mt and mt.isCData then return 'cdata' end
+	return oldtype(o)
+end
+type = newtype
+
+local function cdataToHex(d)
+	local dv = getmetatable(d).blob.dataview
+	local s = {}
+	for i=0,dv.byteLength-1 do
+		table.insert(s, ('%02x'):format(dv:getUint8(i)))
+	end
+	return table.concat(s)
+end
+
+function ffi.copy(dst, src, len)
+--print('ffi.copy', cdataToHex(dst), cdataToHex(src), len)
+	assert(type(dst) == 'cdata')
+	--asserttype(dst, 'cdata')	-- TODO this plz?
+	local dstmt = getmetatable(dst)
+	if not (dstmt and dstmt.isCData) then
+		error("ffi.copy dst is not a cdata, got "..tostring(dst))
+	end
+
+	if type(src) == 'string' then
+		-- convert from lua string to js buffer
+		len = len or #src+1	-- ...including the newline
+		for i=1,len do
+			dstmt.blob.dataview:setUint8(dstmt.offset + i-1, src:byte(i) or 0)
+		end
+	else
+		assert(type(src) == 'cdata')
+		local srcmt = getmetatable(src)
+		assert(srcmt and srcmt.isCData, "ffi.copy src is not a cdata")
+		assert(len, "expected len")	-- or can't it coerce size from cdata?
+		-- construct a temporary object just to copy bytes.  why is javascript so retarded?
+		js.new(js.global.Uint8Array, dstmt.blob.buffer, dstmt.offset, len):set(
+			js.new(js.global.Uint8Array, srcmt.blob.buffer, srcmt.offset, len)
+		)
+	end
+--print('ffi.copy finished', cdataToHex(dst), cdataToHex(src), len)
+end
+
+function ffi.fill(dst, len, value)
+	assert(type(dst) == 'cdata')
+	local dstmt = getmetatable(dst)
+	assert(dstmt and dstmt.isCData, "ffi.fill dst is not a cdata")
+	value = value or 0
+	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
+	js.new(js.global.Uint8Array, dstmt.blob, dstmt.offset, len):fill(value, 0, len)
+end
+
 --[[
 because nil and anything else (userdata, object, etc) will always be false in vanilla lua ...
 --]]
-ffi.null = {}
+ffi.null = {}--ffi.new'void*'
 
 return ffi
