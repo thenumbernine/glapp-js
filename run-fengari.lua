@@ -44,10 +44,27 @@ struct A {
 	print('c.b[0]', c.b[0])
 	assert(c.b[0] == 2)
 --]=]
--- [=[	
+--[=[
+	local s = 'testing'
+	local ffi = require 'ffi'
+	local l = ffi.new'int[1]'
+	print('l', l)
+	print('l[0]', l[0])
+	l[0] = #s
+	print('l[0]', l[0])
+	local p = ffi.new'const char*[1]'
+	print('p', p)
+	print('p[0]', p[0])
+	if ffi.memdump then print('mem', ffi.memdump()) end
+	p[0] = s
+	if ffi.memdump then print('mem', ffi.memdump()) end
+	print('p[0]', p[0])
+	print(ffi.string(p[0]))
+--]=]
+-- [=[
 	--assert(assert(loadfile'glapp/tests/info.lua')())
 	dofile'glapp/tests/test_es.lua'
---]=]	
+--]=]
 	print'done'
 end, function(err)
 	print(tostring(err)..'\n'..debug.traceback())

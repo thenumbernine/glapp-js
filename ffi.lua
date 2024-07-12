@@ -80,12 +80,22 @@ local membuf = js.new(js.global.ArrayBuffer, 0x100000)
 local memview = js.new(js.global.DataView, membuf)
 local memUsedSoFar = 0
 
+function ffi.memdump(from, len)
+	from = from or 0
+	len = len or memUsedSoFar - from
+	local s = {}
+	for i=from,from+len-1 do
+		table.insert(s, ('%02x'):format(memview:getUint8(i)))
+	end
+	return table.concat(s)
+end
+
 local dict = newtable()
 local function malloc(size)
 	-- 4byte align
 	size = (size & ~3) + ((size & 3) == 0 and 0 or 4)
 
-print('malloc', size)	
+print('malloc', size)
 	for _,d in ipairs(dict) do
 		if d.free
 		and d.size >= size
@@ -325,7 +335,7 @@ function ffi.CType:assign(addr, ...)
 				-- TODO use self.set somehow?  if both types are primitives?
 				js.new(js.global.Uint8Array, membuf, addr, len):set(
 					js.new(js.global.Uint8Array, membuf, srcmt.addr, len)
-				)		
+				)
 			elseif vt ~= 'number' then
 				error("can't convert "..vt.." to number")
 			end
@@ -508,7 +518,7 @@ local function getArrayType(baseType, ar)
 	return ctype
 end
 
--- parse a ffi.cast or ffi.new 
+-- parse a ffi.cast or ffi.new
 -- similar to struct but without the loop over multiple named vars with the same base type
 local function parseType(str, allowVarArray)
 --print('parseType', str, allowVarArray)
@@ -581,7 +591,7 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 
 	assert(not str or str:match'^%s*$', 'done parsing type with this left: '..tostring(str))
 --print('got type', fieldtype, gotVarArray)
-	return fieldtype, gotVarArray 
+	return fieldtype, gotVarArray
 end
 
 -- assumes 'struct' or 'union' has already been parsed
@@ -1042,10 +1052,28 @@ function CData:__index(key)
 		error("can't index cdata of type "..tostring(mt.type))
 	end
 end
+
+-- ptr type and 64 and js is a mess
+local function memSetPtr(addr, value)
+	--[[ even tho i've got intptr_t set to 64 bit, js doesn't like assigning 64 bits at once, so ...
+	gettype'intptr_t'.set(memview, addr, value)
+	--]]
+	-- [[
+	ctypes.uint32_t.set(memview, addr, value)
+	ctypes.uint32_t.set(memview, addr + 4, 0)
+	--]]
+end
+
+local function memGetPtr(addr)
+	return ctypes.uint32_t.get(memview, addr)
+--		| (ctypes.uint32_t.get(memview, addr + 4, 0) << 32)	-- allow >32 bit?
+end
+
 function CData:__newindex(key, value)
 	local mt = getmetatable(self)
 	local ctype = mt.type
---DEBUG:print('assigning self', self, 'ctype', ctype, 'key', key, 'value', value)
+	local valuetype = type(value)
+--DEBUG:print('CData:__newindex self=', self, 'ctype', ctype, 'key', key, 'value', value)
 	if ctype.baseType then
 		if ctype.arrayCount then
 --DEBUG:print('...array assignment')
@@ -1053,9 +1081,9 @@ function CData:__newindex(key, value)
 			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = ctype.baseType
 			local fieldAddr = mt.addr + index * ctype.baseType.size
+--DEBUG:print('...fieldType', fieldType.isPrimitive, fieldType.isPointer, 'valuetype', valuetype)
 			if fieldType.isPrimitive then
 
-				local valuetype = type(value)
 				if valuetype == 'cdata' then
 					-- TODO here ... ffi.copy between the two ...
 					-- but only if the types can be coerced first ...
@@ -1067,11 +1095,17 @@ function CData:__newindex(key, value)
 				elseif valuetype == 'nil' then
 					value = 0
 				else
-					if fieldType.isPointer and fieldType.name == 'char' and valuetype == 'string' then
+					--[[ do I need this here?
+					if valuetype == 'string'
+					and fieldType.isPointer
+					and (fieldType.name == 'uint8_t' or fieldType.name == 'int8_t')
+					then
 						-- copy the lua-string to js-mem and return a pointer to it
 						local ptr = ffi.stringBuffer(value)
 						value = getmetatable(ptr).addr
+						-- here and below as well?
 					else
+					--]] do
 						error("can't assign type '"..valuetype.."' to primitive c array type "..tostring(ctype))
 					end
 				end
@@ -1083,15 +1117,23 @@ function CData:__newindex(key, value)
 --DEBUG:				..tostring(err)..'\n'
 --DEBUG:				..debug.traceback()
 --DEBUG:		end))
+			elseif fieldType.isPointer
+			and valuetype == 'string'
+			then
+				-- copy the lua-string to js-mem and return a pointer to it
+				local ptr = ffi.stringBuffer(value)
+--DEBUG:print('...assigning string to ptr, got src', ptr)
+				value = getmetatable(ptr).addr
+				memSetPtr(fieldAddr, value)
 			else
-				error("can't assign to non-primitive type "..tostring(mt))
+				error("can't assign type '"..valuetype.."' to non-primitive type fieldType="..tostring(fieldType))
 			end
 		else
 			-- typedef
 			error("don't allow pointers to hold typedefs")
 		end
 	elseif ctype.fields then
---DEBUG:print('...struct assignment')		
+--DEBUG:print('...struct assignment')
 		-- struct/union
 		local field = ctype.fieldForName[key]
 		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
@@ -1110,7 +1152,30 @@ end
 
 function CData:__tostring()
 	local mt = getmetatable(self)
-	return 'cdata<'..mt.type.name..'>: '..('0x%x'):format(mt.addr)
+	local ctype = mt.type
+	local value
+	if ctype.isPrimitive then
+		value = ctype.get(memview, mt.addr)
+	elseif ctype.isPointer then
+		if mt.addr == 0 then
+			value = 'NULL'
+		else
+			--[[
+			local intptrtype = assert(getctype'intptr_t')
+			value = intptrtype.get(memview, mt.addr)
+			--]]
+			--[[
+			-- "TypeError: Invalid value used as weak map key"
+			value = ('0x%x'):format(memview:getBigUint64(mt.addr))
+			--]]
+			-- [[
+			value = ('0x%08x%08x'):format(memGetPtr(mt.addr + 4), memGetPtr(mt.addr))
+			--]]
+		end
+	else
+		value = ('0x%x'):format(mt.addr)
+	end
+	return 'cdata<'..ctype.name..'>: '..tostring(value)
 end
 
 function CData:add(index)
@@ -1182,15 +1247,26 @@ function ffi.new(ctype, ...)
 	return ptr
 end
 
+local function strlen(addr)
+	local len = 0
+	while memview:getUint8(addr + len) ~= 0 do
+		len = len + 1
+	end
+	return len
+end
+
 -- string-to-lua here
 -- TODO ptr has to be a MemoryBlob
-function ffi.string(ptr)
-	if ptr == ffi.null then
-		return '(null)'
-	end
+function ffi.string(ptr, len)
+--DEBUG:print('ffi.string', ptr, len)
+	if ptr == ffi.null then return '(null)' end
 	local ptrmt = assert(getmetatable(ptr))
+	local addr = memGetPtr(ptrmt.addr)	-- get the ptr's value from mem
+--DEBUG:print('..addr', addr)
+	if not len then len = strlen(addr) end
+--DEBUG:print('...len', len)
 	return tostring(js.new(js.global.TextDecoder):decode(
-		js.new(js.global.DataView, membuf, ptrmt.addr)
+		js.new(js.global.DataView, membuf, addr, len)
 	))
 end
 
@@ -1199,7 +1275,7 @@ end
 function ffi.stringBuffer(str)
 --DEBUG:print('ffi.stringBuffer', str)
 	str = tostring(str)
---DEBUG:print('...after tostring', str)	
+--DEBUG:print('...after tostring', str)
 	local dst = ffi.new('char[?]', #str+1)
 	ffi.copy(dst, str)
 	return dst
