@@ -1,4 +1,5 @@
 local ffi = require 'ffi'
+local table = require 'ext.table'
 
 ffi.cdef[[
 typedef unsigned int GLenum;
@@ -53,6 +54,24 @@ end
 
 function gl.glViewport(...)
 	return js.global.gl:viewport(...)
+end
+
+local programs = table()
+local function getNextProgramID()
+	local maxn = programs:maxn()
+	for i=1,maxn do
+		if not programs[i] then
+			return i
+		end
+	end
+	maxn = maxn + 1
+	return maxn
+end
+
+function gl.glCreateProgram()
+	local id = getNextProgramID()
+	programs[id] = {}
+	return ffi.cast('GLuint', id)
 end
 
 return gl

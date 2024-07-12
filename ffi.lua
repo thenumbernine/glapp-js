@@ -94,6 +94,9 @@ end
 -- put ffi.cdef types here
 local ctypes = {}
 
+--temp debugging
+ffi.ctypes = ctypes
+
 local nextuniquenameindex = 0
 local function nextuniquename()
 	nextuniquenameindex = nextuniquenameindex + 1
@@ -245,7 +248,7 @@ function ffi.CType:finalize()
 	addFields(self.fields, 0)
 end
 function ffi.CType:__tostring()
-	return tostring(self.name)
+	return 'ctype<'..tostring(self.name)..'>'
 end
 function ffi.CType:assign(blob, offset, ...)
 	if select('#', ...) > 0 then
@@ -277,7 +280,18 @@ function ffi.CType:assign(blob, offset, ...)
 			assert(self.isPrimitive, "assigning to a non-primitive...")
 			local v = ...
 			local vt = type(v)
-			if vt ~= 'number' then
+			-- TODO maybe all this goes inside self.set?
+			if vt == 'nil' then
+				v = 0
+			elseif vt == 'cdata' then
+				local srcmt = getmetatable(v)
+				local len = self.size	--srcmt.type.size
+				-- same as ffi.copy
+				-- TODO use self.set somehow?  if both types are primitives?
+				js.new(js.global.Uint8Array, blob.buffer, offset, len):set(
+					js.new(js.global.Uint8Array, srcmt.blob.buffer, srcmt.offset, len)
+				)		
+			elseif vt ~= 'number' then
 				error("can't convert "..vt.." to number")
 			end
 assert(self.set, "expected primitive to have a setter")
@@ -654,7 +668,8 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 					local count = assert(tonumber(token))
 					assert(count > 0, "can we allow non-positive-sized arrays?")
 					-- TODO shouldn't we be modifying field.type to be an array-type with array 'count' ?
-					field.count = count
+					fieldtype = getArrayType(fieldtype, count)
+					field.type = fieldtype
 
 					str, token, tokentype = consume(str)
 					assert(token == ']')
@@ -919,9 +934,9 @@ end
 -- convert string, cdata, or ctype to ctype
 function ffi.typeof(x)
 	local t = type(x)
-	if x ~= 'cdata'
-	and x ~= 'string'
-	and getmetatable(ctype) ~= ffi.CType
+	if t ~= 'cdata'
+	and t ~= 'string'
+	and getmetatable(x) ~= ffi.CType
 	then
 		error('bad argument to ffi.typeof (ctype expected, got '..t..')')
 	end
@@ -956,7 +971,7 @@ local CData = setmetatable({}, {
 		end
 
 		-- hide these from user ... but how?
-		omt.blob = blob	-- should be a MemoryBlob or nil
+		omt.blob = assert(blob)	-- should be a MemoryBlob or nil
 		omt.type = ctype or ctypes.uint8_t
 		omt.offset = offset or 0
 		omt.isCData = true
@@ -966,7 +981,7 @@ local CData = setmetatable({}, {
 })
 -- hmm __index is overridden for the user's api
 -- so that means I can't use self: for CData ...
-function CData.__index(self, key)
+function CData:__index(key)
 	local mt = getmetatable(self)
 	local ctype = mt.type
 	if ctype.baseType then
@@ -993,32 +1008,47 @@ function CData.__index(self, key)
 		if fieldType.isPrimitive then
 			return fieldType.get(mt.blob.dataview, fieldOffset)
 		else
+			-- TODO the returned type should be a ref-type ... indicating not to copy upon assign ...
 			return CData(mt.blob, fieldType, fieldOffset)
 		end
 	else
 		error("can't index cdata of type "..tostring(mt.type))
 	end
 end
-function CData.__newindex(self, key, value)
-	if type(value) ~= 'number' then
-		error("can't assign non-primitive values.  got "..require 'ext.tolua'(value))
-	end
+function CData:__newindex(key, value)
 	local mt = getmetatable(self)
 	local ctype = mt.type
+--DEBUG:print('assigning self', self, 'ctype', ctype, 'key', key, 'value', value)
 	if ctype.baseType then
 		if ctype.arrayCount then
+--DEBUG:print('...array assignment')
 			-- array
 			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = ctype.baseType
 			local fieldOffset = mt.offset + index * ctype.baseType.size
 			if fieldType.isPrimitive then
---DEBUG:		return select(2, assert(xpcall(function()
-					return fieldType.set(mt.blob.dataview, fieldOffset, value)
+
+				if type(value) == 'cdata' then
+					-- TODO here ... ffi.copy between the two ...
+					-- but only if the types can be coerced first ...
+					local valuemt = getmetatable(value)
+					local valueType = valuemt.type
+					assert(valueType.isPrimitive, "can't assign a non-primitive type "..tostring(valueType).." to a primitive type "..tostring(fieldType))
+					value = valueType.get(valuemt.blob.dataview, valuemt.offset)
+				elseif type(value) == 'number' then
+				elseif type(value) == 'nil' then
+					value = 0
+				else
+					error("can't assign type "..type(value).." to primitive c array type "..tostring(mt))
+				end
+
+--DEBUG:		assert(xpcall(function()
+				fieldType.set(mt.blob.dataview, fieldOffset, value)
 --DEBUG:		end, function(err)
 --DEBUG:			return 'setting '..tostring(fieldType.name)..' offset='..tostring(fieldOffset)..' value='..tostring(value)..' buffersize='..tostring(mt.blob.dataview.byteLength)..'\n'
 --DEBUG:				..tostring(err)..'\n'
 --DEBUG:				..debug.traceback()
---DEBUG:		end)))
+--DEBUG:		end))
 			else
 				error("can't assign to non-primitive type "..tostring(mt))
 			end
@@ -1027,20 +1057,28 @@ function CData.__newindex(self, key, value)
 			error("don't allow pointers to hold typedefs")
 		end
 	elseif ctype.fields then
+--DEBUG:print('...struct assignment')		
 		-- struct/union
 		local field = ctype.fieldForName[key]
 		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
 		local fieldType = field.type
 		local fieldOffset = mt.offset + field.offset
 		if fieldType.isPrimitive then
-			return fieldType.set(mt.blob.dataview, fieldOffset, value)
+			fieldType.set(mt.blob.dataview, fieldOffset, value)
 		else
-			error("can't assign to non-primitive type "..tostring(mt))
+			error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
 		end
 	else
 		error("can't assign cdata of type "..tostring(mt.type))
 	end
+--DEBUG:print('...assign done')
 end
+
+function CData:__tostring()
+	local mt = getmetatable(self)
+	return 'cdata<'..mt.type.name..'>: '..tostring(mt.blob.buffer)..'+'..tostring(mt.offset)
+end
+
 function CData:add(index)
 	local mt = getmetatable(self)
 	return CData(
@@ -1049,6 +1087,7 @@ function CData:add(index)
 		mt.offset + index * mt.type.size
 	)
 end
+
 function CData.__add(a,b)
 	local ma = getmetatable(a)
 	local mb = getmetatable(b)
@@ -1075,11 +1114,21 @@ function ffi.cast(ctype, src)
 		src = ffi.stringBuffer(src)
 		local srcmt = getmetatable(src)
 		return CData(srcmt.blob, ctype, srcmt.offset)
+	--[[
 	elseif type(src) == 'nil' then
 		return CData(nil, ctype, 0)
 	else	-- expect it to be cdata
 		local srcmt = getmetatable(src)
 		return CData(srcmt.blob, ctype, srcmt.offset)
+	--]]
+	else
+		-- if it's a ptr then just change the ptr type
+		-- TODO this is going to grow into full on emulated memory management very quickly
+		if ctype.isPointer then
+			return CData(srcmt.blob, ctype, srcmt.offset)
+		end
+		-- same as ffi.new?
+		return ffi.new(ctype, src)
 	end
 end
 

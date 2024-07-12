@@ -18,9 +18,35 @@ xpcall(function()
 
 	-- TODO while we're here, connect gles3 calls to webgl
 
+--[=[
+	local ffi = require 'ffi'
+	ffi.cdef[[
+struct A {
+	int a[1];
+	int b[1];
+};
+]]
+	local c = ffi.new'struct A';
+
+	print('ffi.typeof(c)', ffi.typeof(c))
+	print('ffi.typeof(c.a)', ffi.typeof(c.a))	-- should be: ctype<int (&)[1]>
+	assert(type(c) == 'cdata')
+	assert(type(c.b) == 'cdata')
+	assert(ffi.sizeof(c) == 8)
+	assert(ffi.sizeof(c.b) == 4)
+	c.b[0] = 1				-- TODO this should be an error: cannot convert 'number' to 'int [1]'
+	print('c.b', c.b)		-- should be: cdata<int (&)[1]>: 0x7485879aea1c
+	print('c.b[0]', c.b[0])
+	assert(c.b[0] == 1)
+	local v = ffi.cast('int', 2)
+	c.b[0] = v
+	print('c.b[0]', c.b[0])
+	assert(c.b[0] == 2)
+--]=]
+-- [=[	
 	--assert(assert(loadfile'glapp/tests/info.lua')())
 	dofile'glapp/tests/test_es.lua'
-	
+--]=]	
 	print'done'
 end, function(err)
 	print(tostring(err)..'\n'..debug.traceback())
