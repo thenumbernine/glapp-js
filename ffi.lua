@@ -121,6 +121,55 @@ print('resizing base memory to', membuf.byteLength)
 	return addr
 end
 
+-- put ffi.cdef types here
+local ctypes = {}
+ffi.ctypes = ctypes
+
+-- ptr type and 64 and js is a mess
+local function memSetPtr(addr, value)
+	--[[ even tho i've got intptr_t set to 64 bit, js doesn't like assigning 64 bits at once, so ...
+	gettype'intptr_t'.set(memview, addr, value)
+	--]]
+	-- [[
+	ctypes.uint32_t.set(memview, addr, value)
+	--ctypes.uint32_t.set(memview, addr + 4, 0)	-- only for 64bit addresses
+	--]]
+end
+ffi.memSetPtr = memSetPtr
+
+local function memGetPtr(addr)
+	return ctypes.uint32_t.get(memview, addr)
+--		| (ctypes.uint32_t.get(memview, addr + 4, 0) << 32)	-- allow >32 bit?
+end
+ffi.memGetPtr = memGetPtr
+
+local function strlen(addr)
+	local len = 0
+	while true do
+		if addr >= memview.byteLength then
+			error("strlen ran away")
+		end
+		if memview:getUint8(addr) == 0 then break end
+		addr = addr + 1
+		len = len + 1
+	end
+	return len
+end
+
+-- alloc and push string onto mem and return its addr
+local function pushString(str)
+	str = tostring(str)
+	local len = #str
+	local addr = malloc(len+1)
+	for i=1,len do
+		memview:setUint8(addr + i-1, str:byte(i))
+	end
+	memview:setUint8(addr + len, 0)
+	return addr
+end
+
+
+
 -- helper function for the webgl shim layer equivalent of the ffi .so header files
 -- ... instead of ffi.cdef
 -- NOTICE this field deviates from luajit ffi
@@ -135,12 +184,6 @@ function ffi.cdef_enum(keys, dest)
 		v = v + 1
 	end
 end
-
--- put ffi.cdef types here
-local ctypes = {}
-
---temp debugging
-ffi.ctypes = ctypes
 
 local nextuniquenameindex = 0
 local function nextuniquename()
@@ -296,8 +339,10 @@ function ffi.CType:__tostring()
 	return 'ctype<'..tostring(self.name)..'>'
 end
 function ffi.CType:assign(addr, ...)
+--DEBUG:print('ffi.CType:assign', addr, ...)
 	if select('#', ...) > 0 then
 		if self.fields then
+--DEBUG:print('...assigning to struct')			
 			-- structs
 			if self.isunion then
 				-- then only assign to the first entry? hmmm ...
@@ -309,6 +354,7 @@ function ffi.CType:assign(addr, ...)
 				end
 			end
 		elseif self.arrayCount then
+--DEBUG:print('...assigning to array')			
 			-- arrays
 			local v = ...
 			if type(v) == 'table' then
@@ -322,25 +368,41 @@ function ffi.CType:assign(addr, ...)
 				end
 			end
 		else
+--DEBUG:print('...assigning to primitive')			
 			assert(self.isPrimitive, "assigning to a non-primitive...")
 			local v = ...
 			local vt = type(v)
 			-- TODO maybe all this goes inside self.set?
-			if vt == 'nil' then
-				v = 0
+			if v == nil then
+				self.set(memview, addr, 0)
 			elseif vt == 'cdata' then
+--DEBUG:print('...assigning from cdata')				
 				local srcmt = getmetatable(v)
+--DEBUG:print('...with addr', srcmt.addr)
+				local srcctype = srcmt.type
+--DEBUG:print('...with ctype', srcctype)
 				local len = self.size	--srcmt.type.size
+--DEBUG:print('...with len', len)				
 				-- same as ffi.copy
-				-- TODO use self.set somehow?  if both types are primitives?
+				--[[ TODO use self.set somehow?  if both types are primitives?
 				js.new(js.global.Uint8Array, membuf, addr, len):set(
 					js.new(js.global.Uint8Array, membuf, srcmt.addr, len)
 				)
+				--]]
+				if srcctype.isPointer then
+					value = memGetPtr(srcmt.addr)
+--DEBUG:print('assigning from pointer with value-addr', value,'to addr', addr)					
+					self.set(memview, addr, value)
+--DEBUG:print('double-check got at addr '..addr..' value', self.get(memview, addr))
+				else
+					self.set(memview, addr, srcctype.get(memview, srcmt.addr))
+				end
 			elseif vt ~= 'number' then
 				error("can't convert "..vt.." to number")
-			end
+			else
 assert(self.set, "expected primitive to have a setter")
-			self.set(memview, addr, v)
+				self.set(memview, addr, v)
+			end
 --DEBUG:print('TODO *('..tostring(self)..')(ptr+'..tostring(addr)..') = '..tostring(v))
 --DEBUG:print(debug.traceback())
 		end
@@ -375,8 +437,14 @@ ffi.CType{name='unsigned int', baseType=assert(ctypes.uint32_t)}
 ffi.CType{name='long', baseType=assert(ctypes.int64_t)}
 ffi.CType{name='signed long', baseType=assert(ctypes.int64_t)}
 ffi.CType{name='unsigned long', baseType=assert(ctypes.uint64_t)}
+--[[ I wish but js and BigInt stuff is irritating
 ffi.CType{name='intptr_t', baseType=assert(ctypes.int64_t)}
 ffi.CType{name='uintptr_t', baseType=assert(ctypes.uint64_t)}
+--]]
+-- [[
+ffi.CType{name='intptr_t', baseType=assert(ctypes.int32_t)}
+ffi.CType{name='uintptr_t', baseType=assert(ctypes.uint32_t)}
+--]]
 ffi.CType{name='ssize_t', baseType=assert(ctypes.int64_t)}
 ffi.CType{name='size_t', baseType=assert(ctypes.uint64_t)}
 
@@ -1053,22 +1121,6 @@ function CData:__index(key)
 	end
 end
 
--- ptr type and 64 and js is a mess
-local function memSetPtr(addr, value)
-	--[[ even tho i've got intptr_t set to 64 bit, js doesn't like assigning 64 bits at once, so ...
-	gettype'intptr_t'.set(memview, addr, value)
-	--]]
-	-- [[
-	ctypes.uint32_t.set(memview, addr, value)
-	ctypes.uint32_t.set(memview, addr + 4, 0)
-	--]]
-end
-
-local function memGetPtr(addr)
-	return ctypes.uint32_t.get(memview, addr)
---		| (ctypes.uint32_t.get(memview, addr + 4, 0) << 32)	-- allow >32 bit?
-end
-
 function CData:__newindex(key, value)
 	local mt = getmetatable(self)
 	local ctype = mt.type
@@ -1121,9 +1173,8 @@ function CData:__newindex(key, value)
 			and valuetype == 'string'
 			then
 				-- copy the lua-string to js-mem and return a pointer to it
-				local ptr = ffi.stringBuffer(value)
 --DEBUG:print('...assigning string to ptr, got src', ptr)
-				value = getmetatable(ptr).addr
+				value = pushString(value)
 				memSetPtr(fieldAddr, value)
 			else
 				error("can't assign type '"..valuetype.."' to non-primitive type fieldType="..tostring(fieldType))
@@ -1151,16 +1202,21 @@ function CData:__newindex(key, value)
 end
 
 function CData:__tostring()
+--DEBUG:print('CData:__tostring')
 	local mt = getmetatable(self)
 	local ctype = mt.type
+--DEBUG:print('...ctype', ctype)
+--DEBUG:print('...addr', mt.addr)	
 	local value
 	if ctype.isPrimitive then
 		value = ctype.get(memview, mt.addr)
+--DEBUG:print('...prim value', value)
 	elseif ctype.isPointer then
+--DEBUG:print('...ptr value')			
 		if mt.addr == 0 then
 			value = 'NULL'
 		else
-			--[[
+			-- [[
 			local intptrtype = assert(getctype'intptr_t')
 			value = intptrtype.get(memview, mt.addr)
 			--]]
@@ -1168,11 +1224,12 @@ function CData:__tostring()
 			-- "TypeError: Invalid value used as weak map key"
 			value = ('0x%x'):format(memview:getBigUint64(mt.addr))
 			--]]
-			-- [[
+			--[[ only for 64bit addresses
 			value = ('0x%08x%08x'):format(memGetPtr(mt.addr + 4), memGetPtr(mt.addr))
 			--]]
 		end
 	else
+--DEBUG:print('...else value')		
 		value = ('0x%x'):format(mt.addr)
 	end
 	return 'cdata<'..ctype.name..'>: '..tostring(value)
@@ -1202,6 +1259,8 @@ function CData.__add(a,b)
 	end
 end
 
+-- tonumber(cdata ptr) returns nil
+-- but tonumber(cdata prim) returns the number value
 function ffi.cast(ctype, src)
 	ctype = toctype(ctype)
 
@@ -1241,18 +1300,11 @@ function ffi.new(ctype, ...)
 	local addr = malloc(ctype.size)
 	local ptr = CData(ctype, addr)
 	if not didHandleVarArray and select('#', ...) > 0 then
+--DEBUG:print('ffi.new assigning', ctype, addr, ...)
 		ctype:assign(addr, ...)
 	end
 
 	return ptr
-end
-
-local function strlen(addr)
-	local len = 0
-	while memview:getUint8(addr + len) ~= 0 do
-		len = len + 1
-	end
-	return len
 end
 
 -- string-to-lua here
@@ -1262,7 +1314,7 @@ function ffi.string(ptr, len)
 	if ptr == ffi.null then return '(null)' end
 	local ptrmt = assert(getmetatable(ptr))
 	local addr = memGetPtr(ptrmt.addr)	-- get the ptr's value from mem
---DEBUG:print('..addr', addr)
+--DEBUG:print('...addr', addr)
 	if not len then len = strlen(addr) end
 --DEBUG:print('...len', len)
 	return tostring(js.new(js.global.TextDecoder):decode(
@@ -1272,13 +1324,27 @@ end
 
 -- not in the luajit ffi api
 -- lua-string/js-string to cdata
+-- alloc, push string.  return a newly alloc'd pointer pointing to it
+-- since the lua layer needs the new ptr cdata object to be made
+-- or TODO how about I just return the char[?] array instead of a char* pointing to it? and handle coercion of array/pointer elsewhere?
 function ffi.stringBuffer(str)
 --DEBUG:print('ffi.stringBuffer', str)
 	str = tostring(str)
 --DEBUG:print('...after tostring', str)
 	local dst = ffi.new('char[?]', #str+1)
 	ffi.copy(dst, str)
-	return dst
+	-- which of these will worK? should all of them?
+	--[[
+	return ffi.cast('char*', dst)
+	--]]
+	--[[
+	return ffi.new('char*', dst)
+	--]]
+	-- [[
+	local p = ffi.new'char*'
+	memSetPtr(getmetatable(p).addr, getmetatable(dst).addr)
+	--]]
+	return p
 end
 
 function ffi.metatype(ctype, mt)
