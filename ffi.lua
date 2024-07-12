@@ -195,12 +195,14 @@ local function nextuniquename()
 	return '#'..nextuniquenameindex
 end
 
+local CType
+
 local Field = class()
 function Field:init(args)
 	self.name = assert(args.name)
 	assert(type(self.name) == 'string')
 	self.type = assert(args.type)
-assert(getmetatable(self.type) == ffi.CType)
+assert(getmetatable(self.type) == CType)
 	self.offset = 0	-- calculate this later
 end
 function Field:__tostring()
@@ -229,8 +231,9 @@ array: [name] baseType arrayCount
 pointer: baseType isPointer
 struct: [name] fields [isunion]
 --]]
-ffi.CType = class()
-function ffi.CType:init(args)
+CType = class()
+ffi.CType = CType
+function CType:init(args)
 	args = args or {}
 	self.name = args.name
 	if not self.name then
@@ -247,9 +250,9 @@ function ffi.CType:init(args)
 			self.name = nextuniquename()
 			self.anonymous = true
 		end
---DEBUG:print('...ffi.CType new name', self.name)
+--DEBUG:print('...CType new name', self.name)
 	else
---DEBUG:print('...ffi.CType already has name', self.name)
+--DEBUG:print('...CType already has name', self.name)
 	end
 	assert(not ctypes[self.name], "tried to redefine "..tostring(self.name))
 	ctypes[self.name] = self
@@ -292,7 +295,7 @@ function ffi.CType:init(args)
 --DEBUG:print('setting ctype['..self.name..'] = '..tostring(self))
 end
 
-function ffi.CType:finalize()
+function CType:finalize()
 	if self.size then return end
 
 	if self.arrayCount then
@@ -344,11 +347,11 @@ function ffi.CType:finalize()
 	end
 	addFields(self.fields, 0)
 end
-function ffi.CType:__tostring()
+function CType:__tostring()
 	return 'ctype<'..tostring(self.name)..'>'
 end
-function ffi.CType:assign(addr, ...)
---DEBUG:print('ffi.CType:assign', addr, ...)
+function CType:assign(addr, ...)
+--DEBUG:print('CType:assign', addr, ...)
 	if select('#', ...) > 0 then
 		if self.fields then
 --DEBUG:print('...assigning to struct')
@@ -381,12 +384,14 @@ function ffi.CType:assign(addr, ...)
 			assert(self.isPrimitive, "assigning to a non-primitive...")
 			local v = ...
 			local vt = type(v)
+			local srcmt = getmetatable(v)
 			-- TODO maybe all this goes inside self.set?
 			if v == nil then
 				self.set(memview, addr, 0)
-			elseif vt == 'cdata' then
+			elseif vt == 'cdata' 
+			and srcmt.isCData
+			then
 --DEBUG:print('...assigning from cdata')
-				local srcmt = getmetatable(v)
 --DEBUG:print('...with addr', srcmt.addr)
 				local srcctype = srcmt.type
 --DEBUG:print('...with ctype', srcctype)
@@ -422,43 +427,43 @@ assert(self.set, "expected primitive to have a setter")
 end
 
 
-ffi.CType{name='void', size=0, isPrimitive=true}	-- let's all admit that a void* is really a char*
-ffi.CType{name='int8_t', size=1, isPrimitive=true, getset='Int8'}
-ffi.CType{name='uint8_t', size=1, isPrimitive=true, getset='Uint8'}
-ffi.CType{name='int16_t', size=2, isPrimitive=true, getset='Int16'}
-ffi.CType{name='uint16_t', size=2, isPrimitive=true, getset='Uint16'}
-ffi.CType{name='int32_t', size=4, isPrimitive=true, getset='Int32'}
-ffi.CType{name='uint32_t', size=4, isPrimitive=true, getset='Uint32'}
-ffi.CType{name='int64_t', size=8, isPrimitive=true, getset='BigInt64'}	-- why Big?
-ffi.CType{name='uint64_t', size=8, isPrimitive=true, getset='BigUint64'}
+CType{name='void', size=0, isPrimitive=true}	-- let's all admit that a void* is really a char*
+CType{name='int8_t', size=1, isPrimitive=true, getset='Int8'}
+CType{name='uint8_t', size=1, isPrimitive=true, getset='Uint8'}
+CType{name='int16_t', size=2, isPrimitive=true, getset='Int16'}
+CType{name='uint16_t', size=2, isPrimitive=true, getset='Uint16'}
+CType{name='int32_t', size=4, isPrimitive=true, getset='Int32'}
+CType{name='uint32_t', size=4, isPrimitive=true, getset='Uint32'}
+CType{name='int64_t', size=8, isPrimitive=true, getset='BigInt64'}	-- why Big?
+CType{name='uint64_t', size=8, isPrimitive=true, getset='BigUint64'}
 
-ffi.CType{name='float', size=4, isPrimitive=true, getset='Float32'}
-ffi.CType{name='double', size=8, isPrimitive=true, getset='Float64'}
---ffi.CType{name='long double', size=16, isPrimitive=true}	-- no get/set in Javascript DataView ... hmm ...
+CType{name='float', size=4, isPrimitive=true, getset='Float32'}
+CType{name='double', size=8, isPrimitive=true, getset='Float64'}
+--CType{name='long double', size=16, isPrimitive=true}	-- no get/set in Javascript DataView ... hmm ...
 
 -- add these as typedefs
-ffi.CType{name='char', baseType=assert(ctypes.uint8_t)}	-- char default is unsigned, right?
-ffi.CType{name='signed char', baseType=assert(ctypes.int8_t)}
-ffi.CType{name='unsigned char', baseType=assert(ctypes.uint8_t)}
-ffi.CType{name='short', baseType=assert(ctypes.int16_t)}
-ffi.CType{name='signed short', baseType=assert(ctypes.int16_t)}
-ffi.CType{name='unsigned short', baseType=assert(ctypes.uint16_t)}
-ffi.CType{name='int', baseType=assert(ctypes.int32_t)}
-ffi.CType{name='signed int', baseType=assert(ctypes.int32_t)}
-ffi.CType{name='unsigned int', baseType=assert(ctypes.uint32_t)}
-ffi.CType{name='long', baseType=assert(ctypes.int64_t)}
-ffi.CType{name='signed long', baseType=assert(ctypes.int64_t)}
-ffi.CType{name='unsigned long', baseType=assert(ctypes.uint64_t)}
+CType{name='char', baseType=assert(ctypes.uint8_t)}	-- char default is unsigned, right?
+CType{name='signed char', baseType=assert(ctypes.int8_t)}
+CType{name='unsigned char', baseType=assert(ctypes.uint8_t)}
+CType{name='short', baseType=assert(ctypes.int16_t)}
+CType{name='signed short', baseType=assert(ctypes.int16_t)}
+CType{name='unsigned short', baseType=assert(ctypes.uint16_t)}
+CType{name='int', baseType=assert(ctypes.int32_t)}
+CType{name='signed int', baseType=assert(ctypes.int32_t)}
+CType{name='unsigned int', baseType=assert(ctypes.uint32_t)}
+CType{name='long', baseType=assert(ctypes.int64_t)}
+CType{name='signed long', baseType=assert(ctypes.int64_t)}
+CType{name='unsigned long', baseType=assert(ctypes.uint64_t)}
 --[[ I wish but js and BigInt stuff is irritating
-ffi.CType{name='intptr_t', baseType=assert(ctypes.int64_t)}
-ffi.CType{name='uintptr_t', baseType=assert(ctypes.uint64_t)}
+CType{name='intptr_t', baseType=assert(ctypes.int64_t)}
+CType{name='uintptr_t', baseType=assert(ctypes.uint64_t)}
 --]]
 -- [[
-ffi.CType{name='intptr_t', baseType=assert(ctypes.int32_t)}
-ffi.CType{name='uintptr_t', baseType=assert(ctypes.uint32_t)}
+CType{name='intptr_t', baseType=assert(ctypes.int32_t)}
+CType{name='uintptr_t', baseType=assert(ctypes.uint32_t)}
 --]]
-ffi.CType{name='ssize_t', baseType=assert(ctypes.int64_t)}
-ffi.CType{name='size_t', baseType=assert(ctypes.uint64_t)}
+CType{name='ssize_t', baseType=assert(ctypes.int64_t)}
+CType{name='size_t', baseType=assert(ctypes.uint64_t)}
 
 local function consume(str)
 	str = trim(str)
@@ -592,7 +597,7 @@ local function getptrtype(baseType)
 --DEBUG:print('...getptrtype found old', ptrType, ptrType == ctypes.void, ptrType==ctypes['void*'])
 		return ptrType
 	end
-	ptrType = ffi.CType{
+	ptrType = CType{
 		baseType = baseType,
 		isPointer = true,
 	}
@@ -605,7 +610,7 @@ local function getArrayType(baseType, ar)
 --DEBUG:print('looking for ctype name', baseType.name..'['..ar..'], got', ctype)
 	-- if not then make the array-type
 	if not ctype then
-		ctype = ffi.CType{
+		ctype = CType{
 			baseType = baseType,
 			arrayCount = ar,
 		}
@@ -654,7 +659,7 @@ local function parseType(str, allowVarArray)
 	-- and should be interoperable with typedefs
 	-- except typedefs can't use comma-separated list (can they?)
 	local baseFieldType = assert(getctype(name), "couldn't find type "..name)
-assert(getmetatable(baseFieldType) == ffi.CType)
+assert(getmetatable(baseFieldType) == CType)
 assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 --DEBUG:print('parseType baseFieldType', baseFieldType)
 --DEBUG:print('does baseFieldType* exist?', ctypes[baseFieldType.name..'*'])
@@ -719,7 +724,7 @@ local function parseStruct(str, isunion)
 	end
 
 	-- struct [name] { ...
-	local ctype = ffi.CType{
+	local ctype = CType{
 		name = name,	-- auto-generate a name for the anonymous struct/union
 		fields = newtable(),
 		isunion = isunion,
@@ -745,7 +750,7 @@ local function parseStruct(str, isunion)
 
 			local nestedtype
 			str, token, tokentype, nestedtype = parseStruct(str, token == 'union')
-assert(getmetatable(nestedtype) == ffi.CType)
+assert(getmetatable(nestedtype) == CType)
 assert(nestedtype.size)
 			ctype.fields:insert(Field{
 				name = '',
@@ -780,7 +785,7 @@ assert(nestedtype.size)
 			-- and should be interoperable with typedefs
 			-- except typedefs can't use comma-separated list (can they?)
 			local baseFieldType = assert(getctype(name), "couldn't find type "..name)
-assert(getmetatable(baseFieldType) == ffi.CType)
+assert(getmetatable(baseFieldType) == CType)
 assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 
 			while true do
@@ -866,7 +871,7 @@ local function parseEnum(str)
 	local ctype
 	if name then
 		-- if it's enum XXX then do a typedef to the base enum type
-		ctype = ffi.CType{
+		ctype = CType{
 			name = name,
 			baseType = assert(ctypes.uint32_t),
 		}
@@ -974,7 +979,7 @@ local function parse(str)
 				end
 
 				-- make a typedef type
-				ffi.CType{
+				CType{
 					name = token,
 					baseType = srctype,
 				}
@@ -1047,8 +1052,10 @@ local function toctype(ctype, allowVarArray, ...)
 			ctype = getArrayType(ctype, count)
 			didHandleVarArray = true
 		end
+		assert(getmetatable(ctype) == CType, "ctypes[] entry is not a CType")
+	else
+		assert(getmetatable(ctype) == CType, "toctype got an unknown arg "..tostring(ctype))
 	end
-	assert(getmetatable(ctype) == ffi.CType, "object is not a ctype or string")
 	return ctype, didHandleVarArray
 end
 
@@ -1056,19 +1063,26 @@ local oldtype = _G.type
 local function getTypeAndMT(o)
 	local mt = getmetatable(o)
 	local t = oldtype(o)
-	if mt and mt.isCData then t = 'cdata' end
+	if mt then
+		if mt == CType then
+			t = 'cdata'	-- this is a convention I wouldn't have chosen ...
+		elseif mt.isCData then
+			t = 'cdata'
+		end
+	end
 	return t, mt
 end
-local newtype = function(o)
+function type(o)
 	return (getTypeAndMT(o))
 end
-type = newtype
 
 -- casts a string, cdata, or CType to a CType
 local function toctypefromdata(ctype)
 --print('toctypefromdata', ctype)
 	local t, mt = getTypeAndMT(ctype)
-	if t == 'cdata' then
+	if t == 'cdata' 
+	and mt.isCData
+	then
 		ctype = assert(mt.type)
 	end
 	return toctype(ctype)
@@ -1079,7 +1093,7 @@ function ffi.typeof(x)
 	local t = type(x)
 	if t ~= 'cdata'
 	and t ~= 'string'
-	and getmetatable(x) ~= ffi.CType
+	and getmetatable(x) ~= CType
 	then
 		error('bad argument to ffi.typeof (ctype expected, got '..t..')')
 	end
@@ -1156,6 +1170,7 @@ function CData:__newindex(key, value)
 	local mt = getmetatable(self)
 	local ctype = mt.type
 	local valuetype = type(value)
+	local valuemt = getmetatable(value)
 --DEBUG:print('CData:__newindex self=', self, 'ctype', ctype, 'key', key, 'value', value)
 	if ctype.baseType then
 		if ctype.arrayCount then
@@ -1167,10 +1182,11 @@ function CData:__newindex(key, value)
 --DEBUG:print('...fieldType', fieldType.isPrimitive, fieldType.isPointer, 'valuetype', valuetype)
 			if fieldType.isPrimitive then
 
-				if valuetype == 'cdata' then
+				if valuetype == 'cdata' 
+				and valuemt.isCData
+				then
 					-- TODO here ... ffi.copy between the two ...
 					-- but only if the types can be coerced first ...
-					local valuemt = getmetatable(value)
 					local valueType = valuemt.type
 					assert(valueType.isPrimitive, "can't assign a non-primitive type "..tostring(valueType).." to a primitive type "..tostring(fieldType))
 					value = valueType.get(memview, valuemt.addr)
@@ -1301,6 +1317,7 @@ function ffi.cast(ctype, src)
 	ctype = toctype(ctype)
 
 	local srctype = type(src)
+	local srcmt = getmetatable(src)
 --DEBUG:print('...srctype', srctype)
 	if srctype == 'string' then
 		-- in luajit doing this gives you access to the string's own underlying buffer
@@ -1325,8 +1342,9 @@ function ffi.cast(ctype, src)
 				value = src
 			elseif srctype == 'nil' then
 				value = 0
-			elseif srctype == 'cdata' then
-				local srcmt = getmetatable(src)
+			elseif srctype == 'cdata' 
+			and srcmt.isCData
+			then
 				value = srcmt.addr
 --DEBUG:print('value', value)
 				if srcmt.type.isPointer then
@@ -1380,6 +1398,7 @@ function ffi.string(ptr, len)
 	end
 	assert(type(ptr) == 'cdata')
 	local ptrmt = assert(getmetatable(ptr))
+	assert(ptrmt.isCData)
 	local ptrctype = ptrmt.type
 	local addr
 	if ptrctype.arrayCount then
@@ -1426,7 +1445,7 @@ function ffi.metatype(ctype, mt)
 	if type(ctype) == 'string' then
 		ctype = assert(getctype(ctype), "couldn't find type "..ctype)
 	end
-	assert(getmetatable(ctype) == ffi.CType, "ffi.sizeof object is not a ctype")
+	assert(getmetatable(ctype) == CType, "ffi.sizeof object is not a ctype")
 
 	assert(ctype.fields, "can only call ctype on structs/unions")
 
@@ -1473,9 +1492,9 @@ end
 
 function ffi.copy(dst, src, len)
 --print('ffi.copy', cdataToHex(dst), cdataToHex(src), len)
-	assert(type(dst) == 'cdata')
 	--asserttype(dst, 'cdata')	-- TODO this plz?
 	local dstmt = getmetatable(dst)
+	assert(type(dst) == 'cdata' and dstmt.isCData)
 	if not (dstmt and dstmt.isCData) then
 		error("ffi.copy dst is not a cdata, got "..tostring(dst))
 	end
@@ -1487,8 +1506,8 @@ function ffi.copy(dst, src, len)
 			memview:setUint8(dstmt.addr + i-1, src:byte(i) or 0)
 		end
 	else
-		assert(type(src) == 'cdata')
 		local srcmt = getmetatable(src)
+		assert(type(src) == 'cdata' and srcmt.isCData)
 		assert(srcmt and srcmt.isCData, "ffi.copy src is not a cdata")
 		assert(len, "expected len")	-- or can't it coerce size from cdata?
 		-- construct a temporary object just to copy bytes.  why is javascript so retarded?
@@ -1500,8 +1519,8 @@ function ffi.copy(dst, src, len)
 end
 
 function ffi.fill(dst, len, value)
-	assert(type(dst) == 'cdata')
 	local dstmt = getmetatable(dst)
+	assert(type(dst) == 'cdata' and dstmt.isCData)
 	assert(dstmt and dstmt.isCData, "ffi.fill dst is not a cdata")
 	value = value or 0
 	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
@@ -1515,8 +1534,10 @@ ffi.null = ffi.new'void*'
 
 local oldtonumber = tonumber
 function tonumber(x, ...)
-	if type(x) == 'cdata' then
-		local mt = getmetatable(x)
+	local mt = getmetatable(x)
+	if type(x) == 'cdata' 
+	and mt.isCData
+	then
 		local ctype = mt.type
 		if ctype.isPrimitive then
 			return ctype.get(memview, mt.addr)

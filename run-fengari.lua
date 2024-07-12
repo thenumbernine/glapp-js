@@ -85,7 +85,6 @@ struct A {
 	if ffi.memdump then print('mem', ffi.memdump()) end
 --]=]
 --[=[
-	local ffi = require 'ffi'
 	local i = ffi.new('int32_t', 42)
 	print(i)
 	print(tonumber(i))
@@ -102,6 +101,17 @@ struct A {
 	print(('%x'):format(tonumber(ffi.cast('intptr_t', p2))))
 --]=]
 -- [=[
+	local ffi = require 'ffi'
+	local quatd = require 'vec-ffi.quatd'
+	print('quatd', quatd)	-- should be a type?
+	print('type(quatd)', type(quatd))
+	print('ffi.sizeof(quatd)', ffi.sizeof(quatd))
+	local q = quatd()
+	--print('quatd size', getmetatable(q).type.size)
+	print('ffi.sizeof(q)', ffi.sizeof(q))
+	print('q', q)
+--]=]
+--[=[
 	--assert(assert(loadfile'glapp/tests/info.lua')())
 	dofile'glapp/tests/test_es.lua'
 --]=]
