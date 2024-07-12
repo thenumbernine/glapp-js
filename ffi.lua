@@ -144,7 +144,7 @@ function Field:init(args)
 	assert(type(self.name) == 'string')
 	self.type = assert(args.type)
 assert(getmetatable(self.type) == ffi.CType)
-	self.offset = 0	-- TODO calculate this
+	self.offset = 0	-- calculate this later
 end
 function Field:__tostring()
 	return '[@'..self.offset..' '..self.type.name..' '..self.name..']'
@@ -285,17 +285,17 @@ end
 function ffi.CType:__tostring()
 	return 'ctype<'..tostring(self.name)..'>'
 end
-function ffi.CType:assign(offset, ...)
+function ffi.CType:assign(addr, ...)
 	if select('#', ...) > 0 then
 		if self.fields then
 			-- structs
 			if self.isunion then
 				-- then only assign to the first entry? hmmm ...
-				self.fields[1].type:assign(offset, ...)
+				self.fields[1].type:assign(addr, ...)
 			else
 				for i=1,math.min(#self.fields, select('#', ...)) do
 					local field = self.fields[i]
-					field.type:assign(offset + field.offset, (select(i, ...)))
+					field.type:assign(addr + field.offset, (select(i, ...)))
 				end
 			end
 		elseif self.arrayCount then
@@ -303,12 +303,12 @@ function ffi.CType:assign(offset, ...)
 			local v = ...
 			if type(v) == 'table' then
 				for i=1, #v do
-					self.baseType:assign(offset + (i-1) * self.baseType.size, v[i])
+					self.baseType:assign(addr + (i-1) * self.baseType.size, v[i])
 				end
 			else
 				for i=1, select('#', ...) do
 					local vi = select(i, ...)
-					self.baseType:assign(offset + (i-1) * self.baseType.size, vi)
+					self.baseType:assign(addr + (i-1) * self.baseType.size, vi)
 				end
 			end
 		else
@@ -323,15 +323,15 @@ function ffi.CType:assign(offset, ...)
 				local len = self.size	--srcmt.type.size
 				-- same as ffi.copy
 				-- TODO use self.set somehow?  if both types are primitives?
-				js.new(js.global.Uint8Array, membuf, offset, len):set(
-					js.new(js.global.Uint8Array, membuf, srcmt.offset, len)
+				js.new(js.global.Uint8Array, membuf, addr, len):set(
+					js.new(js.global.Uint8Array, membuf, srcmt.addr, len)
 				)		
 			elseif vt ~= 'number' then
 				error("can't convert "..vt.." to number")
 			end
 assert(self.set, "expected primitive to have a setter")
-			self.set(memview, offset, v)
---DEBUG:print('TODO *('..tostring(self)..')(ptr+'..tostring(offset)..') = '..tostring(v))
+			self.set(memview, addr, v)
+--DEBUG:print('TODO *('..tostring(self)..')(ptr+'..tostring(addr)..') = '..tostring(v))
 --DEBUG:print(debug.traceback())
 		end
 	end
@@ -988,7 +988,7 @@ end
 
 -- metatable assigned *after* init for CData
 local CData = setmetatable({}, {
-	__call = function(mt, ctype, offset)
+	__call = function(mt, ctype, addr)
 		-- NOTICE unlike most class()'s, 'o' doesn't yet have access to its mt during construction
 		local o = {}	--
 
@@ -1000,7 +1000,7 @@ local CData = setmetatable({}, {
 
 		-- hide these from user ... but how?
 		omt.type = ctype or ctypes.uint8_t
-		omt.offset = assert(offset)
+		omt.addr = assert(addr)
 		omt.isCData = true
 
 		return setmetatable(o, omt)
@@ -1016,11 +1016,11 @@ function CData:__index(key)
 			-- array ...
 			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = mt.type.baseType
-			local fieldOffset = mt.offset + index * ctype.baseType.size
+			local fieldAddr = mt.addr + index * ctype.baseType.size
 			if fieldType.isPrimitive then
-				return fieldType.get(memview, fieldOffset)
+				return fieldType.get(memview, fieldAddr)
 			else
-				return CData(fieldType, fieldOffset)
+				return CData(fieldType, fieldAddr)
 			end
 		else
 			-- typedef
@@ -1031,12 +1031,12 @@ function CData:__index(key)
 		local field = ctype.fieldForName[key]
 		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
 		local fieldType = field.type
-		local fieldOffset = mt.offset + field.offset
+		local fieldAddr = mt.addr + field.offset
 		if fieldType.isPrimitive then
-			return fieldType.get(memview, fieldOffset)
+			return fieldType.get(memview, fieldAddr)
 		else
 			-- TODO the returned type should be a ref-type ... indicating not to copy upon assign ...
-			return CData(fieldType, fieldOffset)
+			return CData(fieldType, fieldAddr)
 		end
 	else
 		error("can't index cdata of type "..tostring(mt.type))
@@ -1052,27 +1052,34 @@ function CData:__newindex(key, value)
 			-- array
 			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = ctype.baseType
-			local fieldOffset = mt.offset + index * ctype.baseType.size
+			local fieldAddr = mt.addr + index * ctype.baseType.size
 			if fieldType.isPrimitive then
 
-				if type(value) == 'cdata' then
+				local valuetype = type(value)
+				if valuetype == 'cdata' then
 					-- TODO here ... ffi.copy between the two ...
 					-- but only if the types can be coerced first ...
 					local valuemt = getmetatable(value)
 					local valueType = valuemt.type
 					assert(valueType.isPrimitive, "can't assign a non-primitive type "..tostring(valueType).." to a primitive type "..tostring(fieldType))
-					value = valueType.get(memview, valuemt.offset)
-				elseif type(value) == 'number' then
-				elseif type(value) == 'nil' then
+					value = valueType.get(memview, valuemt.addr)
+				elseif valuetype == 'number' then
+				elseif valuetype == 'nil' then
 					value = 0
 				else
-					error("can't assign type "..type(value).." to primitive c array type "..tostring(ctype))
+					if fieldType.isPointer and fieldType.name == 'char' and valuetype == 'string' then
+						-- copy the lua-string to js-mem and return a pointer to it
+						local ptr = ffi.stringBuffer(value)
+						value = getmetatable(ptr).addr
+					else
+						error("can't assign type '"..valuetype.."' to primitive c array type "..tostring(ctype))
+					end
 				end
 
 --DEBUG:		assert(xpcall(function()
-				fieldType.set(memview, fieldOffset, value)
+				fieldType.set(memview, fieldAddr, value)
 --DEBUG:		end, function(err)
---DEBUG:			return 'setting '..tostring(fieldType.name)..' offset='..tostring(fieldOffset)..' value='..tostring(value)..' buffersize='..tostring(memview.byteLength)..'\n'
+--DEBUG:			return 'setting '..tostring(fieldType.name)..' addr='..tostring(fieldAddr)..' value='..tostring(value)..' buffersize='..tostring(memview.byteLength)..'\n'
 --DEBUG:				..tostring(err)..'\n'
 --DEBUG:				..debug.traceback()
 --DEBUG:		end))
@@ -1089,9 +1096,9 @@ function CData:__newindex(key, value)
 		local field = ctype.fieldForName[key]
 		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
 		local fieldType = field.type
-		local fieldOffset = mt.offset + field.offset
+		local fieldAddr = mt.addr + field.offset
 		if fieldType.isPrimitive then
-			fieldType.set(memview, fieldOffset, value)
+			fieldType.set(memview, fieldAddr, value)
 		else
 			error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
 		end
@@ -1103,14 +1110,14 @@ end
 
 function CData:__tostring()
 	local mt = getmetatable(self)
-	return 'cdata<'..mt.type.name..'>: '..('0x%x'):format(mt.offset)
+	return 'cdata<'..mt.type.name..'>: '..('0x%x'):format(mt.addr)
 end
 
 function CData:add(index)
 	local mt = getmetatable(self)
 	return CData(
 		mt.type,
-		mt.offset + index * mt.type.size
+		mt.addr + index * mt.type.size
 	)
 end
 
@@ -1139,19 +1146,19 @@ function ffi.cast(ctype, src)
 		-- until then, make a new buffer and return the pointer to it
 		src = ffi.stringBuffer(src)
 		local srcmt = getmetatable(src)
-		return CData(ctype, srcmt.offset)
+		return CData(ctype, srcmt.addr)
 	--[[
 	elseif type(src) == 'nil' then
 		return CData(ctype, 0)
 	else	-- expect it to be cdata
 		local srcmt = getmetatable(src)
-		return CData(ctype, srcmt.offset)
+		return CData(ctype, srcmt.addr)
 	--]]
 	else
 		-- if it's a ptr then just change the ptr type
 		-- TODO this is going to grow into full on emulated memory management very quickly
 		if ctype.isPointer then
-			return CData(ctype, srcmt.offset)
+			return CData(ctype, srcmt.addr)
 		end
 		-- same as ffi.new?
 		return ffi.new(ctype, src)
@@ -1183,7 +1190,7 @@ function ffi.string(ptr)
 	end
 	local ptrmt = assert(getmetatable(ptr))
 	return tostring(js.new(js.global.TextDecoder):decode(
-		js.new(js.global.DataView, membuf, ptrmt.offset)
+		js.new(js.global.DataView, membuf, ptrmt.addr)
 	))
 end
 
@@ -1241,7 +1248,7 @@ end
 local function cdataToHex(d)
 	local mt = getmetatable(d)
 	local s = {}
-	for i=mt.offset,mt.offset + mt.type.size-1 do
+	for i=mt.addr,mt.addr + mt.type.size-1 do
 		table.insert(s, ('%02x'):format(memview:getUint8(i)))
 	end
 	return table.concat(s)
@@ -1260,7 +1267,7 @@ function ffi.copy(dst, src, len)
 		-- convert from lua string to js buffer
 		len = len or #src+1	-- ...including the newline
 		for i=1,len do
-			memview:setUint8(dstmt.offset + i-1, src:byte(i) or 0)
+			memview:setUint8(dstmt.addr + i-1, src:byte(i) or 0)
 		end
 	else
 		assert(type(src) == 'cdata')
@@ -1268,8 +1275,8 @@ function ffi.copy(dst, src, len)
 		assert(srcmt and srcmt.isCData, "ffi.copy src is not a cdata")
 		assert(len, "expected len")	-- or can't it coerce size from cdata?
 		-- construct a temporary object just to copy bytes.  why is javascript so retarded?
-		js.new(js.global.Uint8Array, membuf, dstmt.offset, len):set(
-			js.new(js.global.Uint8Array, membuf, srcmt.offset, len)
+		js.new(js.global.Uint8Array, membuf, dstmt.addr, len):set(
+			js.new(js.global.Uint8Array, membuf, srcmt.addr, len)
 		)
 	end
 --print('ffi.copy finished', cdataToHex(dst), cdataToHex(src), len)
@@ -1281,7 +1288,7 @@ function ffi.fill(dst, len, value)
 	assert(dstmt and dstmt.isCData, "ffi.fill dst is not a cdata")
 	value = value or 0
 	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
-	js.new(js.global.Uint8Array, membuf, dstmt.offset, len):fill(value, 0, len)
+	js.new(js.global.Uint8Array, membuf, dstmt.addr, len):fill(value, 0, len)
 end
 
 --[[
