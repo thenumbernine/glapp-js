@@ -1,5 +1,6 @@
 local ffi = require 'ffi'
 local table = require 'ext.table'
+local class = require 'ext.class'
 
 ffi.cdef[[
 typedef unsigned int GLenum;
@@ -52,15 +53,32 @@ function gl.glGetString(name)
 	return ffi.stringBuffer''
 end
 
+gl.GL_NO_ERROR = 0
+gl.GL_INVALID_ENUM = 1280
+gl.GL_INVALID_VALUE = 1281
+gl.GL_INVALID_OPERATION = 1282
+gl.GL_STACK_OVERFLOW = 1283
+gl.GL_STACK_UNDERFLOW = 1284
+gl.GL_OUT_OF_MEMORY = 1285
+
+local glerror = gl.GL_NO_ERROR
+
+function gl.glGetError()
+	return glerror
+end
+
 function gl.glViewport(...)
 	return js.global.gl:viewport(...)
 end
 
-local programs = table()
-local function getNextProgramID()
-	local maxn = programs:maxn()
+local ResMap = class()
+
+ResMap.maxn = table.maxn
+
+function ResMap:getNextID()
+	local maxn = self:maxn()
 	for i=1,maxn do
-		if not programs[i] then
+		if not self[i] then
 			return i
 		end
 	end
@@ -68,10 +86,18 @@ local function getNextProgramID()
 	return maxn
 end
 
-function gl.glCreateProgram()
-	local id = getNextProgramID()
-	programs[id] = {}
-	return ffi.cast('GLuint', id)
+function ResMap:makeCreate()
+	return function()
+		local id = self:getNextID()
+		self[id] = {}
+		return ffi.cast('GLuint', id)
+	end
 end
+
+local programs = ResMap()
+gl.glCreateProgram = programs:makeCreate()
+
+local shaders = ResMap()
+gl.glCreateShader = shaders:makeCreate()
 
 return gl

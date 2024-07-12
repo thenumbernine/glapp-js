@@ -1039,7 +1039,7 @@ function CData:__newindex(key, value)
 				elseif type(value) == 'nil' then
 					value = 0
 				else
-					error("can't assign type "..type(value).." to primitive c array type "..tostring(mt))
+					error("can't assign type "..type(value).." to primitive c array type "..tostring(ctype))
 				end
 
 --DEBUG:		assert(xpcall(function()
