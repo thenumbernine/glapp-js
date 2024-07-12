@@ -1173,6 +1173,8 @@ function CData:__newindex(key, value)
 					assert(valueType.isPrimitive, "can't assign a non-primitive type "..tostring(valueType).." to a primitive type "..tostring(fieldType))
 					value = valueType.get(memview, valuemt.addr)
 				elseif valuetype == 'number' then
+				elseif valuetype == 'boolean' then
+					value = value and 1 or 0
 				elseif valuetype == 'nil' then
 					value = 0
 				else

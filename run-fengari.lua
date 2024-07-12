@@ -77,7 +77,7 @@ struct A {
 	--print('memGetPtr(20)', ffi.memGetPtr(20))
 	print('ffi.string(p[0])', ffi.string(p[0]))
 --]=]
--- [=[
+--[=[
 	local ffi = require 'ffi'
 	if ffi.memdump then print('mem', ffi.memdump()) end
 	local v = ffi.new'void*'
@@ -96,7 +96,7 @@ struct A {
 	print(ffi.cast('intptr_t', p))	-- should assign the pointer to the new intptr_t
 	print(ffi.cast('intptr_t', a))	-- same
 --]=]
---[=[
+-- [=[
 	--assert(assert(loadfile'glapp/tests/info.lua')())
 	dofile'glapp/tests/test_es.lua'
 --]=]

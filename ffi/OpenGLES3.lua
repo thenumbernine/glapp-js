@@ -77,6 +77,16 @@ local function setError(err)
 	glerror = err
 end
 
+local function checkError(jsgl, ...)
+	setError(jsgl:getError())
+	return ...
+end
+
+local function glsafecall(name, ...)
+	local jsgl = getJSGL()
+	return checkError(jsgl, jsgl[name](jsgl, ...))
+end
+
 function gl.glViewport(...)
 	return js.global.gl:viewport(...)
 end
@@ -124,7 +134,6 @@ print(self.name, 'making new at id', id)
 end
 
 local programs = ResMap'programs'
-gl.glCreateProgram = programs:makeCreate'createProgram'
 
 -- make sure these match with webgl
 gl.GL_FRAGMENT_SHADER = 35632
@@ -132,6 +141,21 @@ gl.GL_VERTEX_SHADER = 35633
 
 local shaders = ResMap'shaders'
 gl.glCreateShader = shaders:makeCreate'createShader'
+
+
+
+gl.glCreateProgram = programs:makeCreate'createProgram'
+
+function gl.glAttachShader(programID, shaderID)
+	local program = programs:get(programID)
+	if not program then return end
+	
+	local shader = shaders:get(shaderID)
+	if not shader then return end
+
+	glsafecall('attachShader', program.obj, shader.obj)
+end
+
 
 function gl.glShaderSource(id, numStrs, strs, lens)
 	local shader = shaders:get(id)
@@ -143,18 +167,35 @@ function gl.glShaderSource(id, numStrs, strs, lens)
 	end
 	local source = s:concat()
 
-	local jsgl = getJSGL()
-	jsgl:shaderSource(shader.obj, source)
-	setError(jsgl:getError())
+	glsafecall('shaderSource', shader.obj, source)
 end
 
 function gl.glCompileShader(id)
 	local shader = shaders:get(id)
 	if not shader then return end
-	
-	local jsgl = getJSGL()
-	jsgl:compileShader(shader.obj)
-	setError(jsgl:getError())
+
+	glsafecall('compileShader', shader.obj)
+end
+
+gl.GL_SHADER_TYPE = 35663
+gl.GL_DELETE_STATUS = 35712
+gl.GL_COMPILE_STATUS = 35713
+gl.GL_INFO_LOG_LENGTH = 35716
+gl.GL_SHADER_SOURCE_LENGTH = 35720
+
+function gl.glGetShaderiv(id, pname, params)
+	local shader = shaders:get(id)
+	if not shader then return end
+
+	-- in gles but not in webgl?
+	-- or does gles not allow this also, is it just in gl but not gles?
+	if pname == gl.GL_INFO_LOG_LENGTH then
+		params[0] = #glsafecall('getShaderInfoLog', shader.obj)
+	elseif pname == gl.GL_SHADER_SOURCE_LENGTH then
+		params[0] = #glsafecall('getShaderSource', shader.obj)
+	else
+		params[0] = glsafecall('getShaderParameter', shader.obj, pname)
+	end
 end
 
 return gl
