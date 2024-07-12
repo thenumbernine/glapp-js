@@ -1281,9 +1281,6 @@ end
 function CData:__newindex(key, value)
 	local mt = oldgetmetatable(self)
 	local ctype = mt.type
-	if ctype.mt and ctype.mt.__newindex then
-		return ctype.mt.__newindex(self, key, value)
-	end
 
 	local valuetype = type(value)
 	local valuemt = oldgetmetatable(value)
@@ -1334,6 +1331,7 @@ function CData:__newindex(key, value)
 --DEBUG:				..tostring(err)..'\n'
 --DEBUG:				..debug.traceback()
 --DEBUG:		end))
+				return
 			elseif fieldType.isPointer
 			and valuetype == 'string'
 			then
@@ -1341,6 +1339,7 @@ function CData:__newindex(key, value)
 --DEBUG:print('...assigning string to ptr, got src', ptr)
 				value = pushString(value)
 				memSetPtr(fieldAddr, value)
+				return
 			else
 				error("can't assign type '"..valuetype.."' to non-primitive type fieldType="..tostring(fieldType))
 			end
@@ -1352,17 +1351,25 @@ function CData:__newindex(key, value)
 --DEBUG:print('...struct assignment')
 		-- struct/union
 		local field = ctype.fieldForName[key]
-		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
-		local fieldType = field.type
-		local fieldAddr = mt.addr + field.offset
-		if fieldType.isPrimitive then
-			fieldType.set(memview, fieldAddr, value)
-		else
-			error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
+		if field then
+			local fieldType = field.type
+			local fieldAddr = mt.addr + field.offset
+			if fieldType.isPrimitive then
+				fieldType.set(memview, fieldAddr, value)
+				return
+			else
+				error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
+			end
 		end
 	else
 		error("can't assign cdata of type "..tostring(mt.type))
 	end
+
+	if ctype.mt and ctype.mt.__newindex then
+		return ctype.mt.__newindex(self, key, value)
+	end
+
+	error("in type "..ctype.name.." couldn't find field "..tostring(key))
 --DEBUG:print('...assign done')
 end
 
