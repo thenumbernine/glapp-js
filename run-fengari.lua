@@ -27,7 +27,8 @@ struct A {
 };
 ]]
 	local c = ffi.new'struct A';
-
+	print('ffi.null', ffi.null)
+	print('c', c)
 	print('ffi.typeof(c)', ffi.typeof(c))
 	print('ffi.typeof(c.a)', ffi.typeof(c.a))	-- should be: ctype<int (&)[1]>
 	assert(type(c) == 'cdata')
