@@ -1,4 +1,8 @@
 -- also in ext.class
+local oldtype = _G.type
+local oldgetmetatable = _G.getmetatable
+local oldtonumber = _G.tonumber
+
 local function class()
 	local cl = setmetatable({}, {
 		__call = function(mt, ...)
@@ -202,7 +206,7 @@ function Field:init(args)
 	self.name = assert(args.name)
 	assert(type(self.name) == 'string')
 	self.type = assert(args.type)
-assert(getmetatable(self.type) == CType)
+assert(oldgetmetatable(self.type) == CType)
 	self.offset = 0	-- calculate this later
 end
 function Field:__tostring()
@@ -346,10 +350,16 @@ function CType:finalize()
 		end
 	end
 	addFields(self.fields, 0)
+
+--DEBUG:print('struct name', self.name)
+--DEBUG:for i,field in ipairs(self.fields) do
+--DEBUG:print('field', i, 'name', field.type, field.name, 'offset', field.offset)
+--DEBUG:end
+--DEBUG:for name,field in pairs(self.fieldForName) do
+--DEBUG:print('fieldForName', field.type, name, 'offset', field.offset)
+--DEBUG:end
 end
-function CType:__tostring()
-	return 'ctype<'..tostring(self.name)..'>'
-end
+
 function CType:assign(addr, ...)
 --DEBUG:print('CType:assign', addr, ...)
 	if select('#', ...) > 0 then
@@ -384,11 +394,11 @@ function CType:assign(addr, ...)
 			assert(self.isPrimitive, "assigning to a non-primitive...")
 			local v = ...
 			local vt = type(v)
-			local srcmt = getmetatable(v)
+			local srcmt = oldgetmetatable(v)
 			-- TODO maybe all this goes inside self.set?
 			if v == nil then
 				self.set(memview, addr, 0)
-			elseif vt == 'cdata' 
+			elseif vt == 'cdata'
 			and srcmt.isCData
 			then
 --DEBUG:print('...assigning from cdata')
@@ -426,6 +436,82 @@ assert(self.set, "expected primitive to have a setter")
 	end
 end
 
+-- I think I need to make ffi.typeof return proxy objects to CType
+-- and then I need to make ffi.new, ffi.cast, etc accept these objects
+-- and then the luajit code will operate on these objects,
+--  and the CType .mt etc will be hidden from it
+local CTypeProxy = setmetatable({}, {
+	__call = function(mt, ctype)
+		if oldgetmetatable(ctype) ~= CType then
+			error("CTypeProxy() expected a CType object, got "..tostring(ctype))
+		end
+
+		local omt = {}
+		for k,v in pairs(mt) do
+			omt[k] = v
+		end
+
+		omt.type = ctype
+		omt.isCType = true
+
+		return setmetatable({}, omt)
+	end,
+})
+
+function CTypeProxy:__call(...)
+	local mt = oldgetmetatable(self)
+	if not mt then error("tried to do ffi metatype __call on a non cdata") end
+	local ctype = mt.type
+	local ffimt = ctype.mt
+	if not ffimt or not ffimt.__call then
+		return ffi.new(ctype, ...)
+	end
+	return ffimt.__call(self, ...)
+end
+
+function CTypeProxy:__index(key)
+	local mt = oldgetmetatable(self)
+	if not mt then error("tried to do ffi metatype __index on a non cdata") end
+	local ctype = mt.type
+	local ffimt = ctype.mt
+	if ffimt then
+		local index = ffimt.__index
+		if type(index) == 'function' then
+			return index(self, key)
+		elseif type(index) == 'table' then
+			return index[key]
+		else
+			error(tostring(ctype).." has unknown __index type "..type(index))
+		end
+	end
+	error("'"..tostring(ctype).."' has no member '"..tostring(key).."'")
+end
+
+function CTypeProxy:__tostring()
+	local mt = oldgetmetatable(self)
+	if not mt then error("tried to do ffi metatype __index on a non cdata") end
+	local ctype = mt.type
+	return 'ctype<'..tostring(ctype.name)..'>'
+end
+
+--[=[
+function CType:__index(key)
+	local mt = rawget(self, 'mt')
+	--[[
+	if mt then
+		local index = mt.__index
+		if index then
+			if type(index) == 'function' then
+				return index(self, key)
+			elseif type(index) == 'table' then
+				return index[key]
+			end
+		end
+	end
+	--]]
+	return rawget(self, key)
+end
+--]=]
 
 CType{name='void', size=0, isPrimitive=true}	-- let's all admit that a void* is really a char*
 CType{name='int8_t', size=1, isPrimitive=true, getset='Int8'}
@@ -554,7 +640,7 @@ local function consume(str)
 	if d then
 		assert(#d == 6)
 		local rest = str:sub(#d+1)
-		local esc = tonumber(d:sub(4,5), 16)
+		local esc = oldtonumber(d:sub(4,5), 16)
 		assert(esc, "failed to parse hex char "..d)
 		return rest, esc, 'char'	-- TODO escape?
 	end
@@ -659,7 +745,7 @@ local function parseType(str, allowVarArray)
 	-- and should be interoperable with typedefs
 	-- except typedefs can't use comma-separated list (can they?)
 	local baseFieldType = assert(getctype(name), "couldn't find type "..name)
-assert(getmetatable(baseFieldType) == CType)
+assert(oldgetmetatable(baseFieldType) == CType)
 assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 --DEBUG:print('parseType baseFieldType', baseFieldType)
 --DEBUG:print('does baseFieldType* exist?', ctypes[baseFieldType.name..'*'])
@@ -683,7 +769,7 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 			gotVarArray = true
 		else
 			assert(tokentype == 'number', "expected array size, found "..tostring(tokentype)..' '..tostring(token))
-			count = assert(tonumber(token))
+			count = assert(oldtonumber(token))
 			assert(count > 0, "can we allow non-positive-sized arrays?")
 			fieldtype = getArrayType(fieldtype, count)
 		end
@@ -750,7 +836,7 @@ local function parseStruct(str, isunion)
 
 			local nestedtype
 			str, token, tokentype, nestedtype = parseStruct(str, token == 'union')
-assert(getmetatable(nestedtype) == CType)
+assert(oldgetmetatable(nestedtype) == CType)
 assert(nestedtype.size)
 			ctype.fields:insert(Field{
 				name = '',
@@ -785,7 +871,7 @@ assert(nestedtype.size)
 			-- and should be interoperable with typedefs
 			-- except typedefs can't use comma-separated list (can they?)
 			local baseFieldType = assert(getctype(name), "couldn't find type "..name)
-assert(getmetatable(baseFieldType) == CType)
+assert(oldgetmetatable(baseFieldType) == CType)
 assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 
 			while true do
@@ -813,7 +899,7 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 				while token == '[' do
 					str, token, tokentype = consume(str)
 					assert(tokentype == 'number', "expected array size, found "..tostring(tokentype)..' '..tostring(token))
-					local count = assert(tonumber(token))
+					local count = assert(oldtonumber(token))
 					assert(count > 0, "can we allow non-positive-sized arrays?")
 					-- TODO shouldn't we be modifying field.type to be an array-type with array 'count' ?
 					fieldtype = getArrayType(fieldtype, count)
@@ -1044,27 +1130,32 @@ end
 -- if ctype is a string then make it into a CType object
 -- otherwise make sure it's a CType object
 local function toctype(ctype, allowVarArray, ...)
+	if oldgetmetatable(ctype)
+	and oldgetmetatable(ctype).isCType
+	then
+		ctype = oldgetmetatable(ctype).type
+	end
+
 	local didHandleVarArray
 	if type(ctype) == 'string' then
 		ctype, gotVarArray = parseType(ctype, allowVarArray)
 		if gotVarArray then
-			local count = assert(tonumber((...)))
+			local count = assert(oldtonumber((...)))
 			ctype = getArrayType(ctype, count)
 			didHandleVarArray = true
 		end
-		assert(getmetatable(ctype) == CType, "ctypes[] entry is not a CType")
+		assert(oldgetmetatable(ctype) == CType, "ctypes[] entry is not a CType")
 	else
-		assert(getmetatable(ctype) == CType, "toctype got an unknown arg "..tostring(ctype))
+		assert(oldgetmetatable(ctype) == CType, "toctype got an unknown arg "..tostring(ctype))
 	end
 	return ctype, didHandleVarArray
 end
 
-local oldtype = _G.type
 local function getTypeAndMT(o)
-	local mt = getmetatable(o)
+	local mt = oldgetmetatable(o)
 	local t = oldtype(o)
 	if mt then
-		if mt == CType then
+		if mt.isCType then
 			t = 'cdata'	-- this is a convention I wouldn't have chosen ...
 		elseif mt.isCData then
 			t = 'cdata'
@@ -1078,9 +1169,9 @@ end
 
 -- casts a string, cdata, or CType to a CType
 local function toctypefromdata(ctype)
---print('toctypefromdata', ctype)
+--DEBUG:print('toctypefromdata', ctype)
 	local t, mt = getTypeAndMT(ctype)
-	if t == 'cdata' 
+	if t == 'cdata'
 	and mt.isCData
 	then
 		ctype = assert(mt.type)
@@ -1093,16 +1184,15 @@ function ffi.typeof(x)
 	local t = type(x)
 	if t ~= 'cdata'
 	and t ~= 'string'
-	and getmetatable(x) ~= CType
 	then
 		error('bad argument to ffi.typeof (ctype expected, got '..t..')')
 	end
---print('ffi.typeof result', x)
-	return (toctypefromdata(x))
+--DEBUG:print('ffi.typeof result', x)
+	return CTypeProxy((toctypefromdata(x)))
 end
 
 function ffi.sizeof(ctype)
---print('ffi.sizeof', ctype)
+--DEBUG:print('ffi.sizeof', ctype)
 	ctype = toctypefromdata(ctype)
 assert(ctype.size, "need to calculate a size")
 --DEBUG:print('ffi.sizeof('..tostring(ctype)..') = '..ctype.size)
@@ -1129,15 +1219,22 @@ local CData = setmetatable({}, {
 		return setmetatable(o, omt)
 	end,
 })
+
 -- hmm __index is overridden for the user's api
 -- so that means I can't use self: for CData ...
 function CData:__index(key)
-	local mt = getmetatable(self)
+--print('CData.__index', 'self', key)	-- , self calsl tostring calls index inf loop ...
+	local mt = oldgetmetatable(self)
+--print('mt', mt)
 	local ctype = mt.type
+--print('ctype', ctype)
+	assert(oldgetmetatable(ctype) == CType)
+	local ctypemt = ctype.mt
+
 	if ctype.baseType then
 		if ctype.arrayCount then
 			-- array ...
-			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
+			local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = mt.type.baseType
 			local fieldAddr = mt.addr + index * ctype.baseType.size
 			if fieldType.isPrimitive then
@@ -1152,37 +1249,56 @@ function CData:__index(key)
 	elseif ctype.fields then
 		-- struct/union
 		local field = ctype.fieldForName[key]
-		if not field then error("in type "..tostring(self).." couldn't find field "..tostring(key)) end
-		local fieldType = field.type
-		local fieldAddr = mt.addr + field.offset
-		if fieldType.isPrimitive then
-			return fieldType.get(memview, fieldAddr)
-		else
-			-- TODO the returned type should be a ref-type ... indicating not to copy upon assign ...
-			return CData(fieldType, fieldAddr)
+		if field then
+			local fieldType = field.type
+			local fieldAddr = mt.addr + field.offset
+			if fieldType.isPrimitive then
+				return fieldType.get(memview, fieldAddr)
+			else
+				-- TODO the returned type should be a ref-type ... indicating not to copy upon assign ...
+				return CData(fieldType, fieldAddr)
+			end
 		end
 	else
 		error("can't index cdata of type "..tostring(mt.type))
 	end
+
+	if ctypemt then
+		local index = ctypemt.__index
+--DEBUG:print('calling __index', index)
+		if type(index) == 'function' then
+			return index(self, key)
+		elseif type(index) == 'table' then
+			return index[key]
+		else
+			error(tostring(ctype).." has unknown __index type "..type(index))
+		end
+	else
+		error("in type "..ctype.name.." couldn't find field "..tostring(key))
+	end
 end
 
 function CData:__newindex(key, value)
-	local mt = getmetatable(self)
+	local mt = oldgetmetatable(self)
 	local ctype = mt.type
+	if ctype.mt and ctype.mt.__newindex then
+		return ctype.mt.__newindex(self, key, value)
+	end
+
 	local valuetype = type(value)
-	local valuemt = getmetatable(value)
+	local valuemt = oldgetmetatable(value)
 --DEBUG:print('CData:__newindex self=', self, 'ctype', ctype, 'key', key, 'value', value)
 	if ctype.baseType then
 		if ctype.arrayCount then
 --DEBUG:print('...array assignment')
 			-- array
-			local index = tonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
+			local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = ctype.baseType
 			local fieldAddr = mt.addr + index * ctype.baseType.size
 --DEBUG:print('...fieldType', fieldType.isPrimitive, fieldType.isPointer, 'valuetype', valuetype)
 			if fieldType.isPrimitive then
 
-				if valuetype == 'cdata' 
+				if valuetype == 'cdata'
 				and valuemt.isCData
 				then
 					-- TODO here ... ffi.copy between the two ...
@@ -1203,7 +1319,7 @@ function CData:__newindex(key, value)
 					then
 						-- copy the lua-string to js-mem and return a pointer to it
 						local ptr = ffi.stringBuffer(value)
-						value = getmetatable(ptr).addr
+						value = oldgetmetatable(ptr).addr
 						-- here and below as well?
 					else
 					--]] do
@@ -1252,8 +1368,13 @@ end
 
 function CData:__tostring()
 --DEBUG:print('CData:__tostring')
-	local mt = getmetatable(self)
+	local mt = oldgetmetatable(self)
 	local ctype = mt.type
+
+	if ctype.mt and ctype.mt.__tostring then
+		return ctype.mt.__tostring(self)
+	end
+
 --DEBUG:print('...ctype', ctype)
 --DEBUG:print('...addr', mt.addr)
 	local value
@@ -1287,7 +1408,7 @@ function CData:__tostring()
 end
 
 function CData:add(index)
-	local mt = getmetatable(self)
+	local mt = oldgetmetatable(self)
 	return CData(
 		mt.type,
 		mt.addr + index * mt.type.size
@@ -1295,8 +1416,8 @@ function CData:add(index)
 end
 
 function CData.__add(a,b)
-	local ma = getmetatable(a)
-	local mb = getmetatable(b)
+	local ma = oldgetmetatable(a)
+	local mb = oldgetmetatable(b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	local na = type(a) == 'number'
@@ -1317,20 +1438,20 @@ function ffi.cast(ctype, src)
 	ctype = toctype(ctype)
 
 	local srctype = type(src)
-	local srcmt = getmetatable(src)
+	local srcmt = oldgetmetatable(src)
 --DEBUG:print('...srctype', srctype)
 	if srctype == 'string' then
 		-- in luajit doing this gives you access to the string's own underlying buffer
 		-- TODO eventually pull that out of Fengari
 		-- until then, make a new buffer and return the pointer to it
 		src = ffi.stringBuffer(src)
-		local srcmt = getmetatable(src)
+		local srcmt = oldgetmetatable(src)
 		return CData(ctype, srcmt.addr)
 	--[[
 	elseif srctype == 'nil' then
 		return CData(ctype, 0)
 	else	-- expect it to be cdata
-		local srcmt = getmetatable(src)
+		local srcmt = oldgetmetatable(src)
 		return CData(ctype, srcmt.addr)
 	--]]
 	else
@@ -1342,7 +1463,7 @@ function ffi.cast(ctype, src)
 				value = src
 			elseif srctype == 'nil' then
 				value = 0
-			elseif srctype == 'cdata' 
+			elseif srctype == 'cdata'
 			and srcmt.isCData
 			then
 				value = srcmt.addr
@@ -1355,7 +1476,7 @@ function ffi.cast(ctype, src)
 				error("idk how to assign srctype "..srctype)
 			end
 			local result = ffi.new(ctype)
-			memSetPtr(getmetatable(result).addr, value)
+			memSetPtr(oldgetmetatable(result).addr, value)
 			return result
 		else
 			-- same as ffi.new?
@@ -1397,7 +1518,7 @@ function ffi.string(ptr, len)
 		return ptr
 	end
 	assert(type(ptr) == 'cdata')
-	local ptrmt = assert(getmetatable(ptr))
+	local ptrmt = assert(oldgetmetatable(ptr))
 	assert(ptrmt.isCData)
 	local ptrctype = ptrmt.type
 	local addr
@@ -1436,16 +1557,19 @@ function ffi.stringBuffer(str)
 	--]]
 	-- [[
 	local p = ffi.new'char*'
-	memSetPtr(getmetatable(p).addr, getmetatable(dst).addr)
+	memSetPtr(oldgetmetatable(p).addr, oldgetmetatable(dst).addr)
 	--]]
 	return p
 end
 
 function ffi.metatype(ctype, mt)
+--DEBUG:print('ffi.metatype', ctype, mt)
 	if type(ctype) == 'string' then
+		-- TODO parseType instead of getctype to handle spaces/aliases
 		ctype = assert(getctype(ctype), "couldn't find type "..ctype)
+--DEBUG:print('...got ctype', ctype)
 	end
-	assert(getmetatable(ctype) == CType, "ffi.sizeof object is not a ctype")
+	assert(oldgetmetatable(ctype) == CType, "ffi.sizeof object is not a ctype")
 
 	assert(ctype.fields, "can only call ctype on structs/unions")
 
@@ -1455,34 +1579,25 @@ function ffi.metatype(ctype, mt)
 	end
 	-- modify it to include __call ...
 	local copy = {}
-	for k,v in pairs(mt) do copy[k] = v end
-	mt = copy
-
-	-- now fill in args
-	-- TODO same as ffi.new('ctype', ...) ?
-	mt.__call = function(t, ...)
---DEBUG:print('calling ctor on '..ctype.name..' with', ...)
-		local addr = malloc(ctype.size)
-		local ptr = CData(ctype, addr)
-
-		-- TODO instead of ctype:assign, use ptr:set ?
-		-- TODO double check that in ffi you can use cdata operator= to duplicate ffi.new / metatype-ctor behavior
-		ctype:assign(addr, ...)
-
-		return ptr
+	for k,v in pairs(mt) do
+--DEBUG:print('copying', k, v)
+		copy[k] = v
 	end
+	mt = copy
 
 	-- TODO store old __index
 	-- and give this a new __index
 	-- which first looks up any field names, tries to write to them
 	-- and if it fails then goes to __index
 
-	ctype.mt = setmetatable({}, mt)
-	return ctype.mt
+	ctype.mt = mt
+--DEBUG:print('returning ctype.mt', ctype.mt)
+	--return ctype.mt
+	return CTypeProxy(ctype)
 end
 
 local function cdataToHex(d)
-	local mt = getmetatable(d)
+	local mt = oldgetmetatable(d)
 	local s = {}
 	for i=mt.addr,mt.addr + mt.type.size-1 do
 		table.insert(s, ('%02x'):format(memview:getUint8(i)))
@@ -1491,9 +1606,9 @@ local function cdataToHex(d)
 end
 
 function ffi.copy(dst, src, len)
---print('ffi.copy', cdataToHex(dst), cdataToHex(src), len)
+--DEBUG:print('ffi.copy', cdataToHex(dst), cdataToHex(src), len)
 	--asserttype(dst, 'cdata')	-- TODO this plz?
-	local dstmt = getmetatable(dst)
+	local dstmt = oldgetmetatable(dst)
 	assert(type(dst) == 'cdata' and dstmt.isCData)
 	if not (dstmt and dstmt.isCData) then
 		error("ffi.copy dst is not a cdata, got "..tostring(dst))
@@ -1506,7 +1621,7 @@ function ffi.copy(dst, src, len)
 			memview:setUint8(dstmt.addr + i-1, src:byte(i) or 0)
 		end
 	else
-		local srcmt = getmetatable(src)
+		local srcmt = oldgetmetatable(src)
 		assert(type(src) == 'cdata' and srcmt.isCData)
 		assert(srcmt and srcmt.isCData, "ffi.copy src is not a cdata")
 		assert(len, "expected len")	-- or can't it coerce size from cdata?
@@ -1515,11 +1630,11 @@ function ffi.copy(dst, src, len)
 			js.new(js.global.Uint8Array, membuf, srcmt.addr, len)
 		)
 	end
---print('ffi.copy finished', cdataToHex(dst), cdataToHex(src), len)
+--DEBUG:print('ffi.copy finished', cdataToHex(dst), cdataToHex(src), len)
 end
 
 function ffi.fill(dst, len, value)
-	local dstmt = getmetatable(dst)
+	local dstmt = oldgetmetatable(dst)
 	assert(type(dst) == 'cdata' and dstmt.isCData)
 	assert(dstmt and dstmt.isCData, "ffi.fill dst is not a cdata")
 	value = value or 0
@@ -1532,10 +1647,9 @@ because nil and anything else (userdata, object, etc) will always be false in va
 --]]
 ffi.null = ffi.new'void*'
 
-local oldtonumber = tonumber
 function tonumber(x, ...)
-	local mt = getmetatable(x)
-	if type(x) == 'cdata' 
+	local mt = oldgetmetatable(x)
+	if type(x) == 'cdata'
 	and mt.isCData
 	then
 		local ctype = mt.type
@@ -1546,6 +1660,16 @@ function tonumber(x, ...)
 		end
 	else
 		return oldtonumber(x, ...)
+	end
+end
+
+function getmetatable(m)
+	local t = type(m)
+	if t == 'cdata' then
+		-- idk the point of this
+		return 'ffi'
+	else
+		return oldgetmetatable(t)
 	end
 end
 

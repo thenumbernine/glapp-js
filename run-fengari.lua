@@ -100,7 +100,21 @@ struct A {
 	print(ffi.cast('intptr_t', p2))
 	print(('%x'):format(tonumber(ffi.cast('intptr_t', p2))))
 --]=]
--- [=[
+--[=[
+	local struct = require 'struct'
+	print('struct', struct)
+
+	local A = struct{
+		name = 'A',
+		fields = {
+			{name='a', type='float'},
+			{name='b', type='int'},
+		},
+	}
+	print('type(A)', type(A))
+	print('A', A)
+--]=]
+--[=[
 	local ffi = require 'ffi'
 	local quatd = require 'vec-ffi.quatd'
 	print('quatd', quatd)	-- should be a type?
@@ -109,9 +123,15 @@ struct A {
 	local q = quatd()
 	--print('quatd size', getmetatable(q).type.size)
 	print('ffi.sizeof(q)', ffi.sizeof(q))
-	print('q', q)
+
+	print('q.x', q.x)
+	--print("q.notthere", q.notthere)
+	print("q.fieldToString", q.fieldToString)
+	print("q:fieldToString('x', 'double')", q:fieldToString('x', 'double'))
+
+	--print('q', q)
 --]=]
---[=[
+-- [=[
 	--assert(assert(loadfile'glapp/tests/info.lua')())
 	dofile'glapp/tests/test_es.lua'
 --]=]
