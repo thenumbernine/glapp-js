@@ -92,9 +92,14 @@ struct A {
 
 	local a = ffi.new('char[20]')
 	local p = ffi.cast('char*', a)
+	local p2 = ffi.cast('int*', p)
+	print('a', a)
 	print('p', p)
-	print(ffi.cast('intptr_t', p))	-- should assign the pointer to the new intptr_t
+	print('p2', p2)
 	print(ffi.cast('intptr_t', a))	-- same
+	print(ffi.cast('intptr_t', p))	-- should assign the pointer to the new intptr_t
+	print(ffi.cast('intptr_t', p2))
+	print(('%x'):format(tonumber(ffi.cast('intptr_t', p2))))
 --]=]
 -- [=[
 	--assert(assert(loadfile'glapp/tests/info.lua')())

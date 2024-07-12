@@ -757,9 +757,9 @@ end
 function ResMap:get(id)
 	id = tonumber(id)
 	local obj = self[id]
-	if not obj then 
+	if not obj then
 --DEBUG:print(self.name, 'failed to find id', id)
-		setError(gl.GL_INVALID_OPERATION) 
+		setError(gl.GL_INVALID_OPERATION)
 	end
 	return obj
 end
@@ -792,7 +792,7 @@ end
 function ResMap:makeWrapper(name, ...)
 	local args = table.pack(...)
 	return function(...)
-		local n = select('#', ...) 
+		local n = select('#', ...)
 		if #args ~= n then
 			error('wrong number of function arguments, expected '..n..' but got '..#args)
 		end
@@ -808,16 +808,16 @@ end
 
 
 local programs = ResMap'programs'
-gl.programs = programs 
+gl.programs = programs
 local shaders = ResMap'shaders'
-gl.shaders = shaders 
+gl.shaders = shaders
 
 gl.glCreateProgram = programs:makeCreate'createProgram'
 
 function gl.glAttachShader(programID, shaderID)
 	local program = programs:get(programID)
 	if not program then return end
-	
+
 	local shader = shaders:get(shaderID)
 	if not shader then return end
 
@@ -827,7 +827,7 @@ end
 function gl.glDetachShader(programID, shaderID)
 	local program = programs:get(programID)
 	if not program then return end
-	
+
 	local shader = shaders:get(shaderID)
 	if not shader then return end
 
@@ -851,7 +851,7 @@ end
 function gl.glGetProgramiv(id, pname, params)
 	local program = programs:get(id)
 	if not program then return end
-	
+
 	if pname == gl.GL_ACTIVE_ATOMIC_COUNTER_BUFFERS then
 		setError(gl.GL_INVALID_ENUM)
 	elseif pname == gl.GL_INFO_LOG_LENGTH then
@@ -881,7 +881,7 @@ end
 function gl.glGetProgramInfoLog(id, bufSize, length, infoLog)
 	local program = programs:get(id)
 	if not program then return end
-	
+
 	local log = glsafecall('getProgramInfoLog', program.obj)
 	if not log then return  end
 
@@ -935,7 +935,7 @@ for n=1,4 do
 				assert(type(value) == 'cdata')
 				local mt = getmetatable(value)
 				assert(mt.type.isPointer)
-				-- if it's an array ... coerce somewhere ... 
+				-- if it's an array ... coerce somewhere ...
 				local value = js.new(
 					t == 'f' and js.global.Float32Array or js.global.Int32Array,
 					ffi.membuf,
@@ -954,13 +954,13 @@ for n=1,4 do
 			assert(type(value) == 'cdata')
 			local mt = getmetatable(value)
 			assert(mt.type.isPointer)
-			-- if it's an array ... coerce somewhere ... 
+			-- if it's an array ... coerce somewhere ...
 			local value = js.new(
 				t == 'f' and js.global.Float32Array or js.global.Int32Array,
 				ffi.membuf,
 				memGetPtr(mt.addr),
 				len * count
-			)		
+			)
 			glsafecall(webglname, transpose, value)
 		end
 	end
@@ -983,6 +983,11 @@ function gl.glGetActiveAttrib(id, index, bufSize, length, size, type, name)
 	if name ~= ffi.null then
 		ffi.copy(name, uinfo.name)
 	end
+end
+
+function gl.glGetAttribLocation(id, name)
+	local program = programs:get(id)
+	return program and glsafecall('getAttribLocation', program.obj, ffi.string(name)) or nil
 end
 
 
@@ -1028,14 +1033,10 @@ end
 function gl.glGetShaderInfoLog(id, bufSize, length, infoLog)
 	local shader = shaders:get(id)
 	if not shader then return end
-	
+
 	local log = glsafecall('getShaderInfoLog', shader.obj)
-	if not log then 
-print('...failed to get log')		
-		return 
-	end
-print('got log', log)
-	
+	if not log then  return end
+
 	if length ~= ffi.null then
 		length[0] = #log
 	end

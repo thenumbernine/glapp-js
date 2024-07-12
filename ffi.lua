@@ -1297,9 +1297,12 @@ end
 -- tonumber(cdata ptr) returns nil
 -- but tonumber(cdata prim) returns the number value
 function ffi.cast(ctype, src)
+--DEBUG:print('ffi.cast', ctype, src)
 	ctype = toctype(ctype)
 
-	if type(src) == 'string' then
+	local srctype = type(src)
+--DEBUG:print('...srctype', srctype)
+	if srctype == 'string' then
 		-- in luajit doing this gives you access to the string's own underlying buffer
 		-- TODO eventually pull that out of Fengari
 		-- until then, make a new buffer and return the pointer to it
@@ -1307,7 +1310,7 @@ function ffi.cast(ctype, src)
 		local srcmt = getmetatable(src)
 		return CData(ctype, srcmt.addr)
 	--[[
-	elseif type(src) == 'nil' then
+	elseif srctype == 'nil' then
 		return CData(ctype, 0)
 	else	-- expect it to be cdata
 		local srcmt = getmetatable(src)
@@ -1317,22 +1320,29 @@ function ffi.cast(ctype, src)
 		-- if it's a ptr then just change the ptr type
 		-- TODO this is going to grow into full on emulated memory management very quickly
 		if ctype.isPointer then
-			local srcmt = getmetatable(src)
-			--[[
-			return CData(ctype, srcmt.addr)
-			--]]
-			--[[ making a new pointer?  needs new mem ...
-			-- 'assigning to non-primitive' ... should I allow it in :assign() ?
-			return ffi.new(ctype, srcmt.addr)
-			--]]
-			-- [[
+			local value
+			if srctype == 'number' then
+				value = src
+			elseif srctype == 'nil' then
+				value = 0
+			elseif srctype == 'cdata' then
+				local srcmt = getmetatable(src)
+				value = srcmt.addr
+--DEBUG:print('value', value)
+				if srcmt.type.isPointer then
+					value = memGetPtr(value)
+--DEBUG:print('...get ptr contents', value)
+				end
+			else
+				error("idk how to assign srctype "..srctype)
+			end
 			local result = ffi.new(ctype)
-			memSetPtr(getmetatable(result).addr, srcmt.addr)
+			memSetPtr(getmetatable(result).addr, value)
 			return result
-			--]]
+		else
+			-- same as ffi.new?
+			return ffi.new(ctype, src)
 		end
-		-- same as ffi.new?
-		return ffi.new(ctype, src)
 	end
 end
 
