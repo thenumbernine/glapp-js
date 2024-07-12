@@ -3,19 +3,58 @@ local table = require 'ext.table'
 local class = require 'ext.class'
 
 ffi.cdef[[
-typedef unsigned int GLenum;
-typedef unsigned char GLboolean;
-typedef unsigned int GLbitfield;
+///khrplatform
+typedef int32_t khronos_int32_t;
+typedef uint32_t khronos_uint32_t;
+typedef int64_t khronos_int64_t;
+typedef uint64_t khronos_uint64_t;
+//enum { KHRONOS_SUPPORT_INT64 = 1 };
+//enum { KHRONOS_SUPPORT_FLOAT = 1 };
+typedef signed char khronos_int8_t;
+typedef unsigned char khronos_uint8_t;
+// TODO errors on this one ...
+// TODO FIXME tried to redefine int ...
+//typedef signed short int khronos_int16_t;
+typedef short khronos_int16_t;
+//typedef unsigned short int khronos_uint16_t;
+typedef unsigned short khronos_uint16_t;
+//typedef signed long int khronos_intptr_t;
+typedef long khronos_intptr_t;
+//typedef unsigned long int khronos_uintptr_t;
+typedef unsigned long khronos_uintptr_t;
+//typedef signed long int khronos_ssize_t;
+typedef long khronos_ssize_t;
+typedef unsigned long khronos_usize_t;
+typedef float khronos_float_t;
+typedef khronos_uint64_t khronos_utime_nanoseconds_t;
+typedef khronos_int64_t khronos_stime_nanoseconds_t;
+//enum { KHRONOS_MAX_ENUM = 2147483647 };
+//typedef enum { KHRONOS_FALSE = 0, KHRONOS_TRUE = 1, KHRONOS_BOOLEAN_ENUM_FORCE_SIZE = 0x7FFFFFFF } khronos_boolean_enum_t;
+
+//gles3
+typedef khronos_int8_t GLbyte;
+typedef khronos_float_t GLclampf;
+typedef khronos_int32_t GLfixed;
+typedef khronos_int16_t GLshort;
+typedef khronos_uint16_t GLushort;
 typedef void GLvoid;
-typedef signed char GLbyte;
-typedef short GLshort;
-typedef int GLint;
-typedef unsigned char GLubyte;
-typedef unsigned short GLushort;
+//typedef struct __GLsync *GLsync;
+typedef khronos_int64_t GLint64;
+typedef khronos_uint64_t GLuint64;
+typedef unsigned int GLenum;
 typedef unsigned int GLuint;
+typedef char GLchar;
+typedef khronos_float_t GLfloat;
+typedef khronos_ssize_t GLsizeiptr;
+typedef khronos_intptr_t GLintptr;
+typedef unsigned int GLbitfield;
+typedef int GLint;
+typedef unsigned char GLboolean;
 typedef int GLsizei;
-typedef float GLfloat;
-typedef float GLclampf;
+typedef khronos_uint8_t GLubyte;
+typedef khronos_uint16_t GLhalf;
+
+// these are in desktop GL but not GLES
 typedef double GLdouble;
 typedef double GLclampd;
 ]]
@@ -815,6 +854,18 @@ function gl.glGetProgramiv(id, pname, params)
 	
 	if pname == gl.GL_ACTIVE_ATOMIC_COUNTER_BUFFERS then
 		setError(gl.GL_INVALID_ENUM)
+	elseif pname == gl.GL_INFO_LOG_LENGTH then
+		params[0] = #glsafecall('getProgramInfoLog', program.obj)
+	elseif pname == gl.GL_ACTIVE_UNIFORM_MAX_LENGTH then
+		-- https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGetActiveUniform.xhtml
+		-- "The size of the character buffer required to store the longest uniform variable name in program can be obtained by calling glGetProgram with the value GL_ACTIVE_UNIFORM_MAX_LENGTH"
+		-- I guess webgl doesn't have antything like this ...
+		local maxlen = 0
+		for i=0,glsafecall('getProgramParameter', program.obj, gl.GL_ACTIVE_UNIFORMS)-1 do
+			local uinfo = glsafecall('getActiveUniform', program.obj, i)
+			maxlen = math.max(maxlen, #uinfo.name)
+		end
+		params[0] = maxlen
 	else
 		params[0] = glsafecall('getProgramParameter', program.obj, pname)
 	end
@@ -825,13 +876,32 @@ function gl.glGetProgramInfoLog(id, bufSize, length, infoLog)
 	if not program then return end
 	
 	local log = glsafecall('getProgramInfoLog', program.obj)
-	if not log then return end
-	
+	if not log then return  end
+
 	if length ~= ffi.null then
 		length[0] = #log
 	end
 	if infoLog == ffi.null then
-		ffi.copy(infoLog, log)
+		ffi.copy(infoLog, log, bufSize)
+	end
+end
+
+function gl.glGetActiveUniform(id, index, bufSize, length, size, type, name)
+	local program = programs:get(id)
+	if not program then return end
+
+	local uinfo = glsafecall('getActiveUniform', program.obj, index)
+	if length ~= ffi.null then
+		length[0] = #uinfo.name
+	end
+	if size ~= ffi.null then
+		size[0] = uinfo.size
+	end
+	if type ~= ffi.null then
+		type[0] = uinfo.type
+	end
+	if name ~= ffi.null then
+		ffi.copy(name, uinfo.name)
 	end
 end
 
@@ -865,7 +935,8 @@ function gl.glGetShaderiv(id, pname, params)
 	-- in gles but not in webgl?
 	-- or does gles not allow this also, is it just in gl but not gles?
 	if pname == gl.GL_INFO_LOG_LENGTH then
-		params[0] = #glsafecall('getShaderInfoLog', shader.obj)
+		local log = glsafecall('getShaderInfoLog', shader.obj)
+		params[0] = #log
 	elseif pname == gl.GL_SHADER_SOURCE_LENGTH then
 		params[0] = #glsafecall('getShaderSource', shader.obj)
 	else
@@ -873,18 +944,22 @@ function gl.glGetShaderiv(id, pname, params)
 	end
 end
 
-function gl.glGetShaderInfoLog(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog)
+function gl.glGetShaderInfoLog(id, bufSize, length, infoLog)
 	local shader = shaders:get(id)
 	if not shader then return end
 	
 	local log = glsafecall('getShaderInfoLog', shader.obj)
-	if not log then return end
+	if not log then 
+print('...failed to get log')		
+		return 
+	end
+print('got log', log)
 	
 	if length ~= ffi.null then
 		length[0] = #log
 	end
 	if infoLog == ffi.null then
-		ffi.copy(infoLog, log)
+		ffi.copy(infoLog, log, bufSize)
 	end
 end
 
