@@ -720,18 +720,16 @@ end
 local glerror = gl.GL_NO_ERROR
 
 function gl.glGetError()
-	return glerror
+	-- idk how to make precedence of whether mine or theirs sets first
+	-- too bad there's no glSetError function ....
+	if glerror ~= 0 then return glerror end
+	return getJSGL():getError()
 end
 
 local function setError(err)
 	if glerror ~= 0 then return end
 	if err == 0 then return end
 	glerror = err
-end
-
-local function checkGLError(jsgl, ...)
-	setError(jsgl:getError())
-	return ...
 end
 
 
@@ -777,34 +775,9 @@ function ResMap:makeCreate(webglfuncname)
 	end
 end
 
-local function glsafecall(name, ...)
-	local jsgl = getJSGL()
-	local f = assert(jsgl[name])
-	return checkGLError(jsgl, f(jsgl, ...))
-end
-
---[[ bleh
-local function xformargs(check, i, ...)
-	if select('#', ...) == 0 then return end
-
-end
-
-function ResMap:makeWrapper(name, ...)
-	local args = table.pack(...)
-	return function(...)
-		local n = select('#', ...)
-		if #args ~= n then
-			error('wrong number of function arguments, expected '..n..' but got '..#args)
-		end
-		return glsafecall(name, xformargs(args, 1, ...))
-	end
-end
---]]
-
-
-function gl.glViewport(...)
-	return js.global.gl:viewport(...)
-end
+function gl.glViewport(...) return getJSGL():viewport(...) end
+function gl.glClearColor(...) return getJSGL():clearColor(...) end
+function gl.glClear(...) return getJSGL():clear(...) end
 
 
 local programs = ResMap'programs'
@@ -821,7 +794,7 @@ function gl.glAttachShader(programID, shaderID)
 	local shader = shaders:get(shaderID)
 	if not shader then return end
 
-	glsafecall('attachShader', program.obj, shader.obj)
+	getJSGL():attachShader(program.obj, shader.obj)
 end
 
 function gl.glDetachShader(programID, shaderID)
@@ -831,21 +804,21 @@ function gl.glDetachShader(programID, shaderID)
 	local shader = shaders:get(shaderID)
 	if not shader then return end
 
-	glsafecall('detachShader', program.obj, shader.obj)
+	getJSGL():detachShader(program.obj, shader.obj)
 end
 
 function gl.glLinkProgram(id)
 	local program = programs:get(id)
 	if not program then return end
 
-	glsafecall('linkProgram', program.obj)
+	getJSGL():linkProgram(program.obj)
 end
 
 function gl.glUseProgram(id)
 	local program = programs:get(id)
 	if not program then return end
 
-	glsafecall('useProgram', program.obj)
+	getJSGL():useProgram(program.obj)
 end
 
 function gl.glGetProgramiv(id, pname, params)
@@ -855,26 +828,26 @@ function gl.glGetProgramiv(id, pname, params)
 	if pname == gl.GL_ACTIVE_ATOMIC_COUNTER_BUFFERS then
 		setError(gl.GL_INVALID_ENUM)
 	elseif pname == gl.GL_INFO_LOG_LENGTH then
-		params[0] = #glsafecall('getProgramInfoLog', program.obj)
+		params[0] = #getJSGL():getProgramInfoLog(program.obj)
 	elseif pname == gl.GL_ACTIVE_UNIFORM_MAX_LENGTH then
 		-- https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGetActiveUniform.xhtml
 		-- "The size of the character buffer required to store the longest uniform variable name in program can be obtained by calling glGetProgram with the value GL_ACTIVE_UNIFORM_MAX_LENGTH"
 		-- I guess webgl doesn't have antything like this ...
 		local maxlen = 0
-		for i=0,glsafecall('getProgramParameter', program.obj, gl.GL_ACTIVE_UNIFORMS)-1 do
-			local uinfo = glsafecall('getActiveUniform', program.obj, i)
+		for i=0,getJSGL():getProgramParameter(program.obj, gl.GL_ACTIVE_UNIFORMS)-1 do
+			local uinfo = getJSGL():getActiveUniform(program.obj, i)
 			maxlen = math.max(maxlen, #uinfo.name)
 		end
 		params[0] = maxlen
 	elseif pname == gl.GL_ACTIVE_ATTRIBUTE_MAX_LENGTH then
 		local maxlen = 0
-		for i=0,glsafecall('getProgramParameter', program.obj, gl.GL_ACTIVE_ATTRIBUTES)-1 do
-			local uinfo = glsafecall('getActiveAttrib', program.obj, i)
+		for i=0,getJSGL():getProgramParameter(program.obj, gl.GL_ACTIVE_ATTRIBUTES)-1 do
+			local uinfo = getJSGL():getActiveAttrib(program.obj, i)
 			maxlen = math.max(maxlen, #uinfo.name)
 		end
 		params[0] = maxlen
 	else
-		params[0] = glsafecall('getProgramParameter', program.obj, pname)
+		params[0] = getJSGL():getProgramParameter(program.obj, pname)
 	end
 end
 
@@ -882,7 +855,7 @@ function gl.glGetProgramInfoLog(id, bufSize, length, infoLog)
 	local program = programs:get(id)
 	if not program then return end
 
-	local log = glsafecall('getProgramInfoLog', program.obj)
+	local log = getJSGL():getProgramInfoLog(program.obj)
 	if not log then return  end
 
 	if length ~= ffi.null then
@@ -897,7 +870,7 @@ function gl.glGetActiveUniform(id, index, bufSize, length, size, type, name)
 	local program = programs:get(id)
 	if not program then return end
 
-	local uinfo = glsafecall('getActiveUniform', program.obj, index)
+	local uinfo = getJSGL():getActiveUniform(program.obj, index)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
@@ -914,7 +887,7 @@ end
 
 function gl.glGetUniformLocation(id, name)
 	local program = programs:get(id)
-	return program and glsafecall('getUniformLocation', program.obj, ffi.string(name)) or nil
+	return program and getJSGL():getUniformLocation(program.obj, ffi.string(name)) or nil
 end
 
 for n=1,4 do
@@ -970,7 +943,7 @@ function gl.glGetActiveAttrib(id, index, bufSize, length, size, type, name)
 	local program = programs:get(id)
 	if not program then return end
 
-	local uinfo = glsafecall('getActiveAttrib', program.obj, index)
+	local uinfo = getJSGL():getActiveAttrib(program.obj, index)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
@@ -987,7 +960,7 @@ end
 
 function gl.glGetAttribLocation(id, name)
 	local program = programs:get(id)
-	return program and glsafecall('getAttribLocation', program.obj, ffi.string(name)) or nil
+	return program and getJSGL():getAttribLocation(program.obj, ffi.string(name)) or nil
 end
 
 
@@ -1004,14 +977,14 @@ function gl.glShaderSource(id, numStrs, strs, lens)
 	end
 	local source = s:concat()
 
-	glsafecall('shaderSource', shader.obj, source)
+	getJSGL():shaderSource(shader.obj, source)
 end
 
 function gl.glCompileShader(id)
 	local shader = shaders:get(id)
 	if not shader then return end
 
-	glsafecall('compileShader', shader.obj)
+	getJSGL():compileShader(shader.obj)
 end
 
 function gl.glGetShaderiv(id, pname, params)
@@ -1021,12 +994,12 @@ function gl.glGetShaderiv(id, pname, params)
 	-- in gles but not in webgl?
 	-- or does gles not allow this also, is it just in gl but not gles?
 	if pname == gl.GL_INFO_LOG_LENGTH then
-		local log = glsafecall('getShaderInfoLog', shader.obj)
+		local log = getJSGL():getShaderInfoLog(shader.obj)
 		params[0] = #log
 	elseif pname == gl.GL_SHADER_SOURCE_LENGTH then
-		params[0] = #glsafecall('getShaderSource', shader.obj)
+		params[0] = #getJSGL():getShaderSource(shader.obj)
 	else
-		params[0] = glsafecall('getShaderParameter', shader.obj, pname)
+		params[0] = getJSGL():getShaderParameter(shader.obj, pname)
 	end
 end
 
@@ -1034,7 +1007,7 @@ function gl.glGetShaderInfoLog(id, bufSize, length, infoLog)
 	local shader = shaders:get(id)
 	if not shader then return end
 
-	local log = glsafecall('getShaderInfoLog', shader.obj)
+	local log = getJSGL():getShaderInfoLog(shader.obj)
 	if not log then  return end
 
 	if length ~= ffi.null then
