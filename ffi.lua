@@ -1219,6 +1219,7 @@ function CData:__tostring()
 			-- [[
 			local intptrtype = assert(getctype'intptr_t')
 			value = intptrtype.get(memview, mt.addr)
+			value = ('0x%08x'):format(value)
 			--]]
 			--[[
 			-- "TypeError: Invalid value used as weak map key"
@@ -1230,7 +1231,7 @@ function CData:__tostring()
 		end
 	else
 --DEBUG:print('...else value')		
-		value = ('0x%x'):format(mt.addr)
+		value = ('0x%08x'):format(mt.addr)
 	end
 	return 'cdata<'..ctype.name..'>: '..tostring(value)
 end

@@ -60,7 +60,7 @@ struct A {
 	print('mem: null, int[1] l='..#s)
 	if ffi.memdump then print('mem', ffi.memdump()) end
 	
-	local p = ffi.new'char*[1]'
+	local p = ffi.new'const char*[1]'	-- luajit requires const char*, not char*
 	print('mem: null, int[1] l='..#s..' char*[1] p')
 	if ffi.memdump then print('mem', ffi.memdump()) end
 	print('p', p)
@@ -74,7 +74,7 @@ struct A {
 	if ffi.memdump then print('mem', ffi.memdump()) end
 	print('p[0]', p[0])
 	--print('memGetPtr(p[0])', ffi.memGetPtr(p[0]))
-	print('memGetPtr(20)', ffi.memGetPtr(20))
+	--print('memGetPtr(20)', ffi.memGetPtr(20))
 	print('ffi.string(p[0])', ffi.string(p[0]))
 --]=]
 -- [=[
