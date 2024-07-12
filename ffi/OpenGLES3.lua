@@ -28,9 +28,13 @@ gl.GL_VERSION = 7938
 gl.GL_EXTENSIONS = 7939 
 gl.GL_SHADING_LANGUAGE_VERSION = 35724
 
+local function getJSGL()
+	return assert(js.global.gl, "WebGL isn't initialized")
+end
+
 function gl.glGetString(name)
 	-- TODO initialize upon any dereference?
-	local jsgl = assert(js.global.gl, "WebGL isn't initialized")
+	local jsgl = getJSGL()
 	if name == gl.GL_VENDOR then
 		return ffi.stringBuffer(jsgl:getParameter(jsgl.VENDOR))
 	elseif name == gl.GL_RENDERER then
@@ -67,11 +71,21 @@ function gl.glGetError()
 	return glerror
 end
 
+local function setError(err)
+	if glerror ~= 0 then return end
+	if err == 0 then return end
+	glerror = err
+end
+
 function gl.glViewport(...)
 	return js.global.gl:viewport(...)
 end
 
 local ResMap = class()
+
+function ResMap:init(name)
+	self.name = name
+end
 
 ResMap.maxn = table.maxn
 
@@ -86,18 +100,61 @@ function ResMap:getNextID()
 	return maxn
 end
 
-function ResMap:makeCreate()
-	return function()
+function ResMap:get(id)
+	id = tonumber(id)
+	local obj = self[id]
+	if not obj then 
+print(self.name, 'failed to find id', id)
+		setError(gl.GL_INVALID_OPERATION) 
+	end
+	return obj
+end
+
+function ResMap:makeCreate(webglfuncname)
+	return function(...)
+		local jsgl = getJSGL()
 		local id = self:getNextID()
-		self[id] = {}
+print(self.name, 'making new at id', id)
+		self[id] = {
+			obj = jsgl[webglfuncname](jsgl, ...)
+		}
+		setError(jsgl:getError())
 		return ffi.cast('GLuint', id)
 	end
 end
 
-local programs = ResMap()
-gl.glCreateProgram = programs:makeCreate()
+local programs = ResMap'programs'
+gl.glCreateProgram = programs:makeCreate'createProgram'
 
-local shaders = ResMap()
-gl.glCreateShader = shaders:makeCreate()
+-- make sure these match with webgl
+gl.GL_FRAGMENT_SHADER = 35632
+gl.GL_VERTEX_SHADER = 35633
+
+local shaders = ResMap'shaders'
+gl.glCreateShader = shaders:makeCreate'createShader'
+
+function gl.glShaderSource(id, numStrs, strs, lens)
+	local shader = shaders:get(id)
+	if not shader then return end
+
+	local s = table()
+	for i=0,numStrs-1 do
+		table.insert(s, ffi.string(strs[i], lens[i]))
+	end
+	local source = s:concat()
+
+	local jsgl = getJSGL()
+	jsgl:shaderSource(shader.obj, source)
+	setError(jsgl:getError())
+end
+
+function gl.glCompileShader(id)
+	local shader = shaders:get(id)
+	if not shader then return end
+	
+	local jsgl = getJSGL()
+	jsgl:compileShader(shader.obj)
+	setError(jsgl:getError())
+end
 
 return gl

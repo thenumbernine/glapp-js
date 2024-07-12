@@ -97,7 +97,7 @@ local function malloc(size)
 	-- 4byte align
 	size = (size & ~3) + ((size & 3) == 0 and 0 or 4)
 
-print('malloc', size)
+--DEBUG:print('malloc', size)
 	for _,d in ipairs(dict) do
 		if d.free
 		and d.size >= size
@@ -401,6 +401,9 @@ function ffi.CType:assign(addr, ...)
 --DEBUG:print('assigning from pointer with value-addr', value,'to addr', addr)
 					self.set(memview, addr, value)
 --DEBUG:print('double-check got at addr '..addr..' value', self.get(memview, addr))
+				elseif srcctype.arrayCount then
+					-- TODO only if we are assigning to a pointer?  to an intptr_t ?
+					self.set(memview, addr, srcmt.addr)
 				else
 					self.set(memview, addr, srcctype.get(memview, srcmt.addr))
 				end
@@ -1310,7 +1313,19 @@ function ffi.cast(ctype, src)
 		-- if it's a ptr then just change the ptr type
 		-- TODO this is going to grow into full on emulated memory management very quickly
 		if ctype.isPointer then
+			local srcmt = getmetatable(src)
+			--[[
 			return CData(ctype, srcmt.addr)
+			--]]
+			--[[ making a new pointer?  needs new mem ...
+			-- 'assigning to non-primitive' ... should I allow it in :assign() ?
+			return ffi.new(ctype, srcmt.addr)
+			--]]
+			-- [[
+			local result = ffi.new(ctype)
+			memSetPtr(getmetatable(result).addr, srcmt.addr)
+			return result
+			--]]
 		end
 		-- same as ffi.new?
 		return ffi.new(ctype, src)
@@ -1468,5 +1483,20 @@ end
 because nil and anything else (userdata, object, etc) will always be false in vanilla lua ...
 --]]
 ffi.null = ffi.new'void*'
+
+local oldtonumber = tonumber
+function tonumber(x, ...)
+	if type(x) == 'cdata' then
+		local mt = getmetatable(x)
+		local ctype = mt.type
+		if ctype.isPrimitive then
+			return ctype.get(memview, mt.addr)
+		else
+			return nil
+		end
+	else
+		return oldtonumber(x, ...)
+	end
+end
 
 return ffi

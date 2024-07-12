@@ -77,14 +77,26 @@ struct A {
 	--print('memGetPtr(20)', ffi.memGetPtr(20))
 	print('ffi.string(p[0])', ffi.string(p[0]))
 --]=]
---[=[
+-- [=[
 	local ffi = require 'ffi'
 	if ffi.memdump then print('mem', ffi.memdump()) end
 	local v = ffi.new'void*'
 	print('v', v)
 	if ffi.memdump then print('mem', ffi.memdump()) end
 --]=]
--- [=[
+--[=[
+	local ffi = require 'ffi'
+	local i = ffi.new('int32_t', 42)
+	print(i)
+	print(tonumber(i))
+
+	local a = ffi.new('char[20]')
+	local p = ffi.cast('char*', a)
+	print('p', p)
+	print(ffi.cast('intptr_t', p))	-- should assign the pointer to the new intptr_t
+	print(ffi.cast('intptr_t', a))	-- same
+--]=]
+--[=[
 	--assert(assert(loadfile'glapp/tests/info.lua')())
 	dofile'glapp/tests/test_es.lua'
 --]=]
