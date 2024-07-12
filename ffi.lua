@@ -77,6 +77,8 @@ ffi.arch = 'x64'
 ffi.C = {}
 
 local membuf = js.new(js.global.ArrayBuffer, 0x100000)
+ffi.membuf = membuf
+
 local memview = js.new(js.global.DataView, membuf)
 local memUsedSoFar = 0
 
@@ -1360,8 +1362,23 @@ end
 function ffi.string(ptr, len)
 --DEBUG:print('ffi.string', ptr, len)
 	if ptr == ffi.null then return '(null)' end
+	local tptr = type(ptr)
+	if tptr == 'string' then
+		-- TODO if len > #ptr then ... pad with zeroes?
+		if len then return ptr:sub(1,len) end
+		return ptr
+	end
+	assert(type(ptr) == 'cdata')
 	local ptrmt = assert(getmetatable(ptr))
-	local addr = memGetPtr(ptrmt.addr)	-- get the ptr's value from mem
+	local ptrctype = ptrmt.type
+	local addr
+	if ptrctype.arrayCount then
+		addr = ptrmt.addr
+	elseif ptrctype.isPointer then
+		addr = memGetPtr(ptrmt.addr)	-- get the ptr's value from mem
+	else
+		error("idk how to ffi.string this ctype "..tostring(ptrctype))
+	end
 --DEBUG:print('...addr', addr)
 	if not len then len = strlen(addr) end
 --DEBUG:print('...len', len)

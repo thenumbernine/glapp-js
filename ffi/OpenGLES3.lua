@@ -866,6 +866,13 @@ function gl.glGetProgramiv(id, pname, params)
 			maxlen = math.max(maxlen, #uinfo.name)
 		end
 		params[0] = maxlen
+	elseif pname == gl.GL_ACTIVE_ATTRIBUTE_MAX_LENGTH then
+		local maxlen = 0
+		for i=0,glsafecall('getProgramParameter', program.obj, gl.GL_ACTIVE_ATTRIBUTES)-1 do
+			local uinfo = glsafecall('getActiveAttrib', program.obj, i)
+			maxlen = math.max(maxlen, #uinfo.name)
+		end
+		params[0] = maxlen
 	else
 		params[0] = glsafecall('getProgramParameter', program.obj, pname)
 	end
@@ -904,6 +911,80 @@ function gl.glGetActiveUniform(id, index, bufSize, length, size, type, name)
 		ffi.copy(name, uinfo.name)
 	end
 end
+
+function gl.glGetUniformLocation(id, name)
+	local program = programs:get(id)
+	return program and glsafecall('getUniformLocation', program.obj, ffi.string(name)) or nil
+end
+
+for n=1,4 do
+	for _,t in ipairs{'f', 'i'} do
+		do
+			local glname = 'glUniform'..n..t
+			local webglname = 'uniform'..n..t
+			gl[glname] = function(...)
+				return glsafecall(webglname, ...)
+			end
+		end
+
+		do
+			local glname = 'glUniform'..n..t..'v'
+			local webglname = 'uniform'..n..t..'v'
+			local len = n * 4
+			gl[glname] = function(location, count, value)
+				assert(type(value) == 'cdata')
+				local mt = getmetatable(value)
+				assert(mt.type.isPointer)
+				-- if it's an array ... coerce somewhere ... 
+				local value = js.new(
+					t == 'f' and js.global.Float32Array or js.global.Int32Array,
+					ffi.membuf,
+					memGetPtr(mt.addr),
+					len * count
+				)
+				return glsafecall(webglname, location, value)
+			end
+		end
+	end
+
+	do
+		local glname = 'glUniformMatrix'..n..'fv'
+		local webglname = 'uniformMatrix'..n..'fv'
+		gl[glname] = function(location, count, transpose, value)
+			assert(type(value) == 'cdata')
+			local mt = getmetatable(value)
+			assert(mt.type.isPointer)
+			-- if it's an array ... coerce somewhere ... 
+			local value = js.new(
+				t == 'f' and js.global.Float32Array or js.global.Int32Array,
+				ffi.membuf,
+				memGetPtr(mt.addr),
+				len * count
+			)		
+			glsafecall(webglname, transpose, value)
+		end
+	end
+end
+
+function gl.glGetActiveAttrib(id, index, bufSize, length, size, type, name)
+	local program = programs:get(id)
+	if not program then return end
+
+	local uinfo = glsafecall('getActiveAttrib', program.obj, index)
+	if length ~= ffi.null then
+		length[0] = #uinfo.name
+	end
+	if size ~= ffi.null then
+		size[0] = uinfo.size
+	end
+	if type ~= ffi.null then
+		type[0] = uinfo.type
+	end
+	if name ~= ffi.null then
+		ffi.copy(name, uinfo.name)
+	end
+end
+
 
 
 gl.glCreateShader = shaders:makeCreate'createShader'
