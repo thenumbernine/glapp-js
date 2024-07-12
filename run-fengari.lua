@@ -49,7 +49,7 @@ struct A {
 	print'mem: null'
 	if ffi.memdump then print('mem', ffi.memdump()) end
 	local s = 'testing'
-	
+
 	local l = ffi.new'int[1]'
 	print'mem: null, int[1] l'
 	if ffi.memdump then print('mem', ffi.memdump()) end
@@ -59,7 +59,7 @@ struct A {
 	print('l[0]', l[0])
 	print('mem: null, int[1] l='..#s)
 	if ffi.memdump then print('mem', ffi.memdump()) end
-	
+
 	local p = ffi.new'const char*[1]'	-- luajit requires const char*, not char*
 	print('mem: null, int[1] l='..#s..' char*[1] p')
 	if ffi.memdump then print('mem', ffi.memdump()) end
@@ -68,7 +68,7 @@ struct A {
 	p[0] = s
 	print('mem: null, int[1] l='..#s..' char*[1] p=0xc char[8] s='..s)
 	if ffi.memdump then print('mem', ffi.memdump()) end
-	
+
 	print('p[0]', p[0])	-- pointer has changed
 	print("ffi.cast('intptr_t', p[0])", ffi.cast('intptr_t', p[0]))
 	if ffi.memdump then print('mem', ffi.memdump()) end
@@ -76,6 +76,13 @@ struct A {
 	--print('memGetPtr(p[0])', ffi.memGetPtr(p[0]))
 	--print('memGetPtr(20)', ffi.memGetPtr(20))
 	print('ffi.string(p[0])', ffi.string(p[0]))
+--]=]
+--[=[
+	local ffi = require 'ffi'
+	if ffi.memdump then print('mem', ffi.memdump()) end
+	local v = ffi.new'void*'
+	print('v', v)
+	if ffi.memdump then print('mem', ffi.memdump()) end
 --]=]
 -- [=[
 	--assert(assert(loadfile'glapp/tests/info.lua')())

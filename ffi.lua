@@ -92,6 +92,8 @@ end
 
 local dict = newtable()
 local function malloc(size)
+	-- no zero allocs
+	size = math.max(size, 4)
 	-- 4byte align
 	size = (size & ~3) + ((size & 3) == 0 and 0 or 4)
 
@@ -243,9 +245,11 @@ function ffi.CType:init(args)
 			self.name = nextuniquename()
 			self.anonymous = true
 		end
+--DEBUG:print('...ffi.CType new name', self.name)
+	else
+--DEBUG:print('...ffi.CType already has name', self.name)
 	end
 	assert(not ctypes[self.name], "tried to redefine "..tostring(self.name))
---DEBUG:print('setting ctype '..self.name)
 	ctypes[self.name] = self
 
 	self.fields = args.fields
@@ -282,7 +286,10 @@ function ffi.CType:init(args)
 		assert(self.fields)
 		-- expect :finalize to be called later
 	end
+
+--DEBUG:print('setting ctype['..self.name..'] = '..tostring(self))
 end
+
 function ffi.CType:finalize()
 	if self.size then return end
 
@@ -342,7 +349,7 @@ function ffi.CType:assign(addr, ...)
 --DEBUG:print('ffi.CType:assign', addr, ...)
 	if select('#', ...) > 0 then
 		if self.fields then
---DEBUG:print('...assigning to struct')			
+--DEBUG:print('...assigning to struct')
 			-- structs
 			if self.isunion then
 				-- then only assign to the first entry? hmmm ...
@@ -354,7 +361,7 @@ function ffi.CType:assign(addr, ...)
 				end
 			end
 		elseif self.arrayCount then
---DEBUG:print('...assigning to array')			
+--DEBUG:print('...assigning to array')
 			-- arrays
 			local v = ...
 			if type(v) == 'table' then
@@ -368,7 +375,7 @@ function ffi.CType:assign(addr, ...)
 				end
 			end
 		else
---DEBUG:print('...assigning to primitive')			
+--DEBUG:print('...assigning to primitive')
 			assert(self.isPrimitive, "assigning to a non-primitive...")
 			local v = ...
 			local vt = type(v)
@@ -376,13 +383,13 @@ function ffi.CType:assign(addr, ...)
 			if v == nil then
 				self.set(memview, addr, 0)
 			elseif vt == 'cdata' then
---DEBUG:print('...assigning from cdata')				
+--DEBUG:print('...assigning from cdata')
 				local srcmt = getmetatable(v)
 --DEBUG:print('...with addr', srcmt.addr)
 				local srcctype = srcmt.type
 --DEBUG:print('...with ctype', srcctype)
 				local len = self.size	--srcmt.type.size
---DEBUG:print('...with len', len)				
+--DEBUG:print('...with len', len)
 				-- same as ffi.copy
 				--[[ TODO use self.set somehow?  if both types are primitives?
 				js.new(js.global.Uint8Array, membuf, addr, len):set(
@@ -391,7 +398,7 @@ function ffi.CType:assign(addr, ...)
 				--]]
 				if srcctype.isPointer then
 					value = memGetPtr(srcmt.addr)
---DEBUG:print('assigning from pointer with value-addr', value,'to addr', addr)					
+--DEBUG:print('assigning from pointer with value-addr', value,'to addr', addr)
 					self.set(memview, addr, value)
 --DEBUG:print('double-check got at addr '..addr..' value', self.get(memview, addr))
 				else
@@ -550,7 +557,10 @@ local function getctype(typename)
 	local ctype = ctypes[typename]
 	if not ctype then return end
 
-	if (ctype.baseType and not ctype.arrayCount) then
+	if ctype.baseType
+	and not ctype.arrayCount
+	and not ctype.isPointer
+	then
 		local sofar = {}
 		-- if it has a baseType and no arrayCount then it's just a typedef ...
 		repeat
@@ -559,18 +569,30 @@ local function getctype(typename)
 			end
 			sofar[ctypes] = true
 			ctype = ctype.baseType
-		until not (ctype.baseType and not ctype.arrayCount)
+		until not (
+			ctype.baseType
+			and not ctype.arrayCount
+			and not ctype.isPointer
+		)
 	end
 	return ctype
 end
 
 local function getptrtype(baseType)
-	local ptrType = getctype(baseType.name..'*')
-	if ptrType then return ptrType end
-	return ffi.CType{
+--DEBUG:print('getptrtype', baseType)
+	local ptrtypename = baseType.name..'*'
+--DEBUG:print('getptrtype ptrtypename', ptrtypename)
+	local ptrType = getctype(ptrtypename)
+	if ptrType then
+--DEBUG:print('...getptrtype found old', ptrType, ptrType == ctypes.void, ptrType==ctypes['void*'])
+		return ptrType
+	end
+	ptrType = ffi.CType{
 		baseType = baseType,
 		isPointer = true,
 	}
+--DEBUG:print('...getptrtype made new', ptrType)
+	return ptrType
 end
 
 local function getArrayType(baseType, ar)
@@ -589,7 +611,7 @@ end
 -- parse a ffi.cast or ffi.new
 -- similar to struct but without the loop over multiple named vars with the same base type
 local function parseType(str, allowVarArray)
---print('parseType', str, allowVarArray)
+--DEBUG:print('parseType', ('%q'):format(str), allowVarArray)
 	local gotVarArray
 	str, token, tokentype = consume(str)
 
@@ -621,6 +643,7 @@ local function parseType(str, allowVarArray)
 		name = signedness..' '..name
 	end
 
+--DEBUG:print('parseType name', name)
 	-- fields ...
 	-- TODO this should be 'parsetype' and work just like variable declarations
 	-- and should be interoperable with typedefs
@@ -628,11 +651,14 @@ local function parseType(str, allowVarArray)
 	local baseFieldType = assert(getctype(name), "couldn't find type "..name)
 assert(getmetatable(baseFieldType) == ffi.CType)
 assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
-
+--DEBUG:print('parseType baseFieldType', baseFieldType)
+--DEBUG:print('does baseFieldType* exist?', ctypes[baseFieldType.name..'*'])
 	str, token, tokentype = consume(str)
 	local fieldtype = baseFieldType
 	while token == '*' do
+--DEBUG:print('...looking for ptr of type', fieldtype)
 		fieldtype = getptrtype(fieldtype)
+--DEBUG:print('...making ptr type', fieldtype)
 		str, token, tokentype = consume(str)
 		-- const-ness ... meh?
 		if token == 'const' then
@@ -658,7 +684,7 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 	end
 
 	assert(not str or str:match'^%s*$', 'done parsing type with this left: '..tostring(str))
---print('got type', fieldtype, gotVarArray)
+--DEBUG:print('parseType got', fieldtype, gotVarArray)
 	return fieldtype, gotVarArray
 end
 
@@ -1206,13 +1232,14 @@ function CData:__tostring()
 	local mt = getmetatable(self)
 	local ctype = mt.type
 --DEBUG:print('...ctype', ctype)
---DEBUG:print('...addr', mt.addr)	
+--DEBUG:print('...addr', mt.addr)
 	local value
 	if ctype.isPrimitive then
+		assert(ctype ~= ctypes.void, "how did you get a void type?")
 		value = ctype.get(memview, mt.addr)
 --DEBUG:print('...prim value', value)
 	elseif ctype.isPointer then
---DEBUG:print('...ptr value')			
+--DEBUG:print('...ptr value')
 		if mt.addr == 0 then
 			value = 'NULL'
 		else
@@ -1230,7 +1257,7 @@ function CData:__tostring()
 			--]]
 		end
 	else
---DEBUG:print('...else value')		
+--DEBUG:print('...else value')
 		value = ('0x%08x'):format(mt.addr)
 	end
 	return 'cdata<'..ctype.name..'>: '..tostring(value)
@@ -1291,20 +1318,23 @@ function ffi.cast(ctype, src)
 end
 
 function ffi.new(ctype, ...)
+--DEBUG:print('ffi.new', ctype, ...)
 	local didHandleVarArray
 	ctype, didHandleVarArray = toctype(ctype, true, ...)
+
+	assert(ctype ~= ctypes.void, "you can't new void")
 
 	-- TODO return a pointer?
 	-- or how will sizeof handle pointers?
 	-- or should I return a pointer-to-fixed-size-array, which auto converts to pointer to base type upon arithmetic?
---DEBUG:print('for type', ctype.name, 'allocating', ctype.size)
+--DEBUG:print('ffi.new for type', ctype.name, 'allocating', ctype.size)
 	local addr = malloc(ctype.size)
 	local ptr = CData(ctype, addr)
 	if not didHandleVarArray and select('#', ...) > 0 then
 --DEBUG:print('ffi.new assigning', ctype, addr, ...)
 		ctype:assign(addr, ...)
 	end
-
+--DEBUG:print('ffi.new returning', ptr)
 	return ptr
 end
 
