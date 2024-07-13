@@ -15,7 +15,8 @@ function ffi.C.gettimeofday(tv, tz)
 	--]]
 	-- [[ js-based
 	local now = js.global.Date.now()
-	tv.tv_sec = now // 1000 
-	tv.tv_usec = 1000 * (now % 1000)
+	tv[0].tv_sec = now // 1000
+	tv[0].tv_usec = 1000 * (now % 1000)
 	--]]
+	return 0
 end

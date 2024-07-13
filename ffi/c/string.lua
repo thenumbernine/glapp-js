@@ -1,3 +1,5 @@
 local ffi = require 'ffi'
-ffi.cdef[[
-]]
+
+function ffi.C.strerror(errno)
+	return 'error '..tostring(errno)
+end

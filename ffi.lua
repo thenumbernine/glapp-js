@@ -277,6 +277,8 @@ function CType:init(args)
 	elseif self.isPrimitive then
 		-- primitive type? expects size
 		self.size = args.size
+		self.get = args.get
+		self.set = args.set
 		local getset = args.getset
 		if getset then
 			local gettername = 'get'..getset
@@ -520,8 +522,43 @@ CType{name='int16_t', size=2, isPrimitive=true, getset='Int16'}
 CType{name='uint16_t', size=2, isPrimitive=true, getset='Uint16'}
 CType{name='int32_t', size=4, isPrimitive=true, getset='Int32'}
 CType{name='uint32_t', size=4, isPrimitive=true, getset='Uint32'}
-CType{name='int64_t', size=8, isPrimitive=true, getset='BigInt64'}	-- why Big?
-CType{name='uint64_t', size=8, isPrimitive=true, getset='BigUint64'}
+
+CType{name='int64_t', size=8, isPrimitive=true,
+	get=function(memview, addr)
+		--[[
+		return memview:getBigInt64(addr)
+		--]]
+		-- [[
+		return memview:getUint32(addr) | (memview:getUint32(addr + 4) << 32)
+		--]]
+	end,
+	set=function(memview, addr, v)
+		--[[ "Cannot convert undefined to a BigInt"
+		return memview:setBigInt64(addr, js.global.BigInt(v))
+		--]]
+		--[[ "Invalid value used as weak map key"
+		return memview:setBigInt64(addr, js.global.BigInt(nil, v))
+		--]]
+		--[[ "Invalid value used as weak map key"
+		return memview:setBigInt64(addr, js.global.BigInt(js.global.BigInt, v))
+		--]]
+		-- [[
+		memview:setInt32(addr, v & 0xffffffff)
+		memview:setInt32(addr + 4, (v >> 32) & 0xffffffff)
+		--]]
+	end,
+}	-- why Big?
+CType{name='uint64_t', size=8, isPrimitive=true,
+	get=function(memview, addr)
+		--return memview:getBigUInt64(addr)
+		return memview:getUint32(addr) | (memview:getUint32(addr + 4) << 32)
+	end,
+	set=function(memview, addr, v)
+		--return memview:setBigUInt64(addr, js.global.BigInt(v))
+		memview:setUint32(addr, v & 0xffffffff)
+		memview:setUint32(addr + 4, (v >> 32) & 0xffffffff)
+	end,
+}
 
 CType{name='float', size=4, isPrimitive=true, getset='Float32'}
 CType{name='double', size=8, isPrimitive=true, getset='Float64'}
@@ -1279,6 +1316,7 @@ function CData:__index(key)
 end
 
 function CData:__newindex(key, value)
+--DEBUG:print('CData:__newindex', key, value)
 	local mt = oldgetmetatable(self)
 	local ctype = mt.type
 
