@@ -905,17 +905,14 @@ for n=1,4 do
 			local webglname = 'uniform'..n..t..'v'
 			local len = n * 4
 			gl[glname] = function(location, count, value)
-				assert(type(value) == 'cdata')
-				local mt = getmetatable(value)
-				assert(mt.type.isPointer)
 				-- if it's an array ... coerce somewhere ...
-				local value = js.new(
+				local buffer = js.new(
 					t == 'f' and js.global.Float32Array or js.global.Int32Array,
 					ffi.membuf,
-					memGetPtr(mt.addr),
+					fffi.getAddr(value),
 					len * count
 				)
-				return glsafecall(webglname, location, value)
+				return glsafecall(webglname, location, buffer)
 			end
 		end
 	end
@@ -923,18 +920,17 @@ for n=1,4 do
 	do
 		local glname = 'glUniformMatrix'..n..'fv'
 		local webglname = 'uniformMatrix'..n..'fv'
+		local len = n * n * 4
 		gl[glname] = function(location, count, transpose, value)
 			assert(type(value) == 'cdata')
-			local mt = getmetatable(value)
-			assert(mt.type.isPointer)
 			-- if it's an array ... coerce somewhere ...
-			local value = js.new(
-				t == 'f' and js.global.Float32Array or js.global.Int32Array,
+			local buffer = js.new(
+				js.global.Float32Array,
 				ffi.membuf,
-				memGetPtr(mt.addr),
+				ffi.getAddr(value),
 				len * count
 			)
-			glsafecall(webglname, transpose, value)
+			glsafecall(webglname, transpose, buffer)
 		end
 	end
 end

@@ -145,11 +145,38 @@ local function memSetPtr(addr, value)
 end
 ffi.memSetPtr = memSetPtr
 
+-- read the pointer in memory at addr
 local function memGetPtr(addr)
 	return ctypes.uint32_t.get(memview, addr)
 --		| (ctypes.uint32_t.get(memview, addr + 4, 0) << 32)	-- allow >32 bit?
 end
 ffi.memGetPtr = memGetPtr
+
+local function getTypeAndMT(o)
+	local mt = oldgetmetatable(o)
+	local t = oldtype(o)
+	if mt then
+		if mt.isCType then
+			t = 'cdata'	-- this is a convention I wouldn't have chosen ...
+		elseif mt.isCData then
+			t = 'cdata'
+		end
+	end
+	return t, mt
+end
+
+-- x = cdata
+-- if x's type is an array or prim then return x's addr
+-- if x's type is a pointer hten return x's value
+local function getAddr(x)
+	local t, mt = getTypeAndMT(x)
+	if not (t == 'cdata' and mt.isCData) then error("expected cdata") end
+	local ctype = assert(mt.type)
+	local addr = assert(mt.addr)
+	if ctype.isPointer then return memGetPtr(addr) end
+	return addr
+end
+ffi.getAddr = getAddr
 
 local function strlen(addr)
 	local len = 0
@@ -1188,18 +1215,7 @@ local function toctype(ctype, allowVarArray, ...)
 	return ctype, didHandleVarArray
 end
 
-local function getTypeAndMT(o)
-	local mt = oldgetmetatable(o)
-	local t = oldtype(o)
-	if mt then
-		if mt.isCType then
-			t = 'cdata'	-- this is a convention I wouldn't have chosen ...
-		elseif mt.isCData then
-			t = 'cdata'
-		end
-	end
-	return t, mt
-end
+-- TODO move this up or down?
 function type(o)
 	return (getTypeAndMT(o))
 end
