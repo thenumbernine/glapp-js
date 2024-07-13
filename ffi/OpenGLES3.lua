@@ -965,6 +965,9 @@ function gl.glGetAttribLocation(id, name)
 end
 
 function gl.glVertexAttribPointer(index, size, ctype, normalized, stride, pointer)
+	-- TODO this doesn't translate directly from ES to WebGL
+	-- ES allows pointers to be passed when no buffers are bound ... right? idk about specss but it's functional on my desktop at least, similar to GL
+	-- WebGL only allows this to work with bound buffers
 	return getJSGL():vertexAttribPointer(index, size, ctype, normalized, stride, tonumber(ffi.cast('intptr_t', pointer)))
 end
 
