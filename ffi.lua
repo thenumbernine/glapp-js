@@ -544,6 +544,7 @@ end
 --]=]
 
 CType{name='void', size=0, isPrimitive=true}	-- let's all admit that a void* is really a char*
+CType{name='bool', size=1, isPrimitive=true, getset='Uint8'}	-- not a typedef of char / byte ...
 CType{name='int8_t', size=1, isPrimitive=true, getset='Int8'}
 CType{name='uint8_t', size=1, isPrimitive=true, getset='Uint8'}
 CType{name='int16_t', size=2, isPrimitive=true, getset='Int16'}

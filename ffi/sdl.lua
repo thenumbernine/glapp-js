@@ -1188,8 +1188,7 @@ print('SDL_CreateWindow', title, x, y, w, h, flags)
 	return ffi.new'SDL_Window'
 end
 function sdl.SDL_DestroyWindow(window) return 0 end
-function sdl.SDL_SetWindowSize(window, width, height)
-end
+function sdl.SDL_SetWindowSize(window, width, height) end
 
 -- oof, this returns on-stack a SDL_GLContext ... how to handle that ...
 function sdl.SDL_GL_CreateContext(window)
@@ -1222,6 +1221,7 @@ end
 function sdl.SDL_GL_DeleteContext(ctx) return 0 end
 function sdl.SDL_GL_SetAttribute(key, value) return 0 end
 function sdl.SDL_GL_SetSwapInterval(enable) return 0 end
+function sdl.SDL_GL_SwapWindow(window) end -- double buffering isn't a thing in WebGL eh?
 
 function sdl.SDL_GetVersion(version)
 	version[0].major = 2
@@ -1230,7 +1230,9 @@ function sdl.SDL_GetVersion(version)
 end
 
 -- returns the # of events
+-- either this or SDL_GL_SwapWindow should be our coroutine yield ...
 function sdl.SDL_PollEvent(event)
+	coroutine.yield(mainthread)
 	return 0
 end
 

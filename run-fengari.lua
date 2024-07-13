@@ -131,8 +131,28 @@ struct A {
 	--print('q', q)
 --]=]
 -- [=[
+
+	-- [==[ shim layer also in browser/tabl.lua
+
+	-- bypass GLApp :run() and ImGuiApp
+	-- TODO what about windows and case-sensitivity?  all case permutations of glapp need to be included ...
+	-- or Windows-specific, lowercase the filename ..?
+	local GLApp = require 'glapp'
+	function GLApp:run() return self end
+	function GLApp:exit() end
+	-- thanks to my package.path containing ?.lua;?/?.lua ...
+	package.loaded['glapp.glapp'] = package.loaded['glapp']
+
+	local ImGuiApp = require 'imguiapp'
+	function ImGuiApp:initGL() end
+	function ImGuiApp:exit() end
+	function ImGuiApp:event() end
+	function ImGuiApp:update() end
+	package.loaded['imguiapp.imguiapp'] = package.loaded['imguiapp']
+	--]=]
+
 	--assert(assert(loadfile'glapp/tests/info.lua')())
-	dofile'glapp/tests/test_es.lua'
+--	dofile'glapp/tests/test_es.lua'
 --]=]
 	print'done'
 end, function(err)
