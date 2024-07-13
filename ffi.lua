@@ -1707,12 +1707,14 @@ function ffi.fill(dst, len, value)
 	js.new(js.global.Uint8Array, membuf, dstmt.addr, len):fill(value, 0, len)
 end
 
-function ffi.getDataView(jsarray, data, size)
+-- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
+function ffi.getDataView(jsarray, data, count)
+--DEBUG:print('ffi.getDataView', jsarray, data, count)
 	return js.new(
 		jsarray,
 		membuf,
 		getAddr(data),
-		size or ffi.sizeof(data)
+		assert(count)
 	)
 end
 

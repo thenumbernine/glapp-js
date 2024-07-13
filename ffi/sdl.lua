@@ -1217,6 +1217,7 @@ print('...got gl')
 	if not gl then
 		error "Couldn't initialize WebGL =("
 	end
+	
 	-- TODO need a better way to talk to ffi.OpenGL ...
 	js.global.window.gl = gl
 

@@ -4,3 +4,7 @@ This is doable for Lua, but for LuaJIT I can't find anything out there that has 
 So one avenue I'm poking at is building luajit with emscripten.
 
 Meanwhile I thought I'd poke at the slow option of just emulating the ffi calls, while running Lua in-browser with https://fengari.io/
+
+The ffi.lua file is an attempt to a luajit-ffi implementation for fengari.
+
+The ffi/OpenGLES3.lua file is an interface layer between GLES and WebGL.

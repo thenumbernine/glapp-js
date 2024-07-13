@@ -904,7 +904,7 @@ for n=1,4 do
 		do
 			local glname = 'glUniform'..n..t..'v'
 			local webglname = 'uniform'..n..t..'v'
-			local len = n * 4
+			local len = n
 			gl[glname] = function(location, count, value)
 				-- if it's an array ... coerce somewhere ...
 
@@ -923,7 +923,7 @@ for n=1,4 do
 	do
 		local glname = 'glUniformMatrix'..n..'fv'
 		local webglname = 'uniformMatrix'..n..'fv'
-		local len = n * n * 4
+		local len = n * n
 		gl[glname] = function(location, count, transpose, value)
 			assert(type(value) == 'cdata')
 			-- if it's an array ... coerce somewhere ...
