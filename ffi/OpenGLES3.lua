@@ -896,7 +896,8 @@ for n=1,4 do
 			local glname = 'glUniform'..n..t
 			local webglname = 'uniform'..n..t
 			gl[glname] = function(...)
-				return glsafecall(webglname, ...)
+				local jsgl = getJSGL()
+				return jsgl[webglname](jsgl, ...)
 			end
 		end
 
@@ -912,7 +913,9 @@ for n=1,4 do
 					fffi.getAddr(value),
 					len * count
 				)
-				return glsafecall(webglname, location, buffer)
+				local jsgl = getJSGL()
+				assert(count == 1, "TODO")
+				return jsgl[webglname](jsgl, location, buffer)
 			end
 		end
 	end
@@ -930,7 +933,9 @@ for n=1,4 do
 				ffi.getAddr(value),
 				len * count
 			)
-			glsafecall(webglname, transpose, buffer)
+			local jsgl = getJSGL()
+			assert(count == 1, "TODO")
+			return jsgl[webglname](jsgl, location, transpose, buffer)
 		end
 	end
 end
@@ -959,6 +964,9 @@ function gl.glGetAttribLocation(id, name)
 	return program and getJSGL():getAttribLocation(program.obj, ffi.string(name)) or nil
 end
 
+function gl.glVertexAttribPointer(index, size, ctype, normalized, stride, pointer)
+	return getJSGL():vertexAttribPointer(index, size, ctype, normalized, stride, tonumber(ffi.cast('intptr_t', pointer)))
+end
 
 
 gl.glCreateShader = shaders:makeCreate'createShader'
