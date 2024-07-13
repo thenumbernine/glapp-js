@@ -132,29 +132,41 @@ struct A {
 --]=]
 -- [=[
 
-	-- [==[ shim layer also in browser/tabl.lua
-
-	-- bypass GLApp :run() and ImGuiApp
-	-- TODO what about windows and case-sensitivity?  all case permutations of glapp need to be included ...
-	-- or Windows-specific, lowercase the filename ..?
+	-- [==[ shim layer 
+	local sdl = require 'ffi.sdl'
 	local GLApp = require 'glapp'
-	function GLApp:run() return self end
-	function GLApp:exit() end
+	local oldrun = GLApp.run
+	local glapp
+	function GLApp:run(...)
+		glapp = self
+		-- start it as a new thread ...
+		-- TODO can I just wrap the whole dofile() in a main thread?
+		-- the tradeoff is I'd lose my ability for main coroutine detection ...
+		sdl.mainthread = coroutine.create(oldrun, self, ...)
+	end
 	-- thanks to my package.path containing ?.lua;?/?.lua ...
 	package.loaded['glapp.glapp'] = package.loaded['glapp']
+	--]==]
 
-	local ImGuiApp = require 'imguiapp'
-	function ImGuiApp:initGL() end
-	function ImGuiApp:exit() end
-	function ImGuiApp:event() end
-	function ImGuiApp:update() end
-	package.loaded['imguiapp.imguiapp'] = package.loaded['imguiapp']
-	--]=]
+	-- run it and initialize glapp variable
+	dofile'glapp/tests/test_es.lua'
 
-	--assert(assert(loadfile'glapp/tests/info.lua')())
---	dofile'glapp/tests/test_es.lua'
+	-- set up main loop
+	-- TOOD use requestAnimationFrame instead
+	assert(glapp)
+	local interval
+	local window = js.global.window
+	interval = window:setInterval(function()
+		if glapp.done then
+			window:clearInterval(interval)
+		else
+			-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
+			coroutine.resume(sdl.mainthread)
+		end
+	end, 10)
+
 --]=]
-	print'done'
+	print'run-fengari.lua done'
 end, function(err)
 	print(tostring(err)..'\n'..debug.traceback())
 end)

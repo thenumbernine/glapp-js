@@ -1166,6 +1166,7 @@ print('SDL_CreateWindow', title, x, y, w, h, flags)
 
 	window:scrollTo(0,1)
 	if not canvas then
+print('...creating canvas')		
 		canvas = js.global.document:createElement'canvas'
 		window.canvas = canvas
 		js.global.document.body:prepend(canvas)
@@ -1232,7 +1233,7 @@ end
 -- returns the # of events
 -- either this or SDL_GL_SwapWindow should be our coroutine yield ...
 function sdl.SDL_PollEvent(event)
-	coroutine.yield(mainthread)
+	coroutine.yield(sdl.mainthread)
 	return 0
 end
 
