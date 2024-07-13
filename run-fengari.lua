@@ -19,6 +19,8 @@ xpcall(function()
 	-- needs io to exist first ...
 	--require 'ext.debug'
 
+	-- TODO while we're here, connect gles3 calls to webgl
+
 --[=[
 	ffi.cdef[[
 struct A {

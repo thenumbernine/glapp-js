@@ -767,6 +767,7 @@ function ResMap:makeCreate(webglfuncname)
 		local jsgl = getJSGL()
 		local id = self:getNextID()
 --DEBUG:print(self.name, 'making new at id', id)
+		assert(self[id] == nil)
 		self[id] = {
 			obj = jsgl[webglfuncname](jsgl, ...)
 		}
@@ -778,12 +779,11 @@ end
 function gl.glViewport(...) return getJSGL():viewport(...) end
 function gl.glClearColor(...) return getJSGL():clearColor(...) end
 function gl.glClear(...) return getJSGL():clear(...) end
-
+function gl.glDrawArrays(...) return getJSGL():drawArrays(...) end
 
 local programs = ResMap'programs'
-gl.programs = programs
 local shaders = ResMap'shaders'
-gl.shaders = shaders
+local buffers = ResMap'buffers'
 
 gl.glCreateProgram = programs:makeCreate'createProgram'
 
@@ -907,10 +907,10 @@ for n=1,4 do
 			local len = n * 4
 			gl[glname] = function(location, count, value)
 				-- if it's an array ... coerce somewhere ...
-				local buffer = js.new(
+
+				local buffer = ffi.getDataView(
 					t == 'f' and js.global.Float32Array or js.global.Int32Array,
-					ffi.membuf,
-					fffi.getAddr(value),
+					value,
 					len * count
 				)
 				local jsgl = getJSGL()
@@ -927,10 +927,9 @@ for n=1,4 do
 		gl[glname] = function(location, count, transpose, value)
 			assert(type(value) == 'cdata')
 			-- if it's an array ... coerce somewhere ...
-			local buffer = js.new(
+			local buffer = ffi.getDataView(
 				js.global.Float32Array,
-				ffi.membuf,
-				ffi.getAddr(value),
+				value,
 				len * count
 			)
 			local jsgl = getJSGL()
@@ -971,9 +970,8 @@ function gl.glVertexAttribPointer(index, size, ctype, normalized, stride, pointe
 	return getJSGL():vertexAttribPointer(index, size, ctype, normalized, stride, tonumber(ffi.cast('intptr_t', pointer)))
 end
 
-function gl.glEnableVertexAttribArray(index)
-	return getJSGL():enableVertexAttribArray(index)
-end
+function gl.glEnableVertexAttribArray(...) return getJSGL():enableVertexAttribArray(...) end
+function gl.glDisableVertexAttribArray(...) return getJSGL():disableVertexAttribArray(...) end
 
 
 gl.glCreateShader = shaders:makeCreate'createShader'
@@ -1028,5 +1026,36 @@ function gl.glGetShaderInfoLog(id, bufSize, length, infoLog)
 		ffi.copy(infoLog, log, bufSize)
 	end
 end
+
+local createBuffer = buffers:makeCreate'createBuffer'
+function gl.glGenBuffers(n, buffers)
+	for i=0,n-1 do
+		buffers[i] = createBuffer()
+	end
+end
+
+function gl.glBindBuffer(target, bufferID)
+	local buffer = buffers:get(bufferID)
+	if not buffer then return end
+	return getJSGL():bindBuffer(target, buffer.obj)
+end
+
+function gl.glBufferData(target, size, data, usage)
+	if data == ffi.null then
+		return getJSGL():bufferData(target, size, usage)
+	else
+		return getJSGL():bufferData(
+			target,
+			ffi.getDataView(js.global.Uint8Array, data, size),
+			usage
+		)
+	end
+end
+
+-- [[ debugging
+gl.programs = programs
+gl.shaders = shaders
+gl.buffers = buffers
+--]]
 
 return gl

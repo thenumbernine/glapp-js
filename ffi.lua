@@ -1706,10 +1706,14 @@ function ffi.fill(dst, len, value)
 	js.new(js.global.Uint8Array, membuf, dstmt.addr, len):fill(value, 0, len)
 end
 
---[[
-because nil and anything else (userdata, object, etc) will always be false in vanilla lua ...
---]]
-ffi.null = ffi.new'void*'
+function ffi.getDataView(jsarray, data, size)
+	return js.new(
+		jsarray,
+		membuf,
+		getAddr(data),
+		size or ffi.sizeof(data)
+	)
+end
 
 function tonumber(x, ...)
 	local mt = debug.getmetatable(x)
@@ -1726,5 +1730,10 @@ function tonumber(x, ...)
 		return oldtonumber(x, ...)
 	end
 end
+
+--[[
+because nil and anything else (userdata, object, etc) will always be false in vanilla lua ...
+--]]
+ffi.null = ffi.new'void*'
 
 return ffi
