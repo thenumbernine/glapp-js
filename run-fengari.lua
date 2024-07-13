@@ -12,14 +12,14 @@ xpcall(function()
 	_G.io = io
 	--]]
 
+	-- this modifies some of the _G functions so it should go first
+	local ffi = require 'ffi'
+
 	-- add DEBUG lines
 	-- needs io to exist first ...
 	--require 'ext.debug'
 
-	-- TODO while we're here, connect gles3 calls to webgl
-
 --[=[
-	local ffi = require 'ffi'
 	ffi.cdef[[
 struct A {
 	int a[1];
@@ -45,7 +45,6 @@ struct A {
 	assert(c.b[0] == 2)
 --]=]
 --[=[
-	local ffi = require 'ffi'
 	print'mem: null'
 	if ffi.memdump then print('mem', ffi.memdump()) end
 	local s = 'testing'
@@ -78,7 +77,6 @@ struct A {
 	print('ffi.string(p[0])', ffi.string(p[0]))
 --]=]
 --[=[
-	local ffi = require 'ffi'
 	if ffi.memdump then print('mem', ffi.memdump()) end
 	local v = ffi.new'void*'
 	print('v', v)
@@ -115,7 +113,6 @@ struct A {
 	print('A', A)
 --]=]
 --[=[
-	local ffi = require 'ffi'
 	local quatd = require 'vec-ffi.quatd'
 	print('quatd', quatd)	-- should be a type?
 	print('type(quatd)', type(quatd))
