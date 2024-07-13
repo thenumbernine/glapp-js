@@ -1175,6 +1175,7 @@ print('...creating canvas')
 	canvas.style.left = 0
 	canvas.style.top = 0
 	canvas.style.position = 'absolute'
+	canvas.style.userSelect = 'none'
 
 	local resize = function(e)
 		canvas.width = window.innerWidth
@@ -1191,9 +1192,9 @@ end
 function sdl.SDL_DestroyWindow(window) return 0 end
 function sdl.SDL_SetWindowSize(window, width, height) end
 
+local gl	-- this is the webgl gl-context object (not the luajit gles lib wrapper object)
 -- oof, this returns on-stack a SDL_GLContext ... how to handle that ...
 function sdl.SDL_GL_CreateContext(window)
-	local gl
 	local contextName
 	local webGLNames = {
 		'webgl2',
@@ -1236,7 +1237,15 @@ end
 -- returns the # of events
 -- either this or SDL_GL_SwapWindow should be our coroutine yield ...
 function sdl.SDL_PollEvent(event)
+	-- give up control to the browser again
 	coroutine.yield(sdl.mainthread)
+	-- and a new frame loop starts ...
+
+	-- jump through webgl bs
+	gl:colorMask(false,false,false,true)
+	gl:clear(gl.COLOR_BUFFER_BIT)
+	gl:colorMask(true,true,true,true)
+
 	return 0
 end
 
