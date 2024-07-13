@@ -153,6 +153,7 @@ struct A {
 
 	-- set up main loop
 	-- TOOD use requestAnimationFrame instead
+	local coroutine = require 'ext.coroutine'
 	assert(glapp)
 	local interval
 	local window = js.global.window
@@ -161,9 +162,10 @@ struct A {
 			window:clearInterval(interval)
 		else
 			-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
-			coroutine.resume(sdl.mainthread)
+			coroutine.assertresume(sdl.mainthread)
 		end
 	end, 10)
+	print('mainthread interval', interval)
 
 --]=]
 	print'run-fengari.lua done'

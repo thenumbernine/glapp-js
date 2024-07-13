@@ -108,7 +108,7 @@ function io.output(...)
 	end
 	local f = ...
 	if type(f) == 'string' then
-		io.stdout = assert(io.open(f, 'w'))
+		f = assert(io.open(f, 'w'))
 	elseif not io.type(f) then
 		error("expected a string or a file handle")
 	end
@@ -142,5 +142,47 @@ end
 function io.tmpfile()
 	error('TODO io.tmpfile()')
 end
+
+--[[
+-- really trashy way to insert io.write into print
+local oldprint = print
+
+io.stdout = {}
+io.stdout.linebuf = ''
+function io.stdout:write(...)
+	local l = io.stdout.linebuf
+	for i=1,select('#', ...) do
+		l = l .. tostring((select(i, ...)))
+	end
+	
+	repeat
+		local i = l:find'\n'
+		if not i then break end
+		oldprint(l:sub(1, i-1))
+		l = l:sub(i+1)
+	until false
+
+	io.stdout.linebuf = l
+end
+io.stderr = io.stdout
+
+function print(...)
+	if io.stdout.linebuf ~= '' then
+		print(io.stdout.linebuf)
+		io.stdout.linebuf = ''
+	end
+	oldprint(...)
+end
+
+print'hi'
+io.write'hi'
+print()
+assert(io.stdout)
+--]]
+-- [[ until then
+io.stderr = {}
+function io.stderr:write() end
+function io.stderr:flush() end
+--]]
 
 return io
