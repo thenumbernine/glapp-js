@@ -1166,7 +1166,7 @@ print('SDL_CreateWindow', title, x, y, w, h, flags)
 
 	window:scrollTo(0,1)
 	if not canvas then
-print('...creating canvas')		
+print('...creating canvas')
 		canvas = js.global.document:createElement'canvas'
 		window.canvas = canvas
 		js.global.document.body:prepend(canvas)
@@ -1202,13 +1202,16 @@ function sdl.SDL_GL_CreateContext(window)
 	}
 	for i,name in ipairs(webGLNames) do
 		xpcall(function()
-			--console.log('trying to init gl context of type', this.webGLNames[i]);
+print('trying to init gl context of type', name)
 			gl = canvas:getContext(name)
 			contextName = name
 		end, function(err)
-			--console.log('failed with exception', e);
+			print('canvas:getContext('..name..') failed with exception '..err)
 		end)
-		if gl then break end
+		if gl then
+print('...got gl')
+			break
+		end
 	end
 	if not gl then
 		error "Couldn't initialize WebGL =("

@@ -132,7 +132,8 @@ struct A {
 --]=]
 -- [=[
 
-	-- [==[ shim layer 
+	-- [==[ shim layer
+	local coroutine = require 'ext.coroutine'
 	local sdl = require 'ffi.sdl'
 	local GLApp = require 'glapp'
 	local oldrun = GLApp.run
@@ -142,7 +143,13 @@ struct A {
 		-- start it as a new thread ...
 		-- TODO can I just wrap the whole dofile() in a main thread?
 		-- the tradeoff is I'd lose my ability for main coroutine detection ...
-		sdl.mainthread = coroutine.create(oldrun, self, ...)
+		sdl.mainthread = coroutine.create(oldrun)
+		local res, err = coroutine.resume(sdl.mainthread, self, ...)
+		if not res then
+			print('coroutine.resume failed')
+			print(err)
+			print(debug.traceback(sdl.mainthread))
+		end
 	end
 	-- thanks to my package.path containing ?.lua;?/?.lua ...
 	package.loaded['glapp.glapp'] = package.loaded['glapp']
@@ -153,16 +160,27 @@ struct A {
 
 	-- set up main loop
 	-- TOOD use requestAnimationFrame instead
-	local coroutine = require 'ext.coroutine'
 	assert(glapp)
 	local interval
 	local window = js.global.window
+	window.glapp = glapp
 	interval = window:setInterval(function()
 		if glapp.done then
 			window:clearInterval(interval)
 		else
 			-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
+			--[[
 			coroutine.assertresume(sdl.mainthread)
+			--]]
+			-- [[
+			local res, err = coroutine.resume(sdl.mainthread)
+			if not res then
+				print('coroutine.resume failed')
+				print(err)
+				print(debug.traceback(sdl.mainthread))
+				window:clearInterval(interval)
+			end
+			--]]
 		end
 	end, 10)
 	print('mainthread interval', interval)
