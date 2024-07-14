@@ -189,24 +189,26 @@ struct A {
 	-- the tradeoff is I'd lose my ability for main coroutine detection ...
 	-- or maybe I should shim that function as well ...
 	local sdl = require 'ffi.sdl'
+	local function run(path, file)
+		package.path = package.path .. ';/lua/'..path..'/?.lua'
+		dofile('/lua/'..path..'/'..file)
+	end
 	sdl.mainthread = coroutine.create(function()
-		--dofile'/lua/glapp/tests/test_es2.lua'	-- WORKS only gles calls
-		--dofile'/lua/glapp/tests/test_es.lua'	-- WORKS gl objs
-		--dofile'/lua/glapp/tests/minimal.lua'
-		--dofile'/lua/glapp/tests/pointtest.lua'
-		--dofile'/lua/glapp/tests/info.lua'
-		--dofile'/lua/line-integral-convolution/run.lua'	-- fails, glsl has smoothstep()
-		--dofile'/lua/n-points/run.lua'					-- fails, glColor3f
-		--dofile'/lua/n-points/run_orbit.lua'
-		--dofile'/lua/prime-spiral/run.lua'				-- fails, glColor3f
-		--package.path = package.path .. ';/lua/seashell/?.lua' dofile'/lua/seashell/run.lua'	-- needs complex number support
-		dofile'/lua/rule110/rule110.lua'				-- fbo drawbuffers / glGetIntegerv(GL_DRAW_BUFFER)
+		--run('glapp/tests', 'test_es2.lua')	-- WORKS only gles calls
+		--run('glapp/tests', 'test_es.lua')	-- WORKS gl objs
+		--run('glapp/tests', 'minimal.lua')
+		--run('glapp/tests', 'pointtest.lua')
+		--run('glapp/tests', 'info.lua')
+		--run('line-integral-convolution', 'run.lua')	-- fails, glsl has smoothstep()
+		--run('n-points', 'run.lua')					-- fails, glColor3f
+		--run('n-points', 'run_orbit.lua')
+		--run('prime-spiral', 'run.lua')				-- fails, glColor3f
+		--run('seashell', 'run.lua')	-- needs complex number support
+		--run('rule110', 'rule110.lua')				-- [.WebGL-0x383c02950d00] GL_INVALID_OPERATION: Feedback loop formed between Framebuffer and active Texture.
+		--run('SphericalHarmonicGraph', 'run.lua')		-- needs complex
+		run('geographic-charts', 'test.lua')
 		--[[
-./SphericalHarmonicGraphs/factorial.lua
-./SphericalHarmonicGraphs/run.lua
-./SphericalHarmonicGraphs/associatedlegendre.lua
 ./sphere-grid/run.lua
-./geographic-charts/test.lua
 ./langfix/test.lua
 ./metric/run.lua
 ./fold/run.lua
