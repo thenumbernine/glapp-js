@@ -193,23 +193,20 @@ struct A {
 		--dofile'/lua/glapp/tests/pointtest.lua'
 		--dofile'/lua/glapp/tests/info.lua'
 		--dofile'/lua/line-integral-convolution/run.lua'	-- fails, glsl has smoothstep()
-		dofile'/lua/n-points/run.lua'
+		--dofile'/lua/n-points/run.lua'					-- fails, glColor3f
 		--dofile'/lua/n-points/run_orbit.lua'
+		--dofile'/lua/prime-spiral/run.lua'				-- fails, glColor3f
+		--package.path = package.path .. ';/lua/seashell/?.lua' dofile'/lua/seashell/run.lua'	-- needs complex number support
+		dofile'lua/rule110/rule110.lua'
 		--[[
-./pi-z-curve/run.rua
-./prime-spiral/run.rua
-./SphericalHarmonicGraphs/factorial.rua
-./SphericalHarmonicGraphs/run.rua
-./SphericalHarmonicGraphs/associatedlegendre.rua
-./n-points/run.rua
-./sphere-grid/run.rua
-./line-integral-convolution/run.rua
-./seashell/run.rua
-./rule110/rule110.rua
-./geographic-charts/test.rua
-./langfix/test.rua
-./metric/run.rua
-./fold/run.rua
+./SphericalHarmonicGraphs/factorial.lua
+./SphericalHarmonicGraphs/run.lua
+./SphericalHarmonicGraphs/associatedlegendre.lua
+./sphere-grid/run.lua
+./geographic-charts/test.lua
+./langfix/test.lua
+./metric/run.lua
+./fold/run.lua
 
 		--]]
 	end)

@@ -16,12 +16,15 @@ local ig = setmetatable({}, {
 })
 
 function ig.igCreateContext() end
+function ig.igDestroyContext() end
 function ig.igCheckbox() end
 function ig.igRadioButton_IntPtr() end
 function ig.igStyleColorsDark() end
 function ig.ImGui_ImplSDL2_InitForOpenGL() end
-function ig.ImGui_ImplOpenGL3_Init() end
+function ig.ImGui_ImplSDL2_Shutdown() end
 function ig.ImGui_ImplSDL2_ProcessEvent() end
+function ig.ImGui_ImplOpenGL3_Init() end
+function ig.ImGui_ImplOpenGL3_Shutdown() end
 function ig.igGetIO()
 	-- TODO imgui cdata
 	return {
