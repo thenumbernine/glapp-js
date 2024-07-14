@@ -1248,7 +1248,6 @@ function sdl.SDL_PollEvent(event)
 		sentResize = true
 		-- TODO push this upon creation, and then do a proper event queue here
 		local window = js.global.window
-print('sending resize', window.innerWidth, window.innerHeight)		
 		event[0].type = sdl.SDL_WINDOWEVENT
 		event[0].window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
 		event[0].window.data1 = window.innerWidth

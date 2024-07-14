@@ -767,13 +767,19 @@ function ResMap:getNextID()
 end
 
 function ResMap:get(id)
-	id = tonumber(id)
-	local obj = self[id]
-	if not obj then
+	id = assert(tonumber(id))	-- id should always be a GLuint
+	local entry = self[id]
+	if not entry then
 --DEBUG:print(self.name, 'failed to find id', id)
 		setError(gl.GL_INVALID_OPERATION)
 	end
-	return obj
+	return entry
+end
+
+function ResMap:getObj(id)
+	local entry = self:get(id)
+	if not entry then return end
+	return entry.obj
 end
 
 function ResMap:makeCreate(webglfuncname)
@@ -801,75 +807,52 @@ local buffers = ResMap'buffers'
 
 gl.glCreateProgram = programs:makeCreate'createProgram'
 
-function gl.glAttachShader(programID, shaderID)
-	local program = programs:get(programID)
-	if not program then return end
-
-	local shader = shaders:get(shaderID)
-	if not shader then return end
-
-	getJSGL():attachShader(program.obj, shader.obj)
+function gl.glAttachShader(program, shader)
+	getJSGL():attachShader(programs:getObj(program), shaders:getObj(shader))
 end
 
-function gl.glDetachShader(programID, shaderID)
-	local program = programs:get(programID)
-	if not program then return end
-
-	local shader = shaders:get(shaderID)
-	if not shader then return end
-
-	getJSGL():detachShader(program.obj, shader.obj)
+function gl.glDetachShader(program, shader)
+	getJSGL():detachShader(programs:getObj(shader), shaders:getObj(shader))
 end
 
-function gl.glLinkProgram(id)
-	local program = programs:get(id)
-	if not program then return end
-
-	getJSGL():linkProgram(program.obj)
+function gl.glLinkProgram(program)
+	getJSGL():linkProgram(programs:getObj(program))
 end
 
-function gl.glUseProgram(id)
-	local program = programs:get(id)
-	if not program then return end
-
-	getJSGL():useProgram(program.obj)
+function gl.glUseProgram(program)
+	getJSGL():useProgram(programs:getObj(program))
 end
 
-function gl.glGetProgramiv(id, pname, params)
-	local program = programs:get(id)
-	if not program then return end
-
+function gl.glGetProgramiv(programID, pname, params)
+	local programObj = programs:getObj(programID)
 	if pname == gl.GL_ACTIVE_ATOMIC_COUNTER_BUFFERS then
 		setError(gl.GL_INVALID_ENUM)
 	elseif pname == gl.GL_INFO_LOG_LENGTH then
-		params[0] = #getJSGL():getProgramInfoLog(program.obj)
+		params[0] = #getJSGL():getProgramInfoLog(programObj)
 	elseif pname == gl.GL_ACTIVE_UNIFORM_MAX_LENGTH then
 		-- https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGetActiveUniform.xhtml
 		-- "The size of the character buffer required to store the longest uniform variable name in program can be obtained by calling glGetProgram with the value GL_ACTIVE_UNIFORM_MAX_LENGTH"
 		-- I guess webgl doesn't have antything like this ...
 		local maxlen = 0
-		for i=0,getJSGL():getProgramParameter(program.obj, gl.GL_ACTIVE_UNIFORMS)-1 do
-			local uinfo = getJSGL():getActiveUniform(program.obj, i)
+		for i=0,getJSGL():getProgramParameter(programObj, gl.GL_ACTIVE_UNIFORMS)-1 do
+			local uinfo = getJSGL():getActiveUniform(programObj, i)
 			maxlen = math.max(maxlen, #uinfo.name)
 		end
 		params[0] = maxlen
 	elseif pname == gl.GL_ACTIVE_ATTRIBUTE_MAX_LENGTH then
 		local maxlen = 0
-		for i=0,getJSGL():getProgramParameter(program.obj, gl.GL_ACTIVE_ATTRIBUTES)-1 do
-			local uinfo = getJSGL():getActiveAttrib(program.obj, i)
+		for i=0,getJSGL():getProgramParameter(programObj, gl.GL_ACTIVE_ATTRIBUTES)-1 do
+			local uinfo = getJSGL():getActiveAttrib(programObj, i)
 			maxlen = math.max(maxlen, #uinfo.name)
 		end
 		params[0] = maxlen
 	else
-		params[0] = getJSGL():getProgramParameter(program.obj, pname)
+		params[0] = getJSGL():getProgramParameter(programObj, pname)
 	end
 end
 
-function gl.glGetProgramInfoLog(id, bufSize, length, infoLog)
-	local program = programs:get(id)
-	if not program then return end
-
-	local log = getJSGL():getProgramInfoLog(program.obj)
+function gl.glGetProgramInfoLog(program, bufSize, length, infoLog)
+	local log = getJSGL():getProgramInfoLog(programs:getObj(program))
 	if not log then return  end
 
 	if length ~= ffi.null then
@@ -880,11 +863,8 @@ function gl.glGetProgramInfoLog(id, bufSize, length, infoLog)
 	end
 end
 
-function gl.glGetActiveUniform(id, index, bufSize, length, size, type, name)
-	local program = programs:get(id)
-	if not program then return end
-
-	local uinfo = getJSGL():getActiveUniform(program.obj, index)
+function gl.glGetActiveUniform(program, index, bufSize, length, size, type, name)
+	local uinfo = getJSGL():getActiveUniform(programs:getObj(program), index)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
@@ -899,9 +879,8 @@ function gl.glGetActiveUniform(id, index, bufSize, length, size, type, name)
 	end
 end
 
-function gl.glGetUniformLocation(id, name)
-	local program = programs:get(id)
-	return program and getJSGL():getUniformLocation(program.obj, ffi.string(name)) or nil
+function gl.glGetUniformLocation(program, name)
+	return getJSGL():getUniformLocation(programs:getObj(program), ffi.string(name)) or nil
 end
 
 for n=1,4 do
@@ -953,11 +932,8 @@ for n=1,4 do
 	end
 end
 
-function gl.glGetActiveAttrib(id, index, bufSize, length, size, type, name)
-	local program = programs:get(id)
-	if not program then return end
-
-	local uinfo = getJSGL():getActiveAttrib(program.obj, index)
+function gl.glGetActiveAttrib(program, index, bufSize, length, size, type, name)
+	local uinfo = getJSGL():getActiveAttrib(programs:getObj(program), index)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
@@ -972,9 +948,8 @@ function gl.glGetActiveAttrib(id, index, bufSize, length, size, type, name)
 	end
 end
 
-function gl.glGetAttribLocation(id, name)
-	local program = programs:get(id)
-	return program and getJSGL():getAttribLocation(program.obj, ffi.string(name)) or nil
+function gl.glGetAttribLocation(program, name)
+	return getJSGL():getAttribLocation(programs:getObj(program), ffi.string(name))
 end
 
 -- TODO this doesn't translate directly from ES to WebGL
@@ -990,47 +965,35 @@ function gl.glDisableVertexAttribArray(...) return getJSGL():disableVertexAttrib
 
 gl.glCreateShader = shaders:makeCreate'createShader'
 
-function gl.glShaderSource(id, numStrs, strs, lens)
-	local shader = shaders:get(id)
-	if not shader then return end
-
+function gl.glShaderSource(shader, numStrs, strs, lens)
 	local s = table()
 	for i=0,numStrs-1 do
 		table.insert(s, ffi.string(strs[i], lens[i]))
 	end
 	local source = s:concat()
 
-	getJSGL():shaderSource(shader.obj, source)
+	getJSGL():shaderSource(shaders:getObj(shader), source)
 end
 
-function gl.glCompileShader(id)
-	local shader = shaders:get(id)
-	if not shader then return end
-
-	getJSGL():compileShader(shader.obj)
+function gl.glCompileShader(shader)
+	getJSGL():compileShader(shaders:getObj(shader))
 end
 
-function gl.glGetShaderiv(id, pname, params)
-	local shader = shaders:get(id)
-	if not shader then return end
-
+function gl.glGetShaderiv(shader, pname, params)
 	-- in gles but not in webgl?
 	-- or does gles not allow this also, is it just in gl but not gles?
 	if pname == gl.GL_INFO_LOG_LENGTH then
-		local log = getJSGL():getShaderInfoLog(shader.obj)
+		local log = getJSGL():getShaderInfoLog(shaders:getObj(shader))
 		params[0] = #log
 	elseif pname == gl.GL_SHADER_SOURCE_LENGTH then
-		params[0] = #getJSGL():getShaderSource(shader.obj)
+		params[0] = #getJSGL():getShaderSource(shaders:getObj(shader))
 	else
-		params[0] = getJSGL():getShaderParameter(shader.obj, pname)
+		params[0] = getJSGL():getShaderParameter(shaders:getObj(shader), pname)
 	end
 end
 
-function gl.glGetShaderInfoLog(id, bufSize, length, infoLog)
-	local shader = shaders:get(id)
-	if not shader then return end
-
-	local log = getJSGL():getShaderInfoLog(shader.obj)
+function gl.glGetShaderInfoLog(shader, bufSize, length, infoLog)
+	local log = getJSGL():getShaderInfoLog(shaders:getObj(shader))
 	if not log then  return end
 
 	if length ~= ffi.null then
@@ -1048,10 +1011,8 @@ function gl.glGenBuffers(n, buffers)
 	end
 end
 
-function gl.glBindBuffer(target, bufferID)
-	local buffer = buffers:get(bufferID)
-	if not buffer then return end
-	return getJSGL():bindBuffer(target, buffer.obj)
+function gl.glBindBuffer(target, buffer)
+	return getJSGL():bindBuffer(target, buffers:getObj(buffer))
 end
 
 function gl.glBufferData(target, size, data, usage)
