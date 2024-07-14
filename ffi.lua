@@ -98,6 +98,7 @@ function ffi.memdump(from, len)
 end
 
 local dict = newtable()
+local dictForAddr = {}
 local function malloc(size)
 	-- no zero allocs
 	size = math.max(size, 4)
@@ -121,11 +122,13 @@ print('resizing base memory to', membuf.byteLength)
 	end
 
 	local addr = memUsedSoFar
-	dict:insert{
+	local d = {
 		addr = addr,
 		size = size,
 		free = false,
 	}
+	dict:insert(d)
+	dictForAddr[addr] = d
 	memUsedSoFar = memUsedSoFar + size
 	return addr
 end
@@ -1279,6 +1282,17 @@ local CData = setmetatable({}, {
 		return setmetatable(o, omt)
 	end,
 })
+
+-- does this even work?
+-- nope ... `collectgarbage()` returns `lua_gc not implemented`
+-- so does fengari support garbage collection?
+-- time to switch to a wasm build of lua?
+function CData:__gc()
+	local mt = debug.getmetatable(self)
+	local d = dictForAddr[mt.addr]
+	print("gc'ing", ('0x%x'):format(d.addr), ('0x%x'):format(d.size))
+	d.free = true
+end
 
 CData.__metatable = 'ffi'
 
