@@ -18,8 +18,9 @@ local ig = setmetatable({}, {
 function ig.igCreateContext() end
 function ig.igCheckbox() end
 function ig.igRadioButton_IntPtr() end
+function ig.igStyleColorsDark() end
 function ig.ImGui_ImplSDL2_InitForOpenGL() end
 function ig.ImGui_ImplOpenGL3_Init() end
-function ig.igStyleColorsDark() end
+function ig.ImGui_ImplSDL2_ProcessEvent() end
 
 return ig

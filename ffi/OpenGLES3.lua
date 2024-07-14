@@ -787,6 +787,9 @@ function gl.glViewport(...) return jsgl:viewport(...) end
 function gl.glClearColor(...) return jsgl:clearColor(...) end
 function gl.glClear(...) return jsgl:clear(...) end
 function gl.glDrawArrays(...) return jsgl:drawArrays(...) end
+function gl.glEnable(...) return jsgl:enable(...) end
+function gl.glDisable(...) return jsgl:disable(...) end
+function gl.glBlendFunc(...) return jsgl:blendFunc(...) end
 
 local res = ResMap()
 gl.res = res	--debuggin

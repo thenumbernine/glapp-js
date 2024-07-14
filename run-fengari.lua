@@ -188,12 +188,12 @@ struct A {
 	local sdl = require 'ffi.sdl'
 	sdl.mainthread = coroutine.create(function()
 		--dofile'/lua/glapp/tests/test_es2.lua'	-- WORKS only gles calls
-		dofile'/lua/glapp/tests/test_es.lua'	-- WORKS gl objs
+		--dofile'/lua/glapp/tests/test_es.lua'	-- WORKS gl objs
 		--dofile'/lua/glapp/tests/minimal.lua'
 		--dofile'/lua/glapp/tests/pointtest.lua'
 		--dofile'/lua/glapp/tests/info.lua'
 		--dofile'/lua/line-integral-convolution/run.lua'	-- fails, glsl has smoothstep()
-		--dofile'/lua/n-points/run.lua'
+		dofile'/lua/n-points/run.lua'
 		--dofile'/lua/n-points/run_orbit.lua'
 		--[[
 ./pi-z-curve/run.rua
