@@ -134,6 +134,24 @@ struct A {
 
 	--print('q', q)
 --]=]
+--[=[
+	local sdl = require 'ffi.sdl'
+	local eventPtr = ffi.new'SDL_Event[1]'
+	local event = eventPtr
+	print('event', event)
+	print('event[0]', event[0])
+	print('event[0].type', event[0].type)	-- I think luajit coerces this into a number
+	print('tonumber(event[0].type)', tonumber(event[0].type))
+	print('sdl.SDL_WINDOWEVENT', sdl.SDL_WINDOWEVENT)
+	print('ffi.C.SDL_WINDOWEVENT', ffi.C.SDL_WINDOWEVENT)
+	event[0].type = sdl.SDL_WINDOWEVENT
+	print('event[0].type', event[0].type)
+	event[0].window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
+	event[0].window.data1 = 123
+	event[0].window.data2 = 456
+	print(event[0].type)
+	print(event[0].window.event)
+--]=]
 -- [=[
 
 	-- [==[ shim layer

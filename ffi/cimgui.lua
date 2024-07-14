@@ -11,7 +11,9 @@ struct ImVec4 {
 typedef struct ImVec4 ImVec4;
 ]]
 
-local ig = {}
+local ig = setmetatable({} {
+	__index = ffi.C,
+})
 
 function ig.igCheckbox() end
 function ig.igRadioButton_IntPtr() end

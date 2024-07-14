@@ -206,23 +206,6 @@ local function pushString(str)
 	return addr
 end
 
-
-
--- helper function for the webgl shim layer equivalent of the ffi .so header files
--- ... instead of ffi.cdef
--- NOTICE this field deviates from luajit ffi
-function ffi.cdef_enum(keys, dest)
-	dest = dest or ffi.C
-	local v = 0
-	for _,k in ipairs(keys) do
-		if type(k) == 'table' then
-			k, v = next(k)
-		end
-		dest[k] = v
-		v = v + 1
-	end
-end
-
 local nextuniquenameindex = 0
 local function nextuniquename()
 	nextuniquenameindex = nextuniquenameindex + 1
@@ -1000,6 +983,8 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 	return str, token, tokentype, ctype
 end
 
+-- TODO would be nice to treat enums as constants / define's ...
+-- using the ext.load shim layer maybe ...
 local function parseEnum(str)
 	local token, tokentype
 	str, token, tokentype = consume(str)	-- skip past "enum"

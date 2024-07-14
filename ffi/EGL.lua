@@ -1,27 +1,27 @@
 local ffi = require 'ffi'
 
-ffi.typedefs['EGLDisplay'] = 'intptr_t'	-- void*
-ffi.typedefs['EGLConfig'] = 'intptr_t'	-- void*
-ffi.typedefs['EGLContext'] = 'intptr_t'	-- void*
-ffi.typedefs['EGLint'] = 'int'
+ffi.cdef[[
+typedef intptr_t EGLDisplay;	-- void*
+typedef intptr_t EGLConfig;	-- void*
+typedef intptr_t EGLContext;	-- void*
+typedef int EGLint;
 
-local egl = {}
+enum {
+	EGL_DEFAULT_DISPLAY = 0,
+	EGL_CLIENT_APIS = 12429,
+	EGL_VENDOR = 12371,
+	EGL_VERSION = 12372,
+	EGL_CLIENT_APIS = 12429,
+	EGL_EXTENSIONS = 12373,
+	EGL_BLUE_SIZE = 12322,
+	EGL_GREEN_SIZE = 12323,
+	EGL_RED_SIZE = 12324,
+};
+]]
 
-egl.EGL_DEFAULT_DISPLAY = 0
-egl.EGL_CLIENT_APIS = 12429
-egl.EGL_VENDOR = 12371
-egl.EGL_VERSION = 12372
-egl.EGL_CLIENT_APIS = 12429
-egl.EGL_EXTENSIONS = 12373
-
-ffi.cdef_enum(
-	{
-		{EGL_BLUE_SIZE = 12322},
-		{EGL_GREEN_SIZE = 12323},
-		{EGL_RED_SIZE = 12324},
-	},
-	sdl
-)
+local egl = setmetatable({}, {
+	__index = ffi.C,
+})
 
 function egl.eglGetDisplay()
 	return ffi.new('EGLDisplay')

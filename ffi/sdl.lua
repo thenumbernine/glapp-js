@@ -1100,56 +1100,48 @@ typedef union SDL_Event {
 	SDL_DropEvent drop;
 	Uint8 padding[56];	//[sizeof(void *) <= 8 ? 56 : sizeof(void *) == 16 ? 64 : 3 * sizeof(void *)];
 } SDL_Event;
+
+enum {
+	SDL_WINDOW_FULLSCREEN    = 0x00000001,
+	SDL_WINDOW_OPENGL        = 0x00000002,
+	SDL_WINDOW_SHOWN         = 0x00000004,
+	SDL_WINDOW_HIDDEN        = 0x00000008,
+	SDL_WINDOW_BORDERLESS    = 0x00000010,
+	SDL_WINDOW_RESIZABLE     = 0x00000020,
+	SDL_WINDOW_MINIMIZED     = 0x00000040,
+	SDL_WINDOW_MAXIMIZED     = 0x00000080,
+	SDL_WINDOW_INPUT_GRABBED = 0x00000100,
+	SDL_WINDOW_INPUT_FOCUS   = 0x00000200,
+	SDL_WINDOW_MOUSE_FOCUS   = 0x00000400,
+	SDL_WINDOW_FOREIGN       = 0x00000800,
+};
+
+enum {
+	SDL_GL_RED_SIZE,
+	SDL_GL_GREEN_SIZE,
+	SDL_GL_BLUE_SIZE,
+	SDL_GL_ALPHA_SIZE,
+	SDL_GL_BUFFER_SIZE,
+	SDL_GL_DOUBLEBUFFER,
+	SDL_GL_DEPTH_SIZE,
+	SDL_GL_STENCIL_SIZE,
+	SDL_GL_ACCUM_RED_SIZE,
+	SDL_GL_ACCUM_GREEN_SIZE,
+	SDL_GL_ACCUM_BLUE_SIZE,
+	SDL_GL_ACCUM_ALPHA_SIZE,
+	SDL_GL_STEREO,
+	SDL_GL_MULTISAMPLEBUFFERS,
+	SDL_GL_MULTISAMPLESAMPLES,
+	SDL_GL_ACCELERATED_VISUAL,
+	SDL_GL_RETAINED_BACKING,
+	SDL_GL_CONTEXT_MAJOR_VERSION,
+	SDL_GL_CONTEXT_MINOR_VERSION,
+};
 ]]
 
-local sdl = {}
-
--- TODO would be nice to treat these as constants / define's ...
-
-ffi.cdef_enum(
-	{
-		{SDL_WINDOW_FULLSCREEN    = 0x00000001},
-		{SDL_WINDOW_OPENGL        = 0x00000002},
-		{SDL_WINDOW_SHOWN         = 0x00000004},
-		{SDL_WINDOW_HIDDEN        = 0x00000008},
-		{SDL_WINDOW_BORDERLESS    = 0x00000010},
-		{SDL_WINDOW_RESIZABLE     = 0x00000020},
-		{SDL_WINDOW_MINIMIZED     = 0x00000040},
-		{SDL_WINDOW_MAXIMIZED     = 0x00000080},
-		{SDL_WINDOW_INPUT_GRABBED = 0x00000100},
-		{SDL_WINDOW_INPUT_FOCUS   = 0x00000200},
-		{SDL_WINDOW_MOUSE_FOCUS   = 0x00000400},
-		{SDL_WINDOW_FOREIGN       = 0x00000800},
-	},
-	sdl
-)
-
-ffi.cdef_enum(
-	{
-		'SDL_GL_RED_SIZE',
-		'SDL_GL_GREEN_SIZE',
-		'SDL_GL_BLUE_SIZE',
-		'SDL_GL_ALPHA_SIZE',
-		'SDL_GL_BUFFER_SIZE',
-		'SDL_GL_DOUBLEBUFFER',
-		'SDL_GL_DEPTH_SIZE',
-		'SDL_GL_STENCIL_SIZE',
-		'SDL_GL_ACCUM_RED_SIZE',
-		'SDL_GL_ACCUM_GREEN_SIZE',
-		'SDL_GL_ACCUM_BLUE_SIZE',
-		'SDL_GL_ACCUM_ALPHA_SIZE',
-		'SDL_GL_STEREO',
-		'SDL_GL_MULTISAMPLEBUFFERS',
-		'SDL_GL_MULTISAMPLESAMPLES',
-		'SDL_GL_ACCELERATED_VISUAL',
-		'SDL_GL_RETAINED_BACKING',
-		'SDL_GL_CONTEXT_MAJOR_VERSION',
-		'SDL_GL_CONTEXT_MINOR_VERSION',
-	},
-	sdl
-)
-assert(sdl.SDL_GL_RED_SIZE)
-assert(ffi.C.SDL_GL_RED_SIZE)
+local sdl = setmetatable({}, {
+	__index = ffi.C,
+})
 
 -- store these in ffi.C as well?
 -- how does luajit ffi.load know when to put symbols in ffi.C vs in the table returned?
@@ -1237,6 +1229,8 @@ function sdl.SDL_GetVersion(version)
 	version[0].patch = 0
 end
 
+local sentResize
+
 -- returns the # of events
 -- either this or SDL_GL_SwapWindow should be our coroutine yield ...
 function sdl.SDL_PollEvent(event)
@@ -1249,6 +1243,18 @@ function sdl.SDL_PollEvent(event)
 	gl:clear(gl.COLOR_BUFFER_BIT)
 	gl:colorMask(true, true, true, true)
 
+	-- return our events
+	if not sentResize then
+		sentResize = true
+		-- TODO push this upon creation, and then do a proper event queue here
+		local window = js.global.window
+print('sending resize', window.innerWidth, window.innerHeight)		
+		event[0].type = sdl.SDL_WINDOWEVENT
+		event[0].window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
+		event[0].window.data1 = window.innerWidth
+		event[0].window.data2 = window.innerHeight
+		return 1
+	end
 	return 0
 end
 
