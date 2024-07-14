@@ -152,7 +152,7 @@ struct A {
 	print(event[0].type)
 	print(event[0].window.event)
 --]=]
--- [=[
+--[=[
 	local f = ffi.new('float[2]', 3, 5)
 	print('f', f)
 	print('f[0]', f[0])
@@ -162,7 +162,7 @@ struct A {
 	print('g[1]', g[1])
 	print('g', g)
 --]=]
---[=[
+-- [=[
 	-- run it and initialize glapp variable
 	
 	-- start it as a new thread ...

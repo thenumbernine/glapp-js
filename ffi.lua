@@ -1331,9 +1331,9 @@ function CData:__index(key)
 			-- array ...
 			local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = mt.type.baseType
-			local addr = mt.addr
-			if ctype.isPointer then addr = memGetPtr(addr) end
-			local fieldAddr = addr + index * ctype.baseType.size
+			local fieldAddr = mt.addr
+			if ctype.isPointer then fieldAddr = memGetPtr(fieldAddr) end
+			fieldAddr = fieldAddr + index * ctype.baseType.size
 			if fieldType.isPrimitive then
 				return fieldType.get(memview, fieldAddr)
 			else
@@ -1384,12 +1384,16 @@ function CData:__newindex(key, value)
 	local valuemt = debug.getmetatable(value)
 --DEBUG:print('CData:__newindex self=', self, 'ctype', ctype, 'key', key, 'value', value)
 	if ctype.baseType then
-		if ctype.arrayCount then
+		if ctype.arrayCount 
+		or ctype.isPointer
+		then
 --DEBUG:print('...array assignment')
 			-- array
 			local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = ctype.baseType
-			local fieldAddr = mt.addr + index * ctype.baseType.size
+			local fieldAddr = mt.addr
+			if ctype.isPointer then fieldAddr = memGetPtr(fieldAddr) end
+			fieldAddr = fieldAddr + index * ctype.baseType.size
 --DEBUG:print('...fieldType', fieldType.isPrimitive, fieldType.isPointer, 'valuetype', valuetype)
 			if fieldType.isPrimitive then
 
