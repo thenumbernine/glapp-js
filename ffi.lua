@@ -173,7 +173,7 @@ local function getAddr(x)
 	local ctype = assert(mt.type)
 	local addr = assert(mt.addr)
 	if ctype.isPointer then return memGetPtr(addr) end
-	
+
 	-- TODO real luajit ffi has ref types as well
 	-- this should only return addr if the type is a ref-type or an array type ... not for primitives!
 	assert(not ctype.isPrimitive, "TODO reftypes")

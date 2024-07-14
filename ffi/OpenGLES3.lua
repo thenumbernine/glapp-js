@@ -721,7 +721,12 @@ function gl.glGetString(name)
 		return ffi.stringBuffer(jsgl:getParameter(jsgl.RENDERER))
 	elseif name == gl.GL_VERSION then
 		return ffi.stringBuffer(jsgl:getParameter(jsgl.VERSION))
+	elseif name == gl.GL_MAJOR_VERSION then
+		return ffi.stringBuffer''
+	elseif name == gl.GL_MINOR_VERSION then
+		return ffi.stringBuffer''
 	elseif name == gl.GL_SHADING_LANGUAGE_VERSION then
+		-- TODO tempted to send something else since this string has so much extra crap in it
 		return ffi.stringBuffer(jsgl:getParameter(jsgl.SHADING_LANGUAGE_VERSION))
 	elseif name == gl.GL_EXTENSIONS then
 		local s = {}
@@ -920,11 +925,11 @@ for n=1,4 do
 		local webglname = 'uniformMatrix'..n..'fv'
 		local len = n * n
 		gl[glname] = function(location, count, transpose, value)
-			-- TODO 'location' is coming from lua, 
+			-- TODO 'location' is coming from lua,
 			-- which should be holding a GLuint for the location
 			-- but I'm seeing a WebGLUniformLocation object here ..
 			-- but that's fine anyways cuz that's what should get passed to webgl...
-			
+
 			assert(type(value) == 'cdata')
 			-- if it's an array ... coerce somewhere ...
 			local buffer = ffi.getDataView(
