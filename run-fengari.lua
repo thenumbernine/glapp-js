@@ -119,6 +119,15 @@ struct A {
 	print('A', A)
 --]=]
 --[=[
+	local vec3d = require 'vec-ffi.vec3d'
+	print('vec3d', vec3d)
+	local a = vec3d(1,2,3)
+	print('a', a)
+	local b = vec3d(4,5,6)
+	print('b', b)
+	print('a + b', a + b)
+--]]
+--[=[
 	local quatd = require 'vec-ffi.quatd'
 	print('quatd', quatd)	-- should be a type?
 	print('type(quatd)', type(quatd))
@@ -152,7 +161,7 @@ struct A {
 	print(event[0].type)
 	print(event[0].window.event)
 --]=]
---[=[
+--[=[ make sure arrays and pointers can be indexed
 	local f = ffi.new('float[2]', 3, 5)
 	print('f', f)
 	print('f[0]', f[0])
@@ -161,6 +170,13 @@ struct A {
 	print('g[0]', g[0])
 	print('g[1]', g[1])
 	print('g', g)
+
+	-- does pointer-compare work?
+	-- should pointer-vs-array compare work?
+
+	local h = ffi.new('float*', g)
+	print('f == g', f == g)
+	print('g == h', g == h)
 --]=]
 -- [=[
 	-- run it and initialize glapp variable
@@ -171,9 +187,31 @@ struct A {
 	-- or maybe I should shim that function as well ...
 	local sdl = require 'ffi.sdl'
 	sdl.mainthread = coroutine.create(function()
-		--dofile'/lua/glapp/tests/test_es2.lua'	-- only gles calls
-		--dofile'/lua/glapp/tests/test_es.lua'	-- gl objs
-		dofile'/lua/line-integral-convolution/run.lua'
+		--dofile'/lua/glapp/tests/test_es2.lua'	-- WORKS only gles calls
+		dofile'/lua/glapp/tests/test_es.lua'	-- WORKS gl objs
+		--dofile'/lua/glapp/tests/minimal.lua'
+		--dofile'/lua/glapp/tests/pointtest.lua'
+		--dofile'/lua/glapp/tests/info.lua'
+		--dofile'/lua/line-integral-convolution/run.lua'	-- fails, glsl has smoothstep()
+		--dofile'/lua/n-points/run.lua'
+		--dofile'/lua/n-points/run_orbit.lua'
+		--[[
+./pi-z-curve/run.rua
+./prime-spiral/run.rua
+./SphericalHarmonicGraphs/factorial.rua
+./SphericalHarmonicGraphs/run.rua
+./SphericalHarmonicGraphs/associatedlegendre.rua
+./n-points/run.rua
+./sphere-grid/run.rua
+./line-integral-convolution/run.rua
+./seashell/run.rua
+./rule110/rule110.rua
+./geographic-charts/test.rua
+./langfix/test.rua
+./metric/run.rua
+./fold/run.rua
+
+		--]]
 	end)
 	local res, err = coroutine.resume(sdl.mainthread)
 	if not res then

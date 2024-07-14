@@ -1527,21 +1527,73 @@ function CData:add(index)
 	)
 end
 
-function CData.__add(a,b)
-	local ma = debug.getmetatable(a)
-	local mb = debug.getmetatable(b)
-	local pa = ma and ma.isCData
-	local pb = mb and mb.isCData
-	local na = type(a) == 'number'
-	local nb = type(b) == 'number'
-	if pa and nb then
-		return CData.add(a, b)
-	elseif pb and na then
-		return CData.add(b, a)
-	else
-		error("don't know how to add")
+local function getbinhandler(a, b, event)
+	if a then
+		local h = a[event]
+		if h then return h end
+	end
+	if b then
+		return b[event]
 	end
 end
+
+local function binop(a, b, event, default)
+	local handler = getbinhandler(a, b, event)
+	if handler then
+		return handler(a, b)
+	elseif default then
+		return default(a,b)
+	else
+		error("don't know how to handle "..event)
+	end
+end
+
+function CData.__add(a,b)
+	return binop(a, b, '__add', function()
+		local ma = debug.getmetatable(a)
+		local mb = debug.getmetatable(b)
+		local pa = ma and ma.isCData
+		local pb = mb and mb.isCData
+		local na = type(a) == 'number'
+		local nb = type(b) == 'number'
+		if pa and nb then
+			return CData.add(a, b)
+		elseif pb and na then
+			return CData.add(b, a)
+		else
+			error("don't know how to add")
+		end
+	end)
+end
+
+function CData.__sub(a,b)
+	return binop(a, b, '__sub', function()
+		local ma = debug.getmetatable(a)
+		local mb = debug.getmetatable(b)
+		local pa = ma and ma.isCData
+		local pb = mb and mb.isCData
+		local na = type(a) == 'number'
+		local nb = type(b) == 'number'
+		if pa and nb then
+			return CData.add(a, -b)
+		elseif pb and na then
+			return CData.add(b, -a)
+		else
+			error("don't know how to sub")
+		end
+	end)
+end
+
+function CData.__mul(a,b) return binop(a, b, '__mul') end
+function CData.__div(a,b) return binop(a, b, '__div') end
+function CData.__pow(a,b) return binop(a, b, '__pow') end
+function CData.__mod(a,b) return binop(a, b, '__mod') end
+function CData.__eq(a,b) return binop(a, b, '__eq', function() return getAddr(a) == getAddr(b) end) end
+function CData.__ne(a,b) return binop(a, b, '__ne', function() return getAddr(a) ~= getAddr(b) end) end
+function CData.__lt(a,b) return binop(a, b, '__lt', function() return getAddr(a) < getAddr(b) end) end
+function CData.__le(a,b) return binop(a, b, '__le', function() return getAddr(a) <= getAddr(b) end) end
+function CData.__gt(a,b) return binop(a, b, '__gt', function() return getAddr(a) > getAddr(b) end) end
+function CData.__ge(a,b) return binop(a, b, '__ge', function() return getAddr(a) >= getAddr(b) end) end
 
 -- tonumber(cdata ptr) returns nil
 -- but tonumber(cdata prim) returns the number value
