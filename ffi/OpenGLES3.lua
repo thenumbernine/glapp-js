@@ -691,6 +691,11 @@ local gl = setmetatable({}, {
 	__index = ffi.C,
 })
 
+local function jsbool(b)
+	if b == 0 then return false end
+	return b	-- not not b
+end
+
 local function getJSGL()
 --[[ debugging - see if any values don't match up
 	local jsgl = assert(js.global.gl)
@@ -920,10 +925,6 @@ for n=1,4 do
 			-- but I'm seeing a WebGLUniformLocation object here ..
 			-- but that's fine anyways cuz that's what should get passed to webgl...
 			
-			-- TODO same argument with 'transpose' ... should be GLint GL_TRUE/GL_FALSE
-			-- and in the case of GL_FALSE then it should return js bool false
-			if transpose == 0 then transpose = false end
-			
 			assert(type(value) == 'cdata')
 			-- if it's an array ... coerce somewhere ...
 			local buffer = ffi.getDataView(
@@ -934,7 +935,7 @@ for n=1,4 do
 			local jsgl = getJSGL()
 			assert(count == 1, "TODO")
 --print(glname, location, transpose, buffer)
-			return jsgl[webglname](jsgl, location, transpose, buffer)
+			return jsgl[webglname](jsgl, location, jsbool(transpose), buffer)
 		end
 	end
 end
@@ -963,7 +964,7 @@ end
 -- ES allows pointers to be passed when no buffers are bound ... right? idk about specss but it's functional on my desktop at least, similar to GL
 -- WebGL only allows this to work with bound buffers
 function gl.glVertexAttribPointer(index, size, ctype, normalized, stride, pointer)
-	return getJSGL():vertexAttribPointer(index, size, ctype, normalized, stride, tonumber(ffi.cast('intptr_t', pointer)))
+	return getJSGL():vertexAttribPointer(index, size, ctype, jsbool(normalized), stride, tonumber(ffi.cast('intptr_t', pointer)))
 end
 
 function gl.glEnableVertexAttribArray(...) return getJSGL():enableVertexAttribArray(...) end
