@@ -117,7 +117,17 @@ local function mallocAddr(size)
 
 	local reqmax = memUsedSoFar + size
 	if reqmax > membuf.byteLength then
-		membuf:resize(bit.band(reqmax, 0xfffff) + 0x100000)	-- 1<<20-1
+		local newsize = (reqmax & 0xfffff) + 0x100000
+		--membuf:resize(newsize)	-- TypeError: Method ArrayBuffer.prototype.resize called on incompatible receiver #<ArrayBuffer>
+		--js.global.ArrayBuffer.prototype.resize(membuf, newsize)	-- same
+		-- [[ I hate javascript so much
+		newmembuf = js.new(js.global.ArrayBuffer, newsize)
+		js.new(js.global.Uint8Array, newmembuf, 0, memUsedSoFar):set(
+			js.new(js.global.Uint8Array, membuf, 0, memUsedSoFar)
+		)
+		membuf = newmembuf
+		memview = js.new(js.global.DataView, membuf)
+		--]]
 print('resizing base memory to', membuf.byteLength)
 	end
 
@@ -169,9 +179,6 @@ end
 -- if x's type is an array or prim then return x's addr
 -- if x's type is a pointer hten return x's value
 local function getAddr(x)
-	-- special case?  or should I just change all the claling code to pass/compare ffi.null?
-	if x == nil then return 0 end
-
 	local t, mt = getTypeAndMT(x)
 	if not (t == 'cdata' and mt.isCData) then error("expected cdata") end
 	local ctype = assert(mt.type)
@@ -1710,7 +1717,7 @@ local function getMemSub(jsarray, addr, count)
 	return js.new(jsarray, membuf, addr, count)
 end
 
-local function memcpy(dstaddr, srcaddr, len)
+local function memcpyAddr(dstaddr, srcaddr, len)
 	getMemSub(js.global.Uint8Array, dstaddr, len):set(
 		getMemSub(js.global.Uint8Array, srcaddr, len)
 	)
@@ -1738,7 +1745,7 @@ function ffi.copy(dst, src, len)
 	else
 		assert(len, "expected len")	-- or can't it coerce size from cdata?
 		-- construct a temporary object just to copy bytes.  why is javascript so retarded?
-		memcpy(dstaddr, getAddr(src), len)
+		memcpyAddr(dstaddr, getAddr(src), len)
 	end
 --DEBUG:print('ffi.copy finished', cdataToHex(dst), cdataToHex(src), len)
 end

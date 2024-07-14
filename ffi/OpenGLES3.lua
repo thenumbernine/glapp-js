@@ -1016,11 +1016,7 @@ function gl.glBufferData(target, size, data, usage)
 	if data == ffi.null then
 		return jsgl:bufferData(target, size, usage)
 	else
-		return jsgl:bufferData(
-			target,
-			ffi.getDataView(js.global.Uint8Array, data, size),
-			usage
-		)
+		return jsgl:bufferData(target, ffi.getDataView(js.global.Uint8Array, data, size), usage)
 	end
 end
 
@@ -1047,7 +1043,17 @@ function gl.glBindTexture(target, texture)
 end
 
 function gl.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
-	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, ffi.getDataView(js.global.Uint8Array, pixels))
+	-- ok webgl is retarded here
+	-- if the type is FLOAT then it wants a Float32Array
+	local data
+	if pixels == ffi.null 
+	or pixels == nil
+	then
+		pixels = js.null
+	else
+		pixels = ffi.getDataView(js.global.Uint8Array, pixels)
+	end
+	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, buffer)
 end
 
 function gl.glTexParameterf(...)
@@ -1063,6 +1069,10 @@ end
 
 function gl.glBindFramebuffer(target, framebuffer)
 	return jsgl:bindFramebuffer(target, getObj(framebuffer))
+end
+
+function gl.glFramebufferTexture2D(target, attachment, textarget, texture, level)
+	return jsgl:framebufferTexture2D(target, attachment, textarget, getObj(texture), level)
 end
 
 return gl

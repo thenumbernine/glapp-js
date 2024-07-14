@@ -171,9 +171,9 @@ struct A {
 	-- or maybe I should shim that function as well ...
 	local sdl = require 'ffi.sdl'
 	sdl.mainthread = coroutine.create(function()
-		dofile'/lua/glapp/tests/test_es2.lua'	-- only gles calls
+		--dofile'/lua/glapp/tests/test_es2.lua'	-- only gles calls
 		--dofile'/lua/glapp/tests/test_es.lua'	-- gl objs
-		--dofile'/lua/line-integral-convolution/run.lua'
+		dofile'/lua/line-integral-convolution/run.lua'
 	end)
 	local res, err = coroutine.resume(sdl.mainthread)
 	if not res then
