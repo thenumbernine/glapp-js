@@ -774,7 +774,7 @@ end
 
 function ResMap:getObj(id)
 	local entry = self:get(id)
-	if not entry then return nil end	-- nil for arg # of the js calls
+	if not entry then return js.null end	-- webgl is stingy, needs null, not undefined
 	return entry.obj
 end
 
@@ -913,6 +913,15 @@ for n=1,4 do
 		local webglname = 'uniformMatrix'..n..'fv'
 		local len = n * n
 		gl[glname] = function(location, count, transpose, value)
+			-- TODO 'location' is coming from lua, 
+			-- which should be holding a GLuint for the location
+			-- but I'm seeing a WebGLUniformLocation object here ..
+			-- but that's fine anyways cuz that's what should get passed to webgl...
+			
+			-- TODO same argument with 'transpose' ... should be GLint GL_TRUE/GL_FALSE
+			-- and in the case of GL_FALSE then it should return js bool false
+			if transpose == 0 then transpose = false end
+			
 			assert(type(value) == 'cdata')
 			-- if it's an array ... coerce somewhere ...
 			local buffer = ffi.getDataView(
@@ -922,6 +931,7 @@ for n=1,4 do
 			)
 			local jsgl = getJSGL()
 			assert(count == 1, "TODO")
+--print(glname, location, transpose, buffer)
 			return jsgl[webglname](jsgl, location, transpose, buffer)
 		end
 	end
