@@ -83,6 +83,8 @@ local membuf = js.new(js.global.ArrayBuffer, 0x100000)
 ffi.membuf = membuf
 
 local memview = js.new(js.global.DataView, membuf)
+ffi.memview = memview
+
 local memUsedSoFar = 0
 
 function ffi.memdump(from, len)
@@ -405,7 +407,7 @@ function CType:assign(addr, ...)
 				end
 			end
 		else
---DEBUG:print('...assigning to primitive')
+--DEBUG:print('...assigning to primitive or pointer')
 			assert(self.isPrimitive, "assigning to a non-primitive...")
 			local v = ...
 			local vt = type(v)
@@ -423,11 +425,6 @@ function CType:assign(addr, ...)
 				local len = self.size	--srcmt.type.size
 --DEBUG:print('...with len', len)
 				-- same as ffi.copy
-				--[[ TODO use self.set somehow?  if both types are primitives?
-				js.new(js.global.Uint8Array, membuf, addr, len):set(
-					js.new(js.global.Uint8Array, membuf, srcmt.addr, len)
-				)
-				--]]
 				if srcctype.isPointer then
 					value = memGetPtr(srcmt.addr)
 --DEBUG:print('assigning from pointer with value-addr', value,'to addr', addr)
@@ -576,8 +573,23 @@ CType{name='uint64_t', size=8, isPrimitive=true,
 	end,
 }
 
-CType{name='float', size=4, isPrimitive=true, getset='Float32'}
-CType{name='double', size=8, isPrimitive=true, getset='Float64'}
+-- i hate javascript ... endianness problems ...
+CType{name='float', size=4, isPrimitive=true,
+	get=function(memview, addr)
+		return memview:getFloat32(addr, true)
+	end,
+	set=function(memview, addr, v)
+		memview:setFloat32(addr, v, true)
+	end,
+}
+CType{name='double', size=8, isPrimitive=true,
+	get=function(memview, addr)
+		return memview:getFloat64(addr, true)
+	end,
+	set=function(memview, addr, v)
+		memview:setFloat64(addr, v, true)
+	end,
+}
 --CType{name='long double', size=16, isPrimitive=true}	-- no get/set in Javascript DataView ... hmm ...
 
 -- add these as typedefs
@@ -1668,48 +1680,65 @@ local function getMemSub(jsarray, addr, count)
 end
 
 local function memcpy(dstaddr, srcaddr, len)
+	--[[ tf js ...
 	getMemSub(js.global.Uint8Array, dstaddr, len):set(
 		getMemSub(js.global.Uint8Array, srcaddr, len)
 	)
+	--]]
+	-- [[
+	for i=0,len-1 do
+		memview:setUint8(dstaddr + i, memview:getUint8(srcaddr + i))
+	end
+	--]]
 end
 
 -- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
+-- TODO better name, this isn't a DataView is it ...
 function ffi.getDataView(jsarray, data, count)
 --DEBUG:print('ffi.getDataView', jsarray, data, count)
-	return getMemSub(jsarray, getAddr(data), count)
+	local addr = getAddr(data)
+	local result = getMemSub(jsarray, addr, count)
+--[[
+if jsarray == js.global.Float32Array then
+	print'double check getDataView float'
+	for i=0,count-1 do
+		print(i, result[i], memview:getFloat32(addr + 4 * i, true))
+	end
+end
+--]]
+	return result
 end
 
 
 function ffi.copy(dst, src, len)
 --DEBUG:print('ffi.copy', cdataToHex(dst), cdataToHex(src), len)
-	--asserttype(dst, 'cdata')	-- TODO this plz?
-	local dstmt = debug.getmetatable(dst)
-	assert(type(dst) == 'cdata' and dstmt.isCData)
-	if not (dstmt and dstmt.isCData) then
-		error("ffi.copy dst is not a cdata, got "..tostring(dst))
-	end
-
+	local dstaddr = getAddr(dst)
 	if type(src) == 'string' then
 		-- convert from lua string to js buffer
 		len = len or #src+1	-- ...including the newline
 		for i=1,len do
-			memview:setUint8(dstmt.addr + i-1, src:byte(i) or 0)
+			memview:setUint8(dstaddr + i-1, src:byte(i) or 0)
 		end
 	else
 		assert(len, "expected len")	-- or can't it coerce size from cdata?
 		-- construct a temporary object just to copy bytes.  why is javascript so retarded?
-		memcpy(getAddr(dst), getAddr(src), len)
+		memcpy(dstaddr, getAddr(src), len)
 	end
 --DEBUG:print('ffi.copy finished', cdataToHex(dst), cdataToHex(src), len)
 end
 
 function ffi.fill(dst, len, value)
-	local dstmt = debug.getmetatable(dst)
-	assert(type(dst) == 'cdata' and dstmt.isCData)
-	assert(dstmt and dstmt.isCData, "ffi.fill dst is not a cdata")
+	local addr = getAddr(dst)
 	value = value or 0
 	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
-	js.new(js.global.Uint8Array, membuf, dstmt.addr, len):fill(value, 0, len)
+	--[[ i hate javascript
+	js.new(js.global.Uint8Array, membuf, addr, len):fill(value, 0, len)
+	--]]
+	-- [[
+	for i=0,len-1 do
+		memview:setUint8(addr + i, 0)
+	end
+	--]]
 end
 
 function tonumber(x, ...)

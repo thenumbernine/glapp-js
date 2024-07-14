@@ -792,7 +792,7 @@ function ResMap:makeCreate(webglfuncname)
 	return function(...)
 		local jsgl = getJSGL()
 		local id = self:getNextID()
-print('making '..webglfuncname..' id='..id)
+print(webglfuncname..' id='..id)
 		assert(self[id] == nil)
 		self[id] = {
 			type = webglfuncname,
@@ -1029,9 +1029,30 @@ function gl.glBindBuffer(target, buffer)
 end
 
 function gl.glBufferData(target, size, data, usage)
+--[[
+print('glBufferData', type(target), target, type(size), size, type(data), data, type(usage), usage)
+assert(data ~= nil)
+--]]
 	if data == ffi.null then
 		return getJSGL():bufferData(target, size, usage)
 	else
+--[[
+local count = math.floor(size/4)
+local addr = ffi.getAddr(data)
+print('data addr', addr)
+-- i hate javascript
+local jsdata = ffi.getDataView(js.global.Float32Array, data, count)
+--local jsdata = js.new(js.global.Float32Array, ffi.membuf, addr, count)			-- backwards floats or something ... 1's turn into 1e-41's
+print'data:'
+for i=0,count-1 do
+	print(
+		i,										-- array index
+		data[i],								-- fengari lua ffi array access works
+		ffi.memview:getFloat32(addr + 4 * i, true), 	-- js dataview float32 access works
+		jsdata[i]								-- ... but new Float32Array(buffer, addr, count) doesn't work ...
+	)
+end
+--]]
 		return getJSGL():bufferData(
 			target,
 			ffi.getDataView(js.global.Uint8Array, data, size),
