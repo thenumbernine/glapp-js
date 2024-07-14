@@ -1181,6 +1181,8 @@ print('...creating canvas')
 	--also call resize after init is done
 	window:setTimeout(resize, 0)
 
+	coroutine.yield(sdl.mainthread)
+
 	return ffi.new'SDL_Window'
 end
 function sdl.SDL_DestroyWindow(window) return 0 end
@@ -1214,6 +1216,8 @@ print('...got gl')
 	
 	-- TODO need a better way to talk to ffi.OpenGL ...
 	js.global.window.gl = gl
+	
+	coroutine.yield(sdl.mainthread)
 
 	return ffi.new'SDL_GLContext'
 end

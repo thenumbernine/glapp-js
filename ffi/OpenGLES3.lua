@@ -705,6 +705,7 @@ local function getJSGL()
 
 	return assert(js.global.gl, "WebGL isn't initialized")
 end
+gl.getJSGL = getJSGL	--debugging
 
 function gl.glGetString(name)
 	-- TODO initialize upon any dereference?
@@ -736,13 +737,17 @@ local glerror = gl.GL_NO_ERROR
 function gl.glGetError()
 	-- idk how to make precedence of whether mine or theirs sets first
 	-- too bad there's no glSetError function ....
-	if glerror ~= 0 then return glerror end
+	if glerror ~= 0 then
+		local res = glerror
+		glerror = 0
+		return res
+	end
 	return getJSGL():getError()
 end
 
 local function setError(err)
-	if glerror ~= 0 then return end
 	if err == 0 then return end
+	if glerror ~= 0 then return end
 	glerror = err
 end
 
@@ -764,12 +769,7 @@ end
 
 function ResMap:get(id)
 	id = assert(tonumber(id))	-- id should always be a GLuint
-	local entry = self[id]
-	if not entry then
---DEBUG:print('failed to find id', id)
-		setError(gl.GL_INVALID_OPERATION)
-	end
-	return entry
+	return self[id]
 end
 
 function ResMap:getObj(id)
@@ -787,7 +787,6 @@ print('making '..webglfuncname..' id='..id)
 		self[id] = {
 			obj = jsgl[webglfuncname](jsgl, ...)
 		}
-		setError(jsgl:getError())
 		return id	--ffi.cast('GLuint', id)	-- luajit ffi will auto convert reads of int to luanumber ...
 	end
 end
@@ -807,6 +806,7 @@ function gl.glAttachShader(program, shader)
 end
 
 function gl.glDetachShader(program, shader)
+-- TODO track attached shaders and delete from res[] if they fully detach?
 	getJSGL():detachShader(res:getObj(program), res:getObj(shader))
 end
 
@@ -815,6 +815,7 @@ function gl.glLinkProgram(program)
 end
 
 function gl.glUseProgram(program)
+--print('glUseProgram', program, res:getObj(program))
 	getJSGL():useProgram(res:getObj(program))
 end
 
