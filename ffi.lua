@@ -1032,6 +1032,10 @@ local function parseEnum(str)
 			str, token, tokentype = consume(str)
 			assert(tokentype == 'number' or tokentype == 'char', "expected value to be a number or char, found "..tostring(token).." rest "..tostring(str))
 			value = token
+			value = tonumber(value)
+			if not value then
+				error("failed to parse enum as number: "..token)
+			end
 
 			str, token, tokentype = consume(str)
 		end

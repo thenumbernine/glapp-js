@@ -632,7 +632,7 @@ enum {
 	GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES = 35395,
 	GL_UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER = 35396,
 	GL_UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER = 35398,
-	GL_INVALID_INDEX = 0xFFFFFFFF	// 0xFFFFFFFFu	-- TODO seems fengari uses 32-bit ints, so idk that it can store this other than -1 ... maybe as cdata ?
+	GL_INVALID_INDEX = 0xFFFFFFFF,							// 0xFFFFFFFFu	-- TODO seems fengari uses 32-bit ints, so idk that it can store this other than -1 ... maybe as cdata ?
 	GL_MAX_VERTEX_OUTPUT_COMPONENTS = 37154,
 	GL_MAX_FRAGMENT_INPUT_COMPONENTS = 37157,
 	GL_MAX_SERVER_WAIT_TIMEOUT = 37137,
