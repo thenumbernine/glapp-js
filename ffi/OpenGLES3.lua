@@ -773,7 +773,7 @@ end
 function ResMap:makeCreate(webglfuncname)
 	return function(...)
 		local id = self:getNextID()
-print(webglfuncname..' id='..id)
+--DEBUG:print(webglfuncname..' id='..id)
 		assert(self[id] == nil)
 		self[id] = {
 			type = webglfuncname,
@@ -790,6 +790,18 @@ function gl.glDrawArrays(...) return jsgl:drawArrays(...) end
 function gl.glEnable(...) return jsgl:enable(...) end
 function gl.glDisable(...) return jsgl:disable(...) end
 function gl.glBlendFunc(...) return jsgl:blendFunc(...) end
+
+function gl.glGetIntegerv(pname, data)
+	data[0] = jsgl:getParameter(pname)
+end
+
+function gl.glDrawBuffers(n, bufs)
+	local ar = js.global:Array()
+	for i=0,n do
+		ar[i] = bufs[i]
+	end
+	return jsgl:drawBuffers(ar)
+end
 
 local res = ResMap()
 gl.res = res	--debuggin
@@ -1059,6 +1071,10 @@ function gl.glTexParameterf(...)
 	return jsgl:texParameterf(...)
 end
 
+function gl.glActiveTexture(...)
+	return jsgl:activeTexture(...)
+end
+
 local createFramebuffer = res:makeCreate'createFramebuffer'
 function gl.glGenFramebuffers(n, framebuffers)
 	for i=0,n-1 do
@@ -1072,6 +1088,10 @@ end
 
 function gl.glFramebufferTexture2D(target, attachment, textarget, texture, level)
 	return jsgl:framebufferTexture2D(target, attachment, textarget, getObj(texture), level)
+end
+
+function gl.glCheckFramebufferStatus(...)
+	return jsgl:checkFramebufferStatus(...)
 end
 
 return gl

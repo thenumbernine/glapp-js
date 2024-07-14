@@ -180,7 +180,10 @@ struct A {
 --]=]
 -- [=[
 	-- run it and initialize glapp variable
-	
+
+	-- cmdline global
+	_G.arg = {}
+
 	-- start it as a new thread ...
 	-- TODO can I just wrap the whole dofile() in a main thread?
 	-- the tradeoff is I'd lose my ability for main coroutine detection ...
@@ -197,7 +200,7 @@ struct A {
 		--dofile'/lua/n-points/run_orbit.lua'
 		--dofile'/lua/prime-spiral/run.lua'				-- fails, glColor3f
 		--package.path = package.path .. ';/lua/seashell/?.lua' dofile'/lua/seashell/run.lua'	-- needs complex number support
-		dofile'lua/rule110/rule110.lua'
+		dofile'/lua/rule110/rule110.lua'				-- fbo drawbuffers / glGetIntegerv(GL_DRAW_BUFFER)
 		--[[
 ./SphericalHarmonicGraphs/factorial.lua
 ./SphericalHarmonicGraphs/run.lua
