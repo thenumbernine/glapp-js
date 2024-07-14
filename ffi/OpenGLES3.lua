@@ -774,7 +774,7 @@ end
 
 function ResMap:getObj(id)
 	local entry = self:get(id)
-	if not entry then return end
+	if not entry then return nil end	-- nil for arg # of the js calls
 	return entry.obj
 end
 
@@ -782,13 +782,13 @@ function ResMap:makeCreate(webglfuncname)
 	return function(...)
 		local jsgl = getJSGL()
 		local id = self:getNextID()
---DEBUG:print('making new at id', id)
+print('making '..webglfuncname..' id='..id)
 		assert(self[id] == nil)
 		self[id] = {
 			obj = jsgl[webglfuncname](jsgl, ...)
 		}
 		setError(jsgl:getError())
-		return ffi.cast('GLuint', id)
+		return id	--ffi.cast('GLuint', id)	-- luajit ffi will auto convert reads of int to luanumber ...
 	end
 end
 
@@ -807,7 +807,7 @@ function gl.glAttachShader(program, shader)
 end
 
 function gl.glDetachShader(program, shader)
-	getJSGL():detachShader(res:getObj(shader), res:getObj(shader))
+	getJSGL():detachShader(res:getObj(program), res:getObj(shader))
 end
 
 function gl.glLinkProgram(program)
