@@ -865,7 +865,7 @@ function gl.glGetProgramInfoLog(program, bufSize, length, infoLog)
 	if length ~= ffi.null then
 		length[0] = #log
 	end
-	if infoLog == ffi.null then
+	if infoLog ~= ffi.null then
 		ffi.copy(infoLog, log, bufSize)
 	end
 end
@@ -1012,7 +1012,7 @@ function gl.glGetShaderInfoLog(shader, bufSize, length, infoLog)
 	if length ~= ffi.null then
 		length[0] = #log
 	end
-	if infoLog == ffi.null then
+	if infoLog ~= ffi.null then
 		ffi.copy(infoLog, log, bufSize)
 	end
 end
