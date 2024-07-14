@@ -1533,8 +1533,8 @@ function CData.__add(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__add)
-			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__add)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__add)
+			or (pb and mb.type and mb.type.mt and mb.type.mt.__add)
 		if h then
 			return h(a,b)
 		end
@@ -1547,7 +1547,7 @@ function CData.__add(a,b)
 	elseif pb and na then
 		return CData.add(b, a)
 	else
-		error("don't know how to add")
+		error("don't know how to add "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
 end
 
@@ -1557,8 +1557,8 @@ function CData.__sub(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__sub)
-			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__sub)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__sub)
+			or (pb and mb.type and mb.type.mt and mb.type.mt.__sub)
 		if h then
 			return h(a,b)
 		end
@@ -1581,13 +1581,13 @@ function CData.__mul(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__mul)
-			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__mul)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__mul)
+			or (pb and mb.type and mb.type.mt and mb.type.mt.__mul)
 		if h then
 			return h(a,b)
 		end
 	end
-	error("don't know how to add")
+	error("don't know how to mul")
 end
 
 function CData.__div(a,b)
@@ -1596,13 +1596,13 @@ function CData.__div(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype.mt and ma.ctype.mt.__div)
-			or (pb and mb.ctype.mt and mb.ctype.mt.__div)
+		local h = (pa and ma.type.mt and ma.type.mt.__div)
+			or (pb and mb.type.mt and mb.type.mt.__div)
 		if h then
 			return h(a,b)
 		end
 	end
-	error("don't know how to add")
+	error("don't know how to div")
 end
 
 function CData.__pow(a,b)
@@ -1611,13 +1611,13 @@ function CData.__pow(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__pow)
-			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__pow)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__pow)
+			or (pb and mb.type and mb.type.mt and mb.type.mt.__pow)
 		if h then
 			return h(a,b)
 		end
 	end
-	error("don't know how to add")
+	error("don't know how to pow")
 end
 
 function CData.__mod(a,b)
@@ -1626,13 +1626,13 @@ function CData.__mod(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__mod)
-			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__mod)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__mod)
+			or (pb and mb.type and mb.type.mt and mb.type.mt.__mod)
 		if h then
 			return h(a,b)
 		end
 	end
-	error("don't know how to add")
+	error("don't know how to mod")
 end
 
 
@@ -1643,8 +1643,8 @@ function CData.__eq(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__eq)
-			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__eq)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__eq)
+			or (pb and mb.type and mb.type.mt and mb.type.mt.__eq)
 		if h then
 			return h(a,b)
 		end
@@ -1658,8 +1658,8 @@ function CData.__ne(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__ne)
-				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__ne)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__ne)
+				or (pb and mb.type and mb.type.mt and mb.type.mt.__ne)
 		if h then
 			return h(a,b)
 		end
@@ -1673,8 +1673,8 @@ function CData.__lt(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__lt)
-				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__lt)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__lt)
+				or (pb and mb.type and mb.type.mt and mb.type.mt.__lt)
 		if h then
 			return h(a,b)
 		end
@@ -1688,8 +1688,8 @@ function CData.__le(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__le)
-				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__le)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__le)
+				or (pb and mb.type and mb.type.mt and mb.type.mt.__le)
 		if h then
 			return h(a,b)
 		end
@@ -1703,8 +1703,8 @@ function CData.__gt(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__gt)
-				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__gt)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__gt)
+				or (pb and mb.type and mb.type.mt and mb.type.mt.__gt)
 		if h then
 			return h(a,b)
 		end
@@ -1718,8 +1718,8 @@ function CData.__ge(a,b)
 	local pa = ma and ma.isCData
 	local pb = mb and mb.isCData
 	if pa or pb then
-		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__ge)
-				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__ge)
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__ge)
+				or (pb and mb.type and mb.type.mt and mb.type.mt.__ge)
 		if h then
 			return h(a,b)
 		end
