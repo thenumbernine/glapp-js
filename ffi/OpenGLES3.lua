@@ -886,21 +886,26 @@ for n=1,4 do
 				return jsgl[webglname](jsgl, ...)
 			end
 		end
-
+		
+		-- TODO 'location' is coming from lua,
+		-- which should be holding a GLuint for the location
+		-- but I'm seeing a WebGLUniformLocation object here ..
+		-- but that's fine anyways cuz that's what should get passed to webgl...
 		do
 			local glname = 'glUniform'..n..t..'v'
 			local webglname = 'uniform'..n..t..'v'
 			local len = n
 			gl[glname] = function(location, count, value)
-				-- if it's an array ... coerce somewhere ...
-
-				local buffer = ffi.getDataView(
-					t == 'f' and js.global.Float32Array or js.global.Int32Array,
-					value,
-					len * count
-				)
 				assert(count == 1, "TODO")
-				return jsgl[webglname](jsgl, location, buffer)
+				return jsgl[webglname](
+					jsgl,
+					location,
+					ffi.dataToArray(
+						t == 'f' and js.global.Float32Array or js.global.Int32Array,
+						value,
+						len * count
+					)
+				)
 			end
 		end
 	end
@@ -910,21 +915,18 @@ for n=1,4 do
 		local webglname = 'uniformMatrix'..n..'fv'
 		local len = n * n
 		gl[glname] = function(location, count, transpose, value)
-			-- TODO 'location' is coming from lua,
-			-- which should be holding a GLuint for the location
-			-- but I'm seeing a WebGLUniformLocation object here ..
-			-- but that's fine anyways cuz that's what should get passed to webgl...
-
-			assert(type(value) == 'cdata')
-			-- if it's an array ... coerce somewhere ...
-			local buffer = ffi.getDataView(
-				js.global.Float32Array,
-				value,
-				len * count
-			)
 			assert(count == 1, "TODO")
---print(glname, location, transpose, buffer)
-			return jsgl[webglname](jsgl, location, jsbool(transpose), buffer)
+--print(glname, location, transpose, value)
+			return jsgl[webglname](
+				jsgl,
+				location,
+				jsbool(transpose),
+				ffi.dataToArray(
+					js.global.Float32Array,
+					value,
+					len * count
+				)
+			)
 		end
 	end
 end
@@ -1016,7 +1018,7 @@ function gl.glBufferData(target, size, data, usage)
 	if data == ffi.null then
 		return jsgl:bufferData(target, size, usage)
 	else
-		return jsgl:bufferData(target, ffi.getDataView(js.global.Uint8Array, data, size), usage)
+		return jsgl:bufferData(target, ffi.dataToArray(js.global.Uint8Array, data, size), usage)
 	end
 end
 
@@ -1043,17 +1045,11 @@ function gl.glBindTexture(target, texture)
 end
 
 function gl.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
-	-- ok webgl is retarded here
-	-- if the type is FLOAT then it wants a Float32Array
-	local data
-	if pixels == ffi.null 
-	or pixels == nil
-	then
-		pixels = js.null
-	else
-		pixels = ffi.getDataView(js.global.Uint8Array, pixels)
-	end
-	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, buffer)
+	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, ffi.dataToArray(type == gl.GL_FLOAT and js.global.Float32Array or js.global.Uint8Array, pixels))
+end
+
+function gl.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
+	return jsgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, ffi.dataToArray(type == gl.GL_FLOAT and js.global.Float32Array or js.global.Uint8Array, pixels))
 end
 
 function gl.glTexParameterf(...)

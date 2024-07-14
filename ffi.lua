@@ -117,9 +117,13 @@ local function mallocAddr(size)
 
 	local reqmax = memUsedSoFar + size
 	if reqmax > membuf.byteLength then
-		local newsize = (reqmax & 0xfffff) + 0x100000
-		--membuf:resize(newsize)	-- TypeError: Method ArrayBuffer.prototype.resize called on incompatible receiver #<ArrayBuffer>
-		--js.global.ArrayBuffer.prototype.resize(membuf, newsize)	-- same
+		local newsize = (reqmax & ~0xfffff) + 0x100000
+		--[[
+		membuf:resize(newsize)	-- TypeError: Method ArrayBuffer.prototype.resize called on incompatible receiver #<ArrayBuffer>
+		--]]
+		--[[
+		js.global.ArrayBuffer.prototype.resize(membuf, newsize)	-- same
+		--]]
 		-- [[ I hate javascript so much
 		newmembuf = js.new(js.global.ArrayBuffer, newsize)
 		js.new(js.global.Uint8Array, newmembuf, 0, memUsedSoFar):set(
@@ -1725,8 +1729,11 @@ end
 
 -- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
 -- TODO better name, this isn't a DataView is it ...
-function ffi.getDataView(jsarray, data, count)
---DEBUG:print('ffi.getDataView', jsarray, data, count)
+function ffi.dataToArray(jsarray, data, count)
+	if data == ffi.null or data == nil then	-- does this test pass if it's a data elsewhere but assigned to 0?
+		return js.null
+	end
+--DEBUG:print('ffi.dataToArray', jsarray, data, count)
 	local addr = getAddr(data)
 	local result = getMemSub(jsarray, addr, count)
 	return result
