@@ -160,7 +160,7 @@ struct A {
 	--]==]
 
 	-- run it and initialize glapp variable
-	dofile'/lua/glapp/tests/test_es.lua'
+	dofile'/lua/glapp/tests/test_es2.lua'
 
 	-- set up main loop
 	-- TOOD use requestAnimationFrame instead

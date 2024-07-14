@@ -1148,6 +1148,8 @@ ffi.cdef_enum(
 	},
 	sdl
 )
+assert(sdl.SDL_GL_RED_SIZE)
+assert(ffi.C.SDL_GL_RED_SIZE)
 
 -- store these in ffi.C as well?
 -- how does luajit ffi.load know when to put symbols in ffi.C vs in the table returned?
