@@ -206,14 +206,11 @@ struct A {
 		--run('seashell', 'run.lua')	-- needs complex number support
 		--run('rule110', 'rule110.lua')				-- [.WebGL-0x383c02950d00] GL_INVALID_OPERATION: Feedback loop formed between Framebuffer and active Texture.
 		--run('SphericalHarmonicGraph', 'run.lua')		-- needs complex
-		run('geographic-charts', 'test.lua')
-		--[[
-./sphere-grid/run.lua
-./langfix/test.lua
-./metric/run.lua
-./fold/run.lua
-
-		--]]
+		--run('sphere-grid', 'run.lua')
+		--run('geographic-charts', 'test.lua')			-- needs complex
+		--run('metric', 'run.lua')
+		package.loaded['audio.currentsystem'] = 'null'
+		run('sand-attack', 'run.lua')
 	end)
 	local res, err = coroutine.resume(sdl.mainthread)
 	if not res then

@@ -1969,4 +1969,8 @@ because nil and anything else (userdata, object, etc) will always be false in va
 --]]
 ffi.null = ffi.new'void*'
 
+-- cuz luajit has it global
+jit = {}
+bit = require 'bit'
+
 return ffi

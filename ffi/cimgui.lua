@@ -1,6 +1,12 @@
 local ffi = require 'ffi'
 
 ffi.cdef[[
+
+enum {
+ImGuiConfigFlags_NavEnableKeyboard,
+ImGuiConfigFlags_NavEnableGamepad,
+};
+
 struct ImVec2 {
 	float x, y;
 };
