@@ -99,13 +99,13 @@ end
 
 local dict = newtable()
 local dictForAddr = {}
-local function malloc(size)
+local function mallocAddr(size)
 	-- no zero allocs
 	size = math.max(size, 4)
 	-- 4byte align
 	size = (size & ~3) + ((size & 3) == 0 and 0 or 4)
 
---DEBUG:print('malloc', size)
+--DEBUG:print('mallocAddr', size)
 	for _,d in ipairs(dict) do
 		if d.free
 		and d.size >= size
@@ -132,20 +132,16 @@ print('resizing base memory to', membuf.byteLength)
 	memUsedSoFar = memUsedSoFar + size
 	return addr
 end
+ffi.mallocAddr = mallocAddr
 
 -- put ffi.cdef types here
 local ctypes = {}
 ffi.ctypes = ctypes
 
 -- ptr type and 64 and js is a mess
+local ptrtype
 local function memSetPtr(addr, value)
-	--[[ even tho i've got intptr_t set to 64 bit, js doesn't like assigning 64 bits at once, so ...
-	gettype'intptr_t'.set(memview, addr, value)
-	--]]
-	-- [[
-	ctypes.uint32_t.set(memview, addr, value)
-	--ctypes.uint32_t.set(memview, addr + 4, 0)	-- only for 64bit addresses
-	--]]
+	ptrtype.set(memview, addr, value)
 end
 ffi.memSetPtr = memSetPtr
 
@@ -186,11 +182,29 @@ local function getAddr(x)
 end
 ffi.getAddr = getAddr
 
-local function strlen(addr)
+local function gc(ptr, cb)
+	-- TODO associate the memeory allocated at ptr with gc method 'cb'
+	print('TODO ffi.gc , tho idk that fengari supports it')
+	return ptr
+end
+ffi.gc = gc
+
+local function freeAddr(addr)
+	local d = assert(dictForAddr[mt.addr], "can't free that address, it was never allocated")
+print("freeing", ('0x%x'):format(d.addr), ('0x%x'):format(d.size))
+	d.free = true
+end
+
+local function free(ptr)
+	freeAddr(getAddr(ptr))
+end
+ffi.free = free
+
+local function strlenAddr(addr)
 	local len = 0
 	while true do
 		if addr >= memview.byteLength then
-			error("strlen ran away")
+			error("strlenAddr ran away")
 		end
 		if memview:getUint8(addr) == 0 then break end
 		addr = addr + 1
@@ -203,7 +217,7 @@ end
 local function pushString(str)
 	str = tostring(str)
 	local len = #str
-	local addr = malloc(len+1)
+	local addr = mallocAddr(len+1)
 	for i=1,len do
 		memview:setUint8(addr + i-1, str:byte(i))
 	end
@@ -291,7 +305,7 @@ function CType:init(args)
 
 	if self.isPointer then
 		assert(self.baseType)
-		self.size = ctypes.intptr_t.size
+		self.size = ptrtype.size
 	elseif self.isPrimitive then
 		-- primitive type? expects size
 		self.size = args.size
@@ -411,7 +425,6 @@ function CType:assign(addr, ...)
 			end
 		else
 --DEBUG:print('...assigning to primitive or pointer')
-			assert(self.isPrimitive, "assigning to a non-primitive...")
 			local v = ...
 			local vt = type(v)
 			local srcmt = debug.getmetatable(v)
@@ -428,16 +441,20 @@ function CType:assign(addr, ...)
 				local len = self.size	--srcmt.type.size
 --DEBUG:print('...with len', len)
 				-- same as ffi.copy
+				local value
 				if srcctype.isPointer then
 					value = memGetPtr(srcmt.addr)
---DEBUG:print('assigning from pointer with value-addr', value,'to addr', addr)
-					self.set(memview, addr, value)
---DEBUG:print('double-check got at addr '..addr..' value', self.get(memview, addr))
 				elseif srcctype.arrayCount then
 					-- TODO only if we are assigning to a pointer?  to an intptr_t ?
-					self.set(memview, addr, srcmt.addr)
+					value = srcmt.addr
 				else
-					self.set(memview, addr, srcctype.get(memview, srcmt.addr))
+					value = srcctype.get(memview, srcmt.addr)
+				end
+				if self.isPointer then
+					memSetPtr(addr, value)
+				else
+					assert(self.isPrimitive, "assigning to a non-primitive...")
+					self.set(memview, addr, value)
 				end
 			elseif vt ~= 'number' then
 				error("can't convert "..vt.." to number")
@@ -609,10 +626,12 @@ CType{name='long', baseType=assert(ctypes.int64_t)}
 CType{name='signed long', baseType=assert(ctypes.int64_t)}
 CType{name='unsigned long', baseType=assert(ctypes.uint64_t)}
 --[[ I wish but js and BigInt stuff is irritating
+ptrtype = ctypes.int64_t
 CType{name='intptr_t', baseType=assert(ctypes.int64_t)}
 CType{name='uintptr_t', baseType=assert(ctypes.uint64_t)}
 --]]
 -- [[
+ptrtype = ctypes.int32_t
 CType{name='intptr_t', baseType=assert(ctypes.int32_t)}
 CType{name='uintptr_t', baseType=assert(ctypes.uint32_t)}
 --]]
@@ -1289,9 +1308,7 @@ local CData = setmetatable({}, {
 -- time to switch to a wasm build of lua?
 function CData:__gc()
 	local mt = debug.getmetatable(self)
-	local d = dictForAddr[mt.addr]
-	print("gc'ing", ('0x%x'):format(d.addr), ('0x%x'):format(d.size))
-	d.free = true
+	freeAddr(mt.addr)
 end
 
 CData.__metatable = 'ffi'
@@ -1308,11 +1325,15 @@ function CData:__index(key)
 	local ctypemt = ctype.mt
 
 	if ctype.baseType then
-		if ctype.arrayCount then
+		if ctype.arrayCount 
+		or ctype.isPointer
+		then
 			-- array ...
 			local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
 			local fieldType = mt.type.baseType
-			local fieldAddr = mt.addr + index * ctype.baseType.size
+			local addr = mt.addr
+			if ctype.isPointer then addr = memGetPtr(addr) end
+			local fieldAddr = addr + index * ctype.baseType.size
 			if fieldType.isPrimitive then
 				return fieldType.get(memview, fieldAddr)
 			else
@@ -1320,7 +1341,7 @@ function CData:__index(key)
 			end
 		else
 			-- typedef
-			error("don't allow pointers to hold typedefs")
+			error("don't allow pointers to hold typedefs "..ctype.name)
 		end
 	elseif ctype.fields then
 		-- struct/union
@@ -1397,7 +1418,7 @@ function CData:__newindex(key, value)
 						-- here and below as well?
 					else
 					--]] do
-						error("can't assign type '"..valuetype.."' to primitive c array type "..tostring(ctype))
+						error("can't assign type '"..valuetype.."' to primitive c array type "..ctype.name)
 					end
 				end
 
@@ -1422,7 +1443,7 @@ function CData:__newindex(key, value)
 			end
 		else
 			-- typedef
-			error("don't allow pointers to hold typedefs")
+			error("don't allow pointers to hold typedefs "..ctype.name)
 		end
 	elseif ctype.fields then
 --DEBUG:print('...struct assignment')
@@ -1471,18 +1492,7 @@ function CData:__tostring()
 		if mt.addr == 0 then
 			value = 'NULL'
 		else
-			-- [[
-			local intptrtype = assert(getctype'intptr_t')
-			value = intptrtype.get(memview, mt.addr)
-			value = ('0x%08x'):format(value)
-			--]]
-			--[[
-			-- "TypeError: Invalid value used as weak map key"
-			value = ('0x%x'):format(memview:getBigUint64(mt.addr))
-			--]]
-			--[[ only for 64bit addresses
-			value = ('0x%08x%08x'):format(memGetPtr(mt.addr + 4), memGetPtr(mt.addr))
-			--]]
+			value = ('0x%08x'):format(memGetPtr(mt.addr))
 		end
 	else
 --DEBUG:print('...else value')
@@ -1580,7 +1590,7 @@ function ffi.new(ctype, ...)
 	-- or how will sizeof handle pointers?
 	-- or should I return a pointer-to-fixed-size-array, which auto converts to pointer to base type upon arithmetic?
 --DEBUG:print('ffi.new for type', ctype.name, 'allocating', ctype.size)
-	local addr = malloc(ctype.size)
+	local addr = mallocAddr(ctype.size)
 	local ptr = CData(ctype, addr)
 	if not didHandleVarArray and select('#', ...) > 0 then
 --DEBUG:print('ffi.new assigning', ctype, addr, ...)
@@ -1614,7 +1624,7 @@ function ffi.string(ptr, len)
 		error("idk how to ffi.string this ctype "..tostring(ptrctype))
 	end
 --DEBUG:print('...addr', addr)
-	if not len then len = strlen(addr) end
+	if not len then len = strlenAddr(addr) end
 --DEBUG:print('...len', len)
 	return tostring(js.new(js.global.TextDecoder):decode(
 		js.new(js.global.DataView, membuf, addr, len)

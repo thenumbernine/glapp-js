@@ -153,8 +153,16 @@ struct A {
 	print(event[0].window.event)
 --]=]
 -- [=[
-
-
+	local f = ffi.new('float[2]', 3, 5)
+	print('f', f)
+	print('f[0]', f[0])
+	print('f[1]', f[1])
+	local g = ffi.new('float*', f)
+	print('g[0]', g[0])
+	print('g[1]', g[1])
+	print('g', g)
+--]=]
+--[=[
 	-- run it and initialize glapp variable
 	
 	-- start it as a new thread ...
@@ -163,7 +171,9 @@ struct A {
 	-- or maybe I should shim that function as well ...
 	local sdl = require 'ffi.sdl'
 	sdl.mainthread = coroutine.create(function()
-		dofile'/lua/glapp/tests/test_es.lua'
+		--dofile'/lua/glapp/tests/test_es2.lua'	-- only gles calls
+		--dofile'/lua/glapp/tests/test_es.lua'	-- gl objs
+		dofile'/lua/line-integral-convolution/run.lua'
 	end)
 	local res, err = coroutine.resume(sdl.mainthread)
 	if not res then
