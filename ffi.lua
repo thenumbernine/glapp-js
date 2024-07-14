@@ -1680,16 +1680,9 @@ local function getMemSub(jsarray, addr, count)
 end
 
 local function memcpy(dstaddr, srcaddr, len)
-	-- [[ i hate javascript ...
 	getMemSub(js.global.Uint8Array, dstaddr, len):set(
 		getMemSub(js.global.Uint8Array, srcaddr, len)
 	)
-	--]]
-	--[[
-	for i=0,len-1 do
-		memview:setUint8(dstaddr + i, memview:getUint8(srcaddr + i))
-	end
-	--]]
 end
 
 -- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
@@ -1698,14 +1691,6 @@ function ffi.getDataView(jsarray, data, count)
 --DEBUG:print('ffi.getDataView', jsarray, data, count)
 	local addr = getAddr(data)
 	local result = getMemSub(jsarray, addr, count)
---[[
-if jsarray == js.global.Float32Array then
-	print'double check getDataView float'
-	for i=0,count-1 do
-		print(i, result[i], memview:getFloat32(addr + 4 * i, true))
-	end
-end
---]]
 	return result
 end
 
@@ -1731,14 +1716,7 @@ function ffi.fill(dst, len, value)
 	local addr = getAddr(dst)
 	value = value or 0
 	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
-	-- [[ i hate javascript
 	js.new(js.global.Uint8Array, membuf, addr, len):fill(value, 0, len)
-	--]]
-	--[[
-	for i=0,len-1 do
-		memview:setUint8(addr + i, 0)
-	end
-	--]]
 end
 
 function tonumber(x, ...)
