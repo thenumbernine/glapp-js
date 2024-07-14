@@ -1157,6 +1157,7 @@ local canvas
 function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 print('SDL_CreateWindow', title, x, y, w, h, flags)
 	local window = js.global.window
+	window.document.title = title
 
 	window:scrollTo(0,1)
 	if not canvas then
