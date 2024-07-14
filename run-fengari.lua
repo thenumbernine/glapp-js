@@ -2,7 +2,11 @@
 -- Lua 5.3
 xpcall(function()
 	--print(package.path)	-- ./lua/5.3/?.lua;./lua/5.3/?/init.lua;./?.lua;./?/init.lua
-	package.path = './?.lua;./?/?.lua'
+	package.path = table.concat({
+		'./?.lua',
+		'/lua/?.lua',
+		'/lua/?/?.lua',
+	}, ';')
 
 	-- fengari doesn't have a fake-filesystem so ...
 	-- [[ require 'io'
@@ -156,7 +160,7 @@ struct A {
 	--]==]
 
 	-- run it and initialize glapp variable
-	dofile'glapp/tests/test_es.lua'
+	dofile'/lua/glapp/tests/test_es.lua'
 
 	-- set up main loop
 	-- TOOD use requestAnimationFrame instead

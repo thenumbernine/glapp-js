@@ -1243,9 +1243,9 @@ function sdl.SDL_PollEvent(event)
 	-- and a new frame loop starts ...
 
 	-- jump through webgl bs
-	gl:colorMask(false,false,false,true)
+	gl:colorMask(false, false, false, true)
 	gl:clear(gl.COLOR_BUFFER_BIT)
-	gl:colorMask(true,true,true,true)
+	gl:colorMask(true, true, true, true)
 
 	return 0
 end

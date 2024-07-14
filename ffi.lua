@@ -173,6 +173,10 @@ local function getAddr(x)
 	local ctype = assert(mt.type)
 	local addr = assert(mt.addr)
 	if ctype.isPointer then return memGetPtr(addr) end
+	
+	-- TODO real luajit ffi has ref types as well
+	-- this should only return addr if the type is a ref-type or an array type ... not for primitives!
+	assert(not ctype.isPrimitive, "TODO reftypes")
 	return addr
 end
 ffi.getAddr = getAddr
@@ -1670,6 +1674,23 @@ local function cdataToHex(d)
 	return table.concat(s)
 end
 
+local function getMemSub(jsarray, addr, count)
+	return js.new(jsarray, membuf, addr, count)
+end
+
+local function memcpy(dstaddr, srcaddr, len)
+	getMemSub(js.global.Uint8Array, dstaddr, len):set(
+		getMemSub(js.global.Uint8Array, srcaddr, len)
+	)
+end
+
+-- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
+function ffi.getDataView(jsarray, data, count)
+--DEBUG:print('ffi.getDataView', jsarray, data, count)
+	return getMemSub(jsarray, getAddr(data), count)
+end
+
+
 function ffi.copy(dst, src, len)
 --DEBUG:print('ffi.copy', cdataToHex(dst), cdataToHex(src), len)
 	--asserttype(dst, 'cdata')	-- TODO this plz?
@@ -1686,14 +1707,9 @@ function ffi.copy(dst, src, len)
 			memview:setUint8(dstmt.addr + i-1, src:byte(i) or 0)
 		end
 	else
-		local srcmt = debug.getmetatable(src)
-		assert(type(src) == 'cdata' and srcmt.isCData)
-		assert(srcmt and srcmt.isCData, "ffi.copy src is not a cdata")
 		assert(len, "expected len")	-- or can't it coerce size from cdata?
 		-- construct a temporary object just to copy bytes.  why is javascript so retarded?
-		js.new(js.global.Uint8Array, membuf, dstmt.addr, len):set(
-			js.new(js.global.Uint8Array, membuf, srcmt.addr, len)
-		)
+		memcpy(getAddr(dst), getAddr(src), len)
 	end
 --DEBUG:print('ffi.copy finished', cdataToHex(dst), cdataToHex(src), len)
 end
@@ -1705,17 +1721,6 @@ function ffi.fill(dst, len, value)
 	value = value or 0
 	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
 	js.new(js.global.Uint8Array, membuf, dstmt.addr, len):fill(value, 0, len)
-end
-
--- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
-function ffi.getDataView(jsarray, data, count)
---DEBUG:print('ffi.getDataView', jsarray, data, count)
-	return js.new(
-		jsarray,
-		membuf,
-		getAddr(data),
-		assert(count)
-	)
 end
 
 function tonumber(x, ...)
