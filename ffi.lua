@@ -1527,73 +1527,205 @@ function CData:add(index)
 	)
 end
 
-local function getbinhandler(a, b, event)
-	if a then
-		local h = a[event]
-		if h then return h end
-	end
-	if b then
-		return b[event]
-	end
-end
-
-local function binop(a, b, event, default)
-	local handler = getbinhandler(a, b, event)
-	if handler then
-		return handler(a, b)
-	elseif default then
-		return default(a,b)
-	else
-		error("don't know how to handle "..event)
-	end
-end
-
 function CData.__add(a,b)
-	return binop(a, b, '__add', function()
-		local ma = debug.getmetatable(a)
-		local mb = debug.getmetatable(b)
-		local pa = ma and ma.isCData
-		local pb = mb and mb.isCData
-		local na = type(a) == 'number'
-		local nb = type(b) == 'number'
-		if pa and nb then
-			return CData.add(a, b)
-		elseif pb and na then
-			return CData.add(b, a)
-		else
-			error("don't know how to add")
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__add)
+			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__add)
+		if h then
+			return h(a,b)
 		end
-	end)
+	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	if pa and nb then
+		return CData.add(a, b)
+	elseif pb and na then
+		return CData.add(b, a)
+	else
+		error("don't know how to add")
+	end
 end
 
 function CData.__sub(a,b)
-	return binop(a, b, '__sub', function()
-		local ma = debug.getmetatable(a)
-		local mb = debug.getmetatable(b)
-		local pa = ma and ma.isCData
-		local pb = mb and mb.isCData
-		local na = type(a) == 'number'
-		local nb = type(b) == 'number'
-		if pa and nb then
-			return CData.add(a, -b)
-		elseif pb and na then
-			return CData.add(b, -a)
-		else
-			error("don't know how to sub")
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__sub)
+			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__sub)
+		if h then
+			return h(a,b)
 		end
-	end)
+	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	if pa and nb then
+		return CData.add(a, -b)
+	elseif pb and na then
+		return CData.add(b, -a)
+	else
+		error("don't know how to sub")
+	end
 end
 
-function CData.__mul(a,b) return binop(a, b, '__mul') end
-function CData.__div(a,b) return binop(a, b, '__div') end
-function CData.__pow(a,b) return binop(a, b, '__pow') end
-function CData.__mod(a,b) return binop(a, b, '__mod') end
-function CData.__eq(a,b) return binop(a, b, '__eq', function() return getAddr(a) == getAddr(b) end) end
-function CData.__ne(a,b) return binop(a, b, '__ne', function() return getAddr(a) ~= getAddr(b) end) end
-function CData.__lt(a,b) return binop(a, b, '__lt', function() return getAddr(a) < getAddr(b) end) end
-function CData.__le(a,b) return binop(a, b, '__le', function() return getAddr(a) <= getAddr(b) end) end
-function CData.__gt(a,b) return binop(a, b, '__gt', function() return getAddr(a) > getAddr(b) end) end
-function CData.__ge(a,b) return binop(a, b, '__ge', function() return getAddr(a) >= getAddr(b) end) end
+function CData.__mul(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__mul)
+			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__mul)
+		if h then
+			return h(a,b)
+		end
+	end
+	error("don't know how to add")
+end
+
+function CData.__div(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype.mt and ma.ctype.mt.__div)
+			or (pb and mb.ctype.mt and mb.ctype.mt.__div)
+		if h then
+			return h(a,b)
+		end
+	end
+	error("don't know how to add")
+end
+
+function CData.__pow(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__pow)
+			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__pow)
+		if h then
+			return h(a,b)
+		end
+	end
+	error("don't know how to add")
+end
+
+function CData.__mod(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__mod)
+			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__mod)
+		if h then
+			return h(a,b)
+		end
+	end
+	error("don't know how to add")
+end
+
+
+-- TODO is this too flexible?  should i equals numbers and cdata ptrs?
+function CData.__eq(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__eq)
+			or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__eq)
+		if h then
+			return h(a,b)
+		end
+	end
+	return getAddr(a) == getAddr(b)
+end
+
+function CData.__ne(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__ne)
+				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__ne)
+		if h then
+			return h(a,b)
+		end
+	end
+	return getAddr(a) ~= getAddr(b) 
+end
+
+function CData.__lt(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__lt)
+				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__lt)
+		if h then
+			return h(a,b)
+		end
+	end
+	return getAddr(a) < getAddr(b)
+end
+
+function CData.__le(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__le)
+				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__le)
+		if h then
+			return h(a,b)
+		end
+	end
+	return getAddr(a) <= getAddr(b)
+end
+
+function CData.__gt(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__gt)
+				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__gt)
+		if h then
+			return h(a,b)
+		end
+	end
+	return getAddr(a) > getAddr(b)
+end
+
+function CData.__ge(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.ctype and ma.ctype.mt and ma.ctype.mt.__ge)
+				or (pb and mb.ctype and mb.ctype.mt and mb.ctype.mt.__ge)
+		if h then
+			return h(a,b)
+		end
+	end
+	return getAddr(a) >= getAddr(b)
+end
 
 -- tonumber(cdata ptr) returns nil
 -- but tonumber(cdata prim) returns the number value
