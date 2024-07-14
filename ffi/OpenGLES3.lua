@@ -785,6 +785,7 @@ function ResMap:makeCreate(webglfuncname)
 print('making '..webglfuncname..' id='..id)
 		assert(self[id] == nil)
 		self[id] = {
+			type = webglfuncname,
 			obj = jsgl[webglfuncname](jsgl, ...)
 		}
 		return id	--ffi.cast('GLuint', id)	-- luajit ffi will auto convert reads of int to luanumber ...
@@ -1031,6 +1032,17 @@ function gl.glBufferData(target, size, data, usage)
 			usage
 		)
 	end
+end
+
+local createVertexArray = res:makeCreate'createVertexArray'
+function gl.glGenVertexArrays(n, arrays)
+	for i=0,n-1 do
+		arrays[i] = createVertexArray()
+	end
+end
+
+function gl.glBindVertexArray(array)
+	getJSGL():bindVertexArray(res:getObj(array))
 end
 
 return gl
