@@ -1227,8 +1227,8 @@ print('...got gl')
 		error "Couldn't initialize WebGL =("
 	end
 
-	-- TODO need a better way to talk to ffi.OpenGL ...
-	js.global.window.gl = gl
+	-- behind the scenes hack
+	require 'gl'.setJSGL(gl)
 
 	coroutine.yield(sdl.mainthread)
 

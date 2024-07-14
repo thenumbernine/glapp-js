@@ -169,6 +169,9 @@ end
 -- if x's type is an array or prim then return x's addr
 -- if x's type is a pointer hten return x's value
 local function getAddr(x)
+	-- special case?  or should I just change all the claling code to pass/compare ffi.null?
+	if x == nil then return 0 end
+
 	local t, mt = getTypeAndMT(x)
 	if not (t == 'cdata' and mt.isCData) then error("expected cdata") end
 	local ctype = assert(mt.type)

@@ -696,25 +696,13 @@ local function jsbool(b)
 	return b	-- not not b
 end
 
-local function getJSGL()
---[[ debugging - see if any values don't match up
-	local jsgl = assert(js.global.gl)
-	for _,k in ipairs(table.keys(gl):sort()) do
-		local wk = k:match'^GL_(.*)$'
-		if wk then
-			print(gl[k] == jsgl[wk], k, gl[k], jsgl[wk])
-		end
-	end
-	os.exit()
---]]
-
-	return assert(js.global.gl, "WebGL isn't initialized")
+local jsgl
+function gl.setJSGL(jsgl_)
+	jsgl = jsgl_
 end
-gl.getJSGL = getJSGL	--debugging
 
 function gl.glGetString(name)
 	-- TODO initialize upon any dereference?
-	local jsgl = getJSGL()
 	if name == gl.GL_VENDOR then
 		return ffi.stringBuffer(jsgl:getParameter(jsgl.VENDOR))
 	elseif name == gl.GL_RENDERER then
@@ -752,7 +740,7 @@ function gl.glGetError()
 		glerror = 0
 		return res
 	end
-	return getJSGL():getError()
+	return jsgl:getError()
 end
 
 local function setError(err)
@@ -782,15 +770,8 @@ function ResMap:get(id)
 	return self[id]
 end
 
-function ResMap:getObj(id)
-	local entry = self:get(id)
-	if not entry then return js.null end	-- webgl is stingy, needs null, not undefined
-	return entry.obj
-end
-
 function ResMap:makeCreate(webglfuncname)
 	return function(...)
-		local jsgl = getJSGL()
 		local id = self:getNextID()
 print(webglfuncname..' id='..id)
 		assert(self[id] == nil)
@@ -802,64 +783,70 @@ print(webglfuncname..' id='..id)
 	end
 end
 
-function gl.glViewport(...) return getJSGL():viewport(...) end
-function gl.glClearColor(...) return getJSGL():clearColor(...) end
-function gl.glClear(...) return getJSGL():clear(...) end
-function gl.glDrawArrays(...) return getJSGL():drawArrays(...) end
+function gl.glViewport(...) return jsgl:viewport(...) end
+function gl.glClearColor(...) return jsgl:clearColor(...) end
+function gl.glClear(...) return jsgl:clear(...) end
+function gl.glDrawArrays(...) return jsgl:drawArrays(...) end
 
 local res = ResMap()
 gl.res = res	--debuggin
 
+local function getObj(id)
+	local entry = res:get(id)
+	if not entry then return js.null end	-- webgl is stingy, needs null, not undefined
+	return entry.obj
+end
+
 gl.glCreateProgram = res:makeCreate'createProgram'
 
 function gl.glAttachShader(program, shader)
-	getJSGL():attachShader(res:getObj(program), res:getObj(shader))
+	jsgl:attachShader(getObj(program), getObj(shader))
 end
 
 function gl.glDetachShader(program, shader)
 -- TODO track attached shaders and delete from res[] if they fully detach?
-	getJSGL():detachShader(res:getObj(program), res:getObj(shader))
+	jsgl:detachShader(getObj(program), getObj(shader))
 end
 
 function gl.glLinkProgram(program)
-	getJSGL():linkProgram(res:getObj(program))
+	jsgl:linkProgram(getObj(program))
 end
 
 function gl.glUseProgram(program)
---print('glUseProgram', program, res:getObj(program))
-	getJSGL():useProgram(res:getObj(program))
+--print('glUseProgram', program, getObj(program))
+	jsgl:useProgram(getObj(program))
 end
 
 function gl.glGetProgramiv(programID, pname, params)
-	local programObj = res:getObj(programID)
+	local programObj = getObj(programID)
 	if pname == gl.GL_ACTIVE_ATOMIC_COUNTER_BUFFERS then
 		setError(gl.GL_INVALID_ENUM)
 	elseif pname == gl.GL_INFO_LOG_LENGTH then
-		params[0] = #getJSGL():getProgramInfoLog(programObj)
+		params[0] = #jsgl:getProgramInfoLog(programObj)
 	elseif pname == gl.GL_ACTIVE_UNIFORM_MAX_LENGTH then
 		-- https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGetActiveUniform.xhtml
 		-- "The size of the character buffer required to store the longest uniform variable name in program can be obtained by calling glGetProgram with the value GL_ACTIVE_UNIFORM_MAX_LENGTH"
 		-- I guess webgl doesn't have antything like this ...
 		local maxlen = 0
-		for i=0,getJSGL():getProgramParameter(programObj, gl.GL_ACTIVE_UNIFORMS)-1 do
-			local uinfo = getJSGL():getActiveUniform(programObj, i)
+		for i=0,jsgl:getProgramParameter(programObj, gl.GL_ACTIVE_UNIFORMS)-1 do
+			local uinfo = jsgl:getActiveUniform(programObj, i)
 			maxlen = math.max(maxlen, #uinfo.name)
 		end
 		params[0] = maxlen
 	elseif pname == gl.GL_ACTIVE_ATTRIBUTE_MAX_LENGTH then
 		local maxlen = 0
-		for i=0,getJSGL():getProgramParameter(programObj, gl.GL_ACTIVE_ATTRIBUTES)-1 do
-			local uinfo = getJSGL():getActiveAttrib(programObj, i)
+		for i=0,jsgl:getProgramParameter(programObj, gl.GL_ACTIVE_ATTRIBUTES)-1 do
+			local uinfo = jsgl:getActiveAttrib(programObj, i)
 			maxlen = math.max(maxlen, #uinfo.name)
 		end
 		params[0] = maxlen
 	else
-		params[0] = getJSGL():getProgramParameter(programObj, pname)
+		params[0] = jsgl:getProgramParameter(programObj, pname)
 	end
 end
 
 function gl.glGetProgramInfoLog(program, bufSize, length, infoLog)
-	local log = getJSGL():getProgramInfoLog(res:getObj(program))
+	local log = jsgl:getProgramInfoLog(getObj(program))
 	if not log then return  end
 
 	if length ~= ffi.null then
@@ -871,7 +858,7 @@ function gl.glGetProgramInfoLog(program, bufSize, length, infoLog)
 end
 
 function gl.glGetActiveUniform(program, index, bufSize, length, size, type, name)
-	local uinfo = getJSGL():getActiveUniform(res:getObj(program), index)
+	local uinfo = jsgl:getActiveUniform(getObj(program), index)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
@@ -887,7 +874,7 @@ function gl.glGetActiveUniform(program, index, bufSize, length, size, type, name
 end
 
 function gl.glGetUniformLocation(program, name)
-	return getJSGL():getUniformLocation(res:getObj(program), ffi.string(name)) or nil
+	return jsgl:getUniformLocation(getObj(program), ffi.string(name)) or nil
 end
 
 for n=1,4 do
@@ -896,7 +883,6 @@ for n=1,4 do
 			local glname = 'glUniform'..n..t
 			local webglname = 'uniform'..n..t
 			gl[glname] = function(...)
-				local jsgl = getJSGL()
 				return jsgl[webglname](jsgl, ...)
 			end
 		end
@@ -913,7 +899,6 @@ for n=1,4 do
 					value,
 					len * count
 				)
-				local jsgl = getJSGL()
 				assert(count == 1, "TODO")
 				return jsgl[webglname](jsgl, location, buffer)
 			end
@@ -937,7 +922,6 @@ for n=1,4 do
 				value,
 				len * count
 			)
-			local jsgl = getJSGL()
 			assert(count == 1, "TODO")
 --print(glname, location, transpose, buffer)
 			return jsgl[webglname](jsgl, location, jsbool(transpose), buffer)
@@ -946,7 +930,7 @@ for n=1,4 do
 end
 
 function gl.glGetActiveAttrib(program, index, bufSize, length, size, type, name)
-	local uinfo = getJSGL():getActiveAttrib(res:getObj(program), index)
+	local uinfo = jsgl:getActiveAttrib(getObj(program), index)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
@@ -962,18 +946,18 @@ function gl.glGetActiveAttrib(program, index, bufSize, length, size, type, name)
 end
 
 function gl.glGetAttribLocation(program, name)
-	return getJSGL():getAttribLocation(res:getObj(program), ffi.string(name))
+	return jsgl:getAttribLocation(getObj(program), ffi.string(name))
 end
 
 -- TODO this doesn't translate directly from ES to WebGL
 -- ES allows pointers to be passed when no buffers are bound ... right? idk about specss but it's functional on my desktop at least, similar to GL
 -- WebGL only allows this to work with bound buffers
 function gl.glVertexAttribPointer(index, size, ctype, normalized, stride, pointer)
-	return getJSGL():vertexAttribPointer(index, size, ctype, jsbool(normalized), stride, tonumber(ffi.cast('intptr_t', pointer)))
+	return jsgl:vertexAttribPointer(index, size, ctype, jsbool(normalized), stride, tonumber(ffi.cast('intptr_t', pointer)))
 end
 
-function gl.glEnableVertexAttribArray(...) return getJSGL():enableVertexAttribArray(...) end
-function gl.glDisableVertexAttribArray(...) return getJSGL():disableVertexAttribArray(...) end
+function gl.glEnableVertexAttribArray(...) return jsgl:enableVertexAttribArray(...) end
+function gl.glDisableVertexAttribArray(...) return jsgl:disableVertexAttribArray(...) end
 
 
 gl.glCreateShader = res:makeCreate'createShader'
@@ -985,28 +969,28 @@ function gl.glShaderSource(shader, numStrs, strs, lens)
 	end
 	local source = s:concat()
 
-	getJSGL():shaderSource(res:getObj(shader), source)
+	jsgl:shaderSource(getObj(shader), source)
 end
 
 function gl.glCompileShader(shader)
-	getJSGL():compileShader(res:getObj(shader))
+	jsgl:compileShader(getObj(shader))
 end
 
 function gl.glGetShaderiv(shader, pname, params)
 	-- in gles but not in webgl?
 	-- or does gles not allow this also, is it just in gl but not gles?
 	if pname == gl.GL_INFO_LOG_LENGTH then
-		local log = getJSGL():getShaderInfoLog(res:getObj(shader))
+		local log = jsgl:getShaderInfoLog(getObj(shader))
 		params[0] = #log
 	elseif pname == gl.GL_SHADER_SOURCE_LENGTH then
-		params[0] = #getJSGL():getShaderSource(res:getObj(shader))
+		params[0] = #jsgl:getShaderSource(getObj(shader))
 	else
-		params[0] = getJSGL():getShaderParameter(res:getObj(shader), pname)
+		params[0] = jsgl:getShaderParameter(getObj(shader), pname)
 	end
 end
 
 function gl.glGetShaderInfoLog(shader, bufSize, length, infoLog)
-	local log = getJSGL():getShaderInfoLog(res:getObj(shader))
+	local log = jsgl:getShaderInfoLog(getObj(shader))
 	if not log then  return end
 
 	if length ~= ffi.null then
@@ -1025,14 +1009,14 @@ function gl.glGenBuffers(n, buffers)
 end
 
 function gl.glBindBuffer(target, buffer)
-	return getJSGL():bindBuffer(target, res:getObj(buffer))
+	return jsgl:bindBuffer(target, getObj(buffer))
 end
 
 function gl.glBufferData(target, size, data, usage)
 	if data == ffi.null then
-		return getJSGL():bufferData(target, size, usage)
+		return jsgl:bufferData(target, size, usage)
 	else
-		return getJSGL():bufferData(
+		return jsgl:bufferData(
 			target,
 			ffi.getDataView(js.global.Uint8Array, data, size),
 			usage
@@ -1048,7 +1032,37 @@ function gl.glGenVertexArrays(n, arrays)
 end
 
 function gl.glBindVertexArray(array)
-	getJSGL():bindVertexArray(res:getObj(array))
+	jsgl:bindVertexArray(getObj(array))
+end
+
+local createTexture = res:makeCreate'createTexture'
+function gl.glGenTextures(n, textures)
+	for i=0,n-1 do
+		textures[i] = createTexture()
+	end
+end
+
+function gl.glBindTexture(target, texture)
+	jsgl:bindTexture(target, getObj(texture))
+end
+
+function gl.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
+	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, ffi.getDataView(js.global.Uint8Array, pixels))
+end
+
+function gl.glTexParameterf(...)
+	return jsgl:texParameterf(...)
+end
+
+local createFramebuffer = res:makeCreate'createFramebuffer'
+function gl.glGenFramebuffers(n, framebuffers)
+	for i=0,n-1 do
+		framebuffers[i] = createFramebuffer()
+	end
+end
+
+function gl.glBindFramebuffer(target, framebuffer)
+	return jsgl:bindFramebuffer(target, getObj(framebuffer))
 end
 
 return gl
