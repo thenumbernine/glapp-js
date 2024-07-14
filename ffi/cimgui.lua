@@ -22,5 +22,14 @@ function ig.igStyleColorsDark() end
 function ig.ImGui_ImplSDL2_InitForOpenGL() end
 function ig.ImGui_ImplOpenGL3_Init() end
 function ig.ImGui_ImplSDL2_ProcessEvent() end
+function ig.igGetIO()
+	-- TODO imgui cdata
+	return {
+		[0] = {
+			WantCaptureMouse = false,
+			WantCaptureKeyboard = false,
+		},
+	}
+end
 
 return ig
