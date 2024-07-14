@@ -1680,12 +1680,12 @@ local function getMemSub(jsarray, addr, count)
 end
 
 local function memcpy(dstaddr, srcaddr, len)
-	--[[ tf js ...
+	-- [[ i hate javascript ...
 	getMemSub(js.global.Uint8Array, dstaddr, len):set(
 		getMemSub(js.global.Uint8Array, srcaddr, len)
 	)
 	--]]
-	-- [[
+	--[[
 	for i=0,len-1 do
 		memview:setUint8(dstaddr + i, memview:getUint8(srcaddr + i))
 	end
@@ -1731,10 +1731,10 @@ function ffi.fill(dst, len, value)
 	local addr = getAddr(dst)
 	value = value or 0
 	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
-	--[[ i hate javascript
+	-- [[ i hate javascript
 	js.new(js.global.Uint8Array, membuf, addr, len):fill(value, 0, len)
 	--]]
-	-- [[
+	--[[
 	for i=0,len-1 do
 		memview:setUint8(addr + i, 0)
 	end

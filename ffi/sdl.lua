@@ -1,4 +1,5 @@
 local ffi = require 'ffi'
+local table = require 'ext.table'
 
 ffi.cdef[[
 // fengari-specific:
@@ -1153,6 +1154,18 @@ function sdl.SDL_Quit() return 0 end
 function sdl.SDL_GetError() end	-- TODO return a ffiblob / ptr of a string of the error
 
 local canvas
+local eventQueue = table()
+
+local function pushResizeEvent()
+	-- TODO reuse these
+	local event = ffi.new'SDL_Event'
+	local window = js.global.window
+	event.type = sdl.SDL_WINDOWEVENT
+	event.window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
+	event.window.data1 = window.innerWidth
+	event.window.data2 = window.innerHeight
+	eventQueue:insert(1, event)
+end
 
 function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 print('SDL_CreateWindow', title, x, y, w, h, flags)
@@ -1175,8 +1188,7 @@ print('...creating canvas')
 	local resize = function(e)
 		canvas.width = window.innerWidth
 		canvas.height = window.innerHeight
-
-		-- TODO new SDL event ...
+		pushResizeEvent()
 	end
 	window:addEventListener('resize', resize)
 	--also call resize after init is done
@@ -1234,8 +1246,6 @@ function sdl.SDL_GetVersion(version)
 	version[0].patch = 0
 end
 
-local sentResize
-
 -- returns the # of events
 -- either this or SDL_GL_SwapWindow should be our coroutine yield ...
 function sdl.SDL_PollEvent(event)
@@ -1249,14 +1259,9 @@ function sdl.SDL_PollEvent(event)
 	gl:colorMask(true, true, true, true)
 
 	-- return our events
-	if not sentResize then
-		sentResize = true
-		-- TODO push this upon creation, and then do a proper event queue here
-		local window = js.global.window
-		event[0].type = sdl.SDL_WINDOWEVENT
-		event[0].window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
-		event[0].window.data1 = window.innerWidth
-		event[0].window.data2 = window.innerHeight
+	if #eventQueue > 0 then
+		local srcEvent = eventQueue:remove()	-- pop back, push front
+		ffi.copy(event, srcEvent, ffi.sizeof'SDL_Event')
 		return 1
 	end
 	return 0
