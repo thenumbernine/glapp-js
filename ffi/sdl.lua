@@ -1238,7 +1238,6 @@ end
 function sdl.SDL_GL_DeleteContext(ctx) return 0 end
 function sdl.SDL_GL_SetAttribute(key, value) return 0 end
 function sdl.SDL_GL_SetSwapInterval(enable) return 0 end
-function sdl.SDL_GL_SwapWindow(window) end -- double buffering isn't a thing in WebGL eh?
 
 function sdl.SDL_GetVersion(version)
 	version[0].major = 2
@@ -1246,9 +1245,8 @@ function sdl.SDL_GetVersion(version)
 	version[0].patch = 0
 end
 
--- returns the # of events
--- either this or SDL_GL_SwapWindow should be our coroutine yield ...
-function sdl.SDL_PollEvent(event)
+-- double buffering isn't a thing in WebGL eh?
+function sdl.SDL_GL_SwapWindow(window)
 	-- give up control to the browser again
 	coroutine.yield(sdl.mainthread)
 	-- and a new frame loop starts ...
@@ -1257,7 +1255,11 @@ function sdl.SDL_PollEvent(event)
 	gl:colorMask(false, false, false, true)
 	gl:clear(gl.COLOR_BUFFER_BIT)
 	gl:colorMask(true, true, true, true)
+end
 
+-- returns the # of events
+-- either this or SDL_GL_SwapWindow should be our coroutine yield ...
+function sdl.SDL_PollEvent(event)
 	-- return our events
 	if #eventQueue > 0 then
 		local srcEvent = eventQueue:remove()	-- pop back, push front

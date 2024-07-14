@@ -154,56 +154,42 @@ struct A {
 --]=]
 -- [=[
 
-	-- [==[ shim layer
-	local coroutine = require 'ext.coroutine'
+
+	-- run it and initialize glapp variable
+	
+	-- start it as a new thread ...
+	-- TODO can I just wrap the whole dofile() in a main thread?
+	-- the tradeoff is I'd lose my ability for main coroutine detection ...
+	-- or maybe I should shim that function as well ...
 	local sdl = require 'ffi.sdl'
-	local GLApp = require 'glapp'
-	local oldrun = GLApp.run
-	local glapp
-	function GLApp:run(...)
-		glapp = self
-		-- start it as a new thread ...
-		-- TODO can I just wrap the whole dofile() in a main thread?
-		-- the tradeoff is I'd lose my ability for main coroutine detection ...
-		sdl.mainthread = coroutine.create(oldrun)
-		local res, err = coroutine.resume(sdl.mainthread, self, ...)
+	sdl.mainthread = coroutine.create(function()
+		dofile'/lua/glapp/tests/test_es.lua'
+	end)
+	local res, err = coroutine.resume(sdl.mainthread)
+	if not res then
+		print('coroutine.resume failed')
+		print(err)
+		print(debug.traceback(sdl.mainthread))
+	end
+
+	-- set up main loop
+	-- TOOD use requestAnimationFrame instead
+	local interval
+	local window = js.global.window
+	interval = window:setInterval(function()
+		-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
+		--[[
+		coroutine.assertresume(sdl.mainthread)
+		--]]
+		-- [[
+		local res, err = coroutine.resume(sdl.mainthread)
 		if not res then
 			print('coroutine.resume failed')
 			print(err)
 			print(debug.traceback(sdl.mainthread))
-		end
-	end
-	-- thanks to my package.path containing ?.lua;?/?.lua ...
-	package.loaded['glapp.glapp'] = package.loaded['glapp']
-	--]==]
-
-	-- run it and initialize glapp variable
-	dofile'/lua/glapp/tests/test_es2.lua'
-
-	-- set up main loop
-	-- TOOD use requestAnimationFrame instead
-	assert(glapp)
-	local interval
-	local window = js.global.window
-	window.glapp = glapp
-	interval = window:setInterval(function()
-		if glapp.done then
 			window:clearInterval(interval)
-		else
-			-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
-			--[[
-			coroutine.assertresume(sdl.mainthread)
-			--]]
-			-- [[
-			local res, err = coroutine.resume(sdl.mainthread)
-			if not res then
-				print('coroutine.resume failed')
-				print(err)
-				print(debug.traceback(sdl.mainthread))
-				window:clearInterval(interval)
-			end
-			--]]
 		end
+		--]]
 	end, 10)
 	print('mainthread interval', interval)
 
