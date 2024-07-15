@@ -719,7 +719,22 @@ function gl.glGetString(name)
 		-- ugh webgl why do you have to add your crap to this?
 		local rest = version:match'^WebGL GLSL ES ([0-9%.]*)'
 		if rest then
-			version = rest:gsub('%.', '')..' es'
+			version = rest:gsub('%.', '')
+		end
+		-- ok on my desktop GLES, this is giving me the desktop-GLSL version, which is up to 460  ... even tho I'm running GLES ...
+		-- and then on desktop I have to translate GLSL version to GLSL-ES version
+		-- on Chrome it gives me the GLSL-ES version which is up to 300
+		-- so I guess I have to translate that here?
+		-- or should I not need to there?
+		-- what even is the correct behavior?
+		if version == '320' then
+			version = '460'
+		elseif version >= '310' then
+			version = '450'
+		elseif version >= '300' then
+			version = '430'
+		elseif version >= '100' then
+			version = '410'
 		end
 		return ffi.stringBuffer(version)
 	elseif name == gl.GL_EXTENSIONS then
