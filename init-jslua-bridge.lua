@@ -200,9 +200,12 @@ struct A {
 			-- copy from javascript Uint8Array to our ffi memory
 			local dstbuf = ffi.new('char[?]', len)
 			ffi.dataToArray(js.newUint8Array, dstbuf, len):set(jssrc.buffer)
-			local img = Image(jssrc.width, jssrc.height, jssrc.channels, jssrc.format)
-			img.buffer = dstbuf
-			return img
+			return {
+				data = dstbuf,
+				width = jssrc.width,
+				height = jssrc.height,
+				channels = jssrc.channels,
+			}
 		end
 	end
 
