@@ -42,7 +42,12 @@ async function mountFile(file_path, lua_path) {
 await mountFile('./ffi.lua', 'ffi.lua');
 await mountFile('./init-jslua-bridge.lua', 'init-jslua-bridge.lua');
 
+class Foo {};
+
 lua.global.set('js', {
+	testobj : {},
+	Foo : Foo,
+	ArrayBuffer : ArrayBuffer,
 	global : window,
 	['log'] : (...args) => { console.log(...args); },
 	['new'] : (cl, ...args) => {
@@ -57,9 +62,14 @@ lua.global.set('js', {
 });
 lua.doString(`
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
+	js.log('testobj', js.testobj)	-- how come this isn't wrapped?
+	js.log('Foo', js.Foo)			-- how come this isn't wrapped?
+	js.log('new Foo()', js.new(js.Foo))	-- this works.
+	--js.log('ArrayBuffer', js.ArrayBuffer)	-- but this is wrapped, so new'ing the wrapped ctor fails ...
+
 	js.log('js', js)
 	js.log('global', js.global)
-	js.log('ArrayBuffer', js.global.ArrayBuffer)
+	--js.log('ArrayBuffer', js.global.ArrayBuffer)
 	print(js.new(js.global.ArrayBuffer, 10, 20))
 end, function(err)
 	print(err)
