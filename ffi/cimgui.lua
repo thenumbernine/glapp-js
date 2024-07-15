@@ -27,6 +27,8 @@ function ig.igCheckbox() end
 function ig.igRadioButton_IntPtr() end
 function ig.igStyleColorsDark() end
 function ig.ImFontAtlas_ImFontAtlas() end
+function ig.ImFontAtlas_AddFontFromFileTTF() end
+function ig.ImFontAtlas_Build() return true end
 function ig.ImGui_ImplSDL2_InitForOpenGL() end
 function ig.ImGui_ImplSDL2_Shutdown() end
 function ig.ImGui_ImplSDL2_ProcessEvent() end

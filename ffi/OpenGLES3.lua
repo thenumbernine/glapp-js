@@ -715,7 +715,13 @@ function gl.glGetString(name)
 		return ffi.stringBuffer''
 	elseif name == gl.GL_SHADING_LANGUAGE_VERSION then
 		-- TODO tempted to send something else since this string has so much extra crap in it
-		return ffi.stringBuffer(jsgl:getParameter(jsgl.SHADING_LANGUAGE_VERSION))
+		local version = jsgl:getParameter(jsgl.SHADING_LANGUAGE_VERSION)
+		-- ugh webgl why do you have to add your crap to this?
+		local rest = version:match'^WebGL GLSL ES ([0-9%.]*)'
+		if rest then
+			version = rest:gsub('%.', '')..' es'
+		end
+		return ffi.stringBuffer(version)
 	elseif name == gl.GL_EXTENSIONS then
 		local s = {}
 		local ext = jsgl:getSupportedExtensions()	-- js array
@@ -901,7 +907,7 @@ for n=1,4 do
 				return jsgl[webglname](jsgl, ...)
 			end
 		end
-		
+
 		-- TODO 'location' is coming from lua,
 		-- which should be holding a GLuint for the location
 		-- but I'm seeing a WebGLUniformLocation object here ..

@@ -184,6 +184,8 @@ struct A {
 	-- cmdline global
 	_G.arg = {}
 
+	package.loaded['audio.currentsystem'] = 'null'
+
 	-- start it as a new thread ...
 	-- TODO can I just wrap the whole dofile() in a main thread?
 	-- the tradeoff is I'd lose my ability for main coroutine detection ...
@@ -191,10 +193,13 @@ struct A {
 	local sdl = require 'ffi.sdl'
 	local function run(path, file)
 		package.path = package.path .. ';/lua/'..path..'/?.lua'
-		dofile('/lua/'..path..'/'..file)
+		local fn = '/lua/'..path..'/'..file
+		arg[0] = fn
+		--dofile(fn)	-- doesn't handle ...
+		assert(loadfile(fn))(table.unpack(arg))
 	end
 	sdl.mainthread = coroutine.create(function()
-		--run('glapp/tests', 'test_es2.lua')	-- WORKS only gles calls
+		run('glapp/tests', 'test_es2.lua')	-- WORKS only gles calls
 		--run('glapp/tests', 'test_es.lua')	-- WORKS gl objs
 		--run('glapp/tests', 'minimal.lua')
 		--run('glapp/tests', 'pointtest.lua')
@@ -209,8 +214,7 @@ struct A {
 		--run('sphere-grid', 'run.lua')
 		--run('geographic-charts', 'test.lua')			-- needs complex
 		--run('metric', 'run.lua')
-		package.loaded['audio.currentsystem'] = 'null'
-		run('sand-attack', 'run.lua')
+		--arg = {'skipCustomFont', 'gl=OpenGLES3'} run('sand-attack', 'run.lua')
 	end)
 	local res, err = coroutine.resume(sdl.mainthread)
 	if not res then

@@ -1,3 +1,6 @@
+--[[
+TODO just maybe implement a full emulated filesystem ...
+--]]
 local io = {}
 
 local filemt = {}
