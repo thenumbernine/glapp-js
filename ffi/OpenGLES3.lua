@@ -741,6 +741,7 @@ function gl.glGetString(name)
 		local s = {}
 		local ext = jsgl:getSupportedExtensions()	-- js array
 		for i=0,ext.length-1 do
+			-- TODO convert any extension names here
 			table.insert(s, ext[i])
 		end
 		return ffi.stringBuffer(table.concat(s, ' '))
