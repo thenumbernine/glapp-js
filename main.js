@@ -3,19 +3,19 @@ const rundir = urlparams.get('dir') || 'glapp/tests';
 const runfile = urlparams.get('file') || 'test_es3.lua';
 
 /* progress so far
---run('glapp/tests', 'test_es.lua')		-- WORKS gl objs
---run('glapp/tests', 'test_es2.lua')	-- WORKS only gles calls
-run('glapp/tests', 'test_es3.lua')	-- WORKS only gles calls
+--run('glapp/tests', 'test_es.lua')			-- WORKS gl objs
+--run('glapp/tests', 'test_es2.lua')		-- WORKS only gles calls
+--run('glapp/tests', 'test_es3.lua')		-- WORKS only gles calls
 --run('glapp/tests', 'test.lua')			-- fails, glmatrixmode
 --run('glapp/tests', 'minimal.lua')
 --run('glapp/tests', 'pointtest.lua')
 --run('glapp/tests', 'info.lua')
---run('line-integral-convolution', 'run.lua')	-- fails, glsl has smoothstep()
+--run('prime-spiral', 'run.lua')				-- fails, glColor3f
 --run('n-points', 'run.lua')					-- fails, glColor3f
 --run('n-points', 'run_orbit.lua')
---run('prime-spiral', 'run.lua')				-- fails, glColor3f
---run('seashell', 'run.lua')	-- needs complex number support
---run('rule110', 'rule110.lua')				-- [.WebGL-0x383c02950d00] GL_INVALID_OPERATION: Feedback loop formed between Framebuffer and active Texture.
+--run('line-integral-convolution', 'run.lua')	-- fails, fbo completeness problems
+--run('rule110', 'rule110.lua')					-- [.WebGL-0x383c02950d00] GL_INVALID_OPERATION: Feedback loop formed between Framebuffer and active Texture.
+--run('seashell', 'run.lua')					-- needs complex number support
 --run('SphericalHarmonicGraph', 'run.lua')		-- needs complex
 --run('sphere-grid', 'run.lua')
 --run('geographic-charts', 'test.lua')			-- needs complex
@@ -158,7 +158,7 @@ const mountFile = (filePath, luaPath) => {
         }
 
 		FS.writeFile(luaPath, fileContent, {encoding:'binary'});
-	
+
 		// and now the images separately, because javascript and wasmoon is retarded
 		if (luaPath.substr(-4) == '.png') {
 			return preloadImage(luaPath);
@@ -173,6 +173,9 @@ const addDir = (fromPath, toPath, files) =>
 const addLuaDir = (path, files) => addDir('/lua/' + path, 'lua/' + path, files);
 
 //await mountFile('/lua/bit/bit.lua', 'lua/bit/bit.lua');
+// in a smart future, this would be executed upon callback of any filesystem read event to see if the file is there, and wait and load, or cache the failure ...
+// and in a smarter future, you'd do a first pass of running the app to capture all associated files to preload ...
+// but for now just load everything
 await Promise.all([
 	addDir('.', '.', ['ffi.lua', 'init-jslua-bridge.lua']),
 	addDir('ffi', 'ffi', ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']),
@@ -198,6 +201,7 @@ await Promise.all([
 	addLuaDir('imgui', ['imgui.lua']),
 	addLuaDir('imguiapp', ['imguiapp.lua', 'withorbit.lua']),
 	addLuaDir('line-integral-convolution', ['run.lua']),
+	addLuaDir('rule110', ['rule110.lua']),
 ]).catch(e => { throw e; });
 
 lua.global.set('js', {

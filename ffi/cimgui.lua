@@ -21,6 +21,8 @@ local ig = setmetatable({}, {
 	__index = ffi.C,
 })
 
+function ig.igButton() end
+function ig.igSameLine() end
 function ig.igNewFrame() end
 function ig.igRender() end
 function ig.igGetDrawData() end
