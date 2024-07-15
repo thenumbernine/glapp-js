@@ -254,6 +254,4 @@ interval = window:setInterval(function()
 	end
 	--]]
 end, 10)
-print('mainthread interval', interval)
-
 --]=]

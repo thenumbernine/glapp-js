@@ -1179,7 +1179,7 @@ local function pushResizeEvent()
 end
 
 function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
-print('SDL_CreateWindow', title, x, y, w, h, flags)
+--DEBUG:print('SDL_CreateWindow', title, x, y, w, h, flags)
 	local window = js.global
 	window:scrollTo(0,1)
 	
@@ -1187,7 +1187,7 @@ print('SDL_CreateWindow', title, x, y, w, h, flags)
 	document.title = title
 
 	if not canvas then
-print('...creating canvas')
+--DEBUG:print('...creating canvas')
 		canvas = document:createElement'canvas'
 		window.canvas = canvas			-- global?  do I really need it?
 		document.body:prepend(canvas)
@@ -1225,14 +1225,14 @@ function sdl.SDL_GL_CreateContext(window)
 	}
 	for i,name in ipairs(webGLNames) do
 		xpcall(function()
-print('trying to init gl context of type', name)
+--DEBUG:print('trying to init gl context of type', name)
 			gl = canvas:getContext(name)
 			contextName = name
 		end, function(err)
 			print('canvas:getContext('..name..') failed with exception '..err)
 		end)
 		if gl then
-print('...got gl')
+--DEBUG:print('...got gl')
 			break
 		end
 	end

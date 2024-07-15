@@ -1922,6 +1922,12 @@ local function memcpyAddr(dstaddr, srcaddr, len)
 	)
 end
 
+
+local jsElemSizeForTypedArrayName = {
+	Float32Array = 4,
+	Int32Array = 4,
+}
+
 -- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
 -- TODO better name, this isn't a DataView is it ...
 function ffi.dataToArray(jsArrayClassName, data, count)
@@ -1933,15 +1939,9 @@ function ffi.dataToArray(jsArrayClassName, data, count)
 	local addr = getAddr(data)
 --DEBUG:print('...addr', addr)
 
-	local jsarrayElemSize = 1
 	-- more wasmoon retardedness ... I can't compare these, because every single time it changes
 	-- i'm getting suspicious that fengari might even run a lot faster than wasmoon because of how poorly it handles interop
-	if jsArrayClassName == 'Float32Array'
-	or jsArrayClassName == 'Int32Array'
-	then
-		jsarrayElemSize = 4
-	-- else use 1
-	end
+	local jsarrayElemSize = jsElemSizeForTypedArrayName[jsArrayClassName] or 1
 --DEBUG:print('...jsarrayElemSize', jsarrayElemSize)
 
 	-- i thought if you just let count be undefined then the js TypedArray lets it be unbound
