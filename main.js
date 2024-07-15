@@ -48,8 +48,9 @@ lua.global.set('js', {
 	['new'] : (cl, ...args) => {
 		//console.log(window.ArrayBuffer);	// ArrayBuffer
 		//console.log('cl', cl);	// ArrayBuffer wrapped in wasmoon trash
-		console.log('cl', cl);
-		//return new cl(...args);
+		//console.log('cl', cl());	// error requires 'new' ... so it is passing me a js function that can be used as the class constructor ... why not just pass the class?!?!?!
+		//return cl(...args);		// "Error: TypeError: Constructor ArrayBuffer requires 'new'"
+		return new cl(...args);		// "TypeError: cl is not a constructor"
 	},
 });
 lua.doString(`
