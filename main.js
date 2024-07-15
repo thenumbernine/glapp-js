@@ -1,3 +1,28 @@
+const urlparams = new URLSearchParams(location.search);
+const rundir = urlparams.get('dir') || 'glapp/tests';
+const runfile = urlparams.get('file') || 'test_es3.lua';
+
+/* progress so far
+--run('glapp/tests', 'test_es.lua')		-- WORKS gl objs
+--run('glapp/tests', 'test_es2.lua')	-- WORKS only gles calls
+run('glapp/tests', 'test_es3.lua')	-- WORKS only gles calls
+--run('glapp/tests', 'test.lua')			-- fails, glmatrixmode
+--run('glapp/tests', 'minimal.lua')
+--run('glapp/tests', 'pointtest.lua')
+--run('glapp/tests', 'info.lua')
+--run('line-integral-convolution', 'run.lua')	-- fails, glsl has smoothstep()
+--run('n-points', 'run.lua')					-- fails, glColor3f
+--run('n-points', 'run_orbit.lua')
+--run('prime-spiral', 'run.lua')				-- fails, glColor3f
+--run('seashell', 'run.lua')	-- needs complex number support
+--run('rule110', 'rule110.lua')				-- [.WebGL-0x383c02950d00] GL_INVALID_OPERATION: Feedback loop formed between Framebuffer and active Texture.
+--run('SphericalHarmonicGraph', 'run.lua')		-- needs complex
+--run('sphere-grid', 'run.lua')
+--run('geographic-charts', 'test.lua')			-- needs complex
+--run('metric', 'run.lua')
+--run('sand-attack', 'run.lua', 'skipCustomFont', 'gl=OpenGLES3')
+*/
+
 async function require(path) {
 	let _module = window.module;
 	window.module = {};
@@ -44,7 +69,7 @@ const FS = lua.cmodule.module.FS;
 const imageCache = {};
 const preloadImage = async fn => {
 	try {
-console.log('preloadImage', fn);
+//console.log('preloadImage', fn);
 		// why is the world so retarded
 		// why can't FS just SIT ON THE BLOB and NOT FUCK WITH IT
 		const fileBlob = FS.readFile(fn, {encoding:'binary'});
@@ -103,11 +128,6 @@ const fetchBytes = src => {
 
 // https://github.com/hellpanderrr/lua-in-browser
 const mountFile = (filePath, luaPath) => {
-	/* but i want binary blob ... * /
-	fetch(filePath)
-	.then(data => data.text())
-	.then(fileContent => {
-	/* */
 	return fetchBytes(filePath)
 	.then((fileContent) => {
 		// contents of wasmoon factory.ts BUT WITH BINARY ENCODING FDJLFUICLJFSDFLKJDS:LJFD
@@ -138,7 +158,11 @@ const mountFile = (filePath, luaPath) => {
         }
 
 		FS.writeFile(luaPath, fileContent, {encoding:'binary'});
-		//return factory.mountFile(luaPath, fileContent, {encoding:'binary'});
+	
+		// and now the images separately, because javascript and wasmoon is retarded
+		if (luaPath.substr(-4) == '.png') {
+			return preloadImage(luaPath);
+		}
 	});
 }
 
@@ -176,9 +200,6 @@ await Promise.all([
 	addLuaDir('line-integral-convolution', ['run.lua']),
 ]).catch(e => { throw e; });
 
-// and now the images separately, because javascript and wasmoon is retarded
-await preloadImage('lua/glapp/tests/src.png');
-
 lua.global.set('js', {
 	global : window,	//for fengari compat
 	// welp looks like wasmoon wraps only some builtin classes (ArrayBuffer) into lambdas to treat them all ONLY AS CTORS so i can't access properties of them, because retarded
@@ -194,19 +215,17 @@ lua.global.set('js', {
 	dateNow : () => Date.now(),
 	loadImage : fn => imageCache[fn] || (() => { throw "you need to decode up front file "+fn; })(),
 });
+
+// ofc you can't push extra args into the call, i guess you only can via global assignments?
 lua.doString(`
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
-	package.path = table.concat({
-		'./?.lua',
-		'/lua/?.lua',
-		'/lua/?/?.lua',
-	}, ';')
-	dofile'init-jslua-bridge.lua'
+	assert(loadfile'init-jslua-bridge.lua')(
+		"`+rundir+`", "`+runfile+`"
+	)
 end, function(err)
 	print(err)
 	print(debug.traceback())
-end)
-`);
+end)`);
 //await lua.doFile(`init-jslua-bridge.lua`);
 /* */
 
@@ -225,20 +244,17 @@ js.newInt32Array = function(...) return js.new(js.global.Int32Array, ...) end
 js.newTextDecoder = function(...) return js.new(js.global.TextDecoder, ...) end
 js.dateNow = function() return js.global.Date.now() end
 
---print(package.path)	-- ./lua/5.3/?.lua;./lua/5.3/?/init.lua;./?.lua;./?/init.lua
-package.path = table.concat({
-	'./?.lua',
-	'/lua/?.lua',
-	'/lua/?/?.lua',
-}, ';')
-
 -- fengari doesn't have a fake-filesystem so ...
 assert(not package.io)
 local io = require 'io'
 package.loaded.io = io
 _G.io = io
-
-dofile'init-jslua-bridge.lua'
+xpcall(function()
+	dofile'init-jslua-bridge.lua'
+end, function(err)
+	print(err)
+	print(debug.traceback())
+end)
 `)();
 
 /* */
