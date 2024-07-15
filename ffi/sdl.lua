@@ -1159,7 +1159,7 @@ local eventQueue = table()
 local function pushResizeEvent()
 	-- TODO reuse these
 	local event = ffi.new'SDL_Event'
-	local window = js.global.window
+	local window = js.global
 	event.type = sdl.SDL_WINDOWEVENT
 	event.window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
 	event.window.data1 = window.innerWidth
@@ -1169,7 +1169,7 @@ end
 
 function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 print('SDL_CreateWindow', title, x, y, w, h, flags)
-	local window = js.global.window
+	local window = js.global
 	window.document.title = title
 
 	window:scrollTo(0,1)

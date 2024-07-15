@@ -58,6 +58,7 @@ lua.global.set('js', {
 	newFloat32Array : (...args) => new Float32Array(...args),
 	newInt32Array : (...args) => new Int32Array(...args),
 	newTextDecoder : (...args) => new TextDecoder(...args),
+	dateNow : () => Date.now(),
 });
 lua.doString(`
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
@@ -85,6 +86,7 @@ js.newUint8Array = function(...) return js.new(js.global.Uint8Array, ...) end
 js.newFloat32Array = function(...) return js.new(js.global.Float32Array, ...) end
 js.newInt32Array = function(...) return js.new(js.global.Int32Array, ...) end
 js.newTextDecoder = function(...) return js.new(js.global.TextDecoder, ...) end
+js.dateNow = function() return js.global.Date.now() end
 
 --print(package.path)	-- ./lua/5.3/?.lua;./lua/5.3/?/init.lua;./?.lua;./?/init.lua
 package.path = table.concat({

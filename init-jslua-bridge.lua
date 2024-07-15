@@ -212,7 +212,7 @@ struct A {
 	-- set up main loop
 	-- TOOD use requestAnimationFrame instead
 	local interval
-	local window = js.global.window
+	local window = js.global
 	interval = window:setInterval(function()
 		-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
 		--[[
