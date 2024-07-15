@@ -50,7 +50,11 @@ lua.global.set('js', {
 	ArrayBuffer : ArrayBuffer,
 	global : window,
 	['log'] : (...args) => { console.log(...args); },
-	['new'] : (cl, ...args) => {
+	['new'] : function(cl, ...args) {
+		// it's wrapping ArrayBuffer in a new lua-state-padding lambda every single time ...
+		console.log('cl', cl);
+		console.log('js.ArrayBuffer', this.ArrayBuffer);
+		console.log('cl == ArrayBuffer', cl == this.ArrayBuffer);
 		// HOW DO I JUST MAKE A JS OBJECT FROM WITH LUA ?!??!?!
 		// ALL THE WASMOON DEMOS ONLY SHOW MAKING A JS OBJECT USING PRIMITIVES -- NO JS OBJECTS CAN BE PASSED THROUGH! !+! ! ! !!  !
 		//console.log(window.ArrayBuffer);	// ArrayBuffer
@@ -62,15 +66,19 @@ lua.global.set('js', {
 });
 lua.doString(`
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
+	js.ArrayBuffer = js.global.ArrayBuffer
+
 	js.log('testobj', js.testobj)	-- how come this isn't wrapped?
 	js.log('Foo', js.Foo)			-- how come this isn't wrapped?
 	js.log('new Foo()', js.new(js.Foo))	-- this works.
-	--js.log('ArrayBuffer', js.ArrayBuffer)	-- but this is wrapped, so new'ing the wrapped ctor fails ...
+	js.log('ArrayBuffer', js.ArrayBuffer)	-- but this is wrapped, so new'ing the wrapped ctor fails ...
 
-	js.log('js', js)
-	js.log('global', js.global)
+	js.new(js.global.ArrayBuffer)
+
+	--js.log('js', js)
+	--js.log('global', js.global)
 	--js.log('ArrayBuffer', js.global.ArrayBuffer)
-	print(js.new(js.global.ArrayBuffer, 10, 20))
+	--print(js.new(js.global.ArrayBuffer, 10, 20))
 end, function(err)
 	print(err)
 	print(debug.traceback())
