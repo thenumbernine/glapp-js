@@ -938,7 +938,7 @@ for n=1,4 do
 					jsgl,
 					location,
 					ffi.dataToArray(
-						t == 'f' and js.global.Float32Array or js.global.Int32Array,
+						t == 'f' and js.newFloat32Array or js.newInt32Array,
 						value,
 						len * count
 					)
@@ -959,7 +959,7 @@ for n=1,4 do
 				location,
 				jsbool(transpose),
 				ffi.dataToArray(
-					js.global.Float32Array,
+					js.newFloat32Array,
 					value,
 					len * count
 				)
@@ -1055,7 +1055,7 @@ function gl.glBufferData(target, size, data, usage)
 	if data == ffi.null then
 		return jsgl:bufferData(target, size, usage)
 	else
-		return jsgl:bufferData(target, ffi.dataToArray(js.global.Uint8Array, data, size), usage)
+		return jsgl:bufferData(target, ffi.dataToArray(js.newUint8Array, data, size), usage)
 	end
 end
 
@@ -1082,11 +1082,11 @@ function gl.glBindTexture(target, texture)
 end
 
 function gl.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
-	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, ffi.dataToArray(type == gl.GL_FLOAT and js.global.Float32Array or js.global.Uint8Array, pixels))
+	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, ffi.dataToArray(type == gl.GL_FLOAT and js.newFloat32Array or js.newUint8Array, pixels))
 end
 
 function gl.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
-	return jsgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, ffi.dataToArray(type == gl.GL_FLOAT and js.global.Float32Array or js.global.Uint8Array, pixels))
+	return jsgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, ffi.dataToArray(type == gl.GL_FLOAT and js.newFloat32Array or js.newUint8Array, pixels))
 end
 
 function gl.glTexParameterf(...)

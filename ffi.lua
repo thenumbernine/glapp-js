@@ -79,10 +79,10 @@ ffi.arch = 'x64'
 -- put ffi.cdef functions here
 ffi.C = {}
 
-local membuf = js.new(js.global.ArrayBuffer, 0x100000)
+local membuf = js.newArrayBuffer(0x100000)
 ffi.membuf = membuf
 
-local memview = js.new(js.global.DataView, membuf)
+local memview = js.newDataView(membuf)
 ffi.memview = memview
 
 local memUsedSoFar = 0
@@ -125,12 +125,12 @@ local function mallocAddr(size)
 		js.global.ArrayBuffer.prototype.resize(membuf, newsize)	-- same
 		--]]
 		-- [[ I hate javascript so much
-		newmembuf = js.new(js.global.ArrayBuffer, newsize)
-		js.new(js.global.Uint8Array, newmembuf, 0, memUsedSoFar):set(
-			js.new(js.global.Uint8Array, membuf, 0, memUsedSoFar)
+		newmembuf = js.newArrayBuffer(newsize)
+		js.newUint8Array(newmembuf, 0, memUsedSoFar):set(
+			js.newUint8Array(membuf, 0, memUsedSoFar)
 		)
 		membuf = newmembuf
-		memview = js.new(js.global.DataView, membuf)
+		memview = js.newDataView(membuf)
 		--]]
 print('resizing base memory to', membuf.byteLength)
 	end
@@ -269,7 +269,8 @@ args:
 	baseType = for typedefs or for arrays
 	arrayCount = if the type is an array of another type
 	size = defined for prims, computed for structs, it'll be manually set for primitives
-	getset = suffix of DataView member getter/setter for primitives
+	get = getter function 
+	set = setter function
 	mt = is the metatype of this ctype
 	isPrimitive = if this is a primitive type
 	isPointer = is a pointer of the base type
@@ -325,13 +326,6 @@ function CType:init(args)
 		self.size = args.size
 		self.get = args.get
 		self.set = args.set
-		local getset = args.getset
-		if getset then
-			local gettername = 'get'..getset
-			self.get = js.global.DataView.prototype[gettername] or error("failed to find getter "..gettername)
-			local settername = 'set'..getset
-			self.set = js.global.DataView.prototype[settername] or error("failed to find setter "..settername)
-		end
 	elseif self.arrayCount then
 		-- array type? calculate
 		self.size = self.baseType.size * self.arrayCount
@@ -562,13 +556,34 @@ end
 --]=]
 
 CType{name='void', size=0, isPrimitive=true}	-- let's all admit that a void* is really a char*
-CType{name='bool', size=1, isPrimitive=true, getset='Uint8'}	-- not a typedef of char / byte ...
-CType{name='int8_t', size=1, isPrimitive=true, getset='Int8'}
-CType{name='uint8_t', size=1, isPrimitive=true, getset='Uint8'}
-CType{name='int16_t', size=2, isPrimitive=true, getset='Int16'}
-CType{name='uint16_t', size=2, isPrimitive=true, getset='Uint16'}
-CType{name='int32_t', size=4, isPrimitive=true, getset='Int32'}
-CType{name='uint32_t', size=4, isPrimitive=true, getset='Uint32'}
+CType{name='bool', size=1, isPrimitive=true,	-- not a typedef of char / byte ...
+	get = function(memview, addr) return memview:getUint8(addr) end,
+	set = function(memview, addr, v) return memview:setUint8(addr, v) end,
+}
+CType{name='int8_t', size=1, isPrimitive=true,
+	get = function(memview, addr) return memview:getInt8(addr) end,
+	set = function(memview, addr, v) return memview:setInt8(addr, v) end,
+}
+CType{name='uint8_t', size=1, isPrimitive=true,
+	get = function(memview, addr) return memview:getUint8(addr) end,
+	set = function(memview, addr, v) return memview:setUint8(addr, v) end,
+}
+CType{name='int16_t', size=2, isPrimitive=true,
+	get = function(memview, addr) return memview:getInt16(addr) end,
+	set = function(memview, addr, v) return memview:setInt16(addr, v) end,
+}
+CType{name='uint16_t', size=2, isPrimitive=true,
+	get = function(memview, addr) return memview:getUint16(addr) end,
+	set = function(memview, addr, v) return memview:setUint16(addr, v) end,
+}
+CType{name='int32_t', size=4, isPrimitive=true,
+	get = function(memview, addr) return memview:getInt32(addr) end,
+	set = function(memview, addr, v) return memview:setInt32(addr, v) end,
+}
+CType{name='uint32_t', size=4, isPrimitive=true,
+	get = function(memview, addr) return memview:getUint32(addr) end,
+	set = function(memview, addr, v) return memview:setUint32(addr, v) end,
+}
 
 CType{name='int64_t', size=8, isPrimitive=true,
 	get=function(memview, addr)
@@ -1828,8 +1843,8 @@ function ffi.string(ptr, len)
 --DEBUG:print('...addr', addr)
 	if not len then len = strlenAddr(addr) end
 --DEBUG:print('...len', len)
-	return tostring(js.new(js.global.TextDecoder):decode(
-		js.new(js.global.DataView, membuf, addr, len)
+	return tostring(js.newTextDecoder():decode(
+		js.newDataView(membuf, addr, len)
 	))
 end
 
@@ -1901,25 +1916,21 @@ local function cdataToHex(d)
 	return table.concat(s)
 end
 
-local function getMemSub(jsarray, addr, count)
-	return js.new(jsarray, membuf, addr, count)
-end
-
 local function memcpyAddr(dstaddr, srcaddr, len)
-	getMemSub(js.global.Uint8Array, dstaddr, len):set(
-		getMemSub(js.global.Uint8Array, srcaddr, len)
+	js.newUint8Array(membuf, dstaddr, len):set(
+		js.newUint8Array(membuf, srcaddr, len)
 	)
 end
 
 -- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
 -- TODO better name, this isn't a DataView is it ...
-function ffi.dataToArray(jsarray, data, count)
+function ffi.dataToArray(jsarrayctor, data, count)
 	if data == ffi.null or data == nil then	-- does this test pass if it's a data elsewhere but assigned to 0?
 		return js.null
 	end
---DEBUG:print('ffi.dataToArray', jsarray, data, count)
+--DEBUG:print('ffi.dataToArray', jsarrayctor, data, count)
 	local addr = getAddr(data)
-	local result = getMemSub(jsarray, addr, count)
+	local result = jsarrayctor(membuf, addr, count)
 	return result
 end
 
@@ -1945,7 +1956,7 @@ function ffi.fill(dst, len, value)
 	local addr = getAddr(dst)
 	value = value or 0
 	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
-	js.new(js.global.Uint8Array, membuf, addr, len):fill(value, 0, len)
+	js.newUint8Array(membuf, addr, len):fill(value, 0, len)
 end
 
 function tonumber(x, ...)

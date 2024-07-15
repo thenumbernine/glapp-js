@@ -164,7 +164,7 @@ struct A {
 	print('f == g', f == g)
 	print('g == h', g == h)
 --]=]
---[=[
+-- [=[
 	-- run it and initialize glapp variable
 
 	-- cmdline global
