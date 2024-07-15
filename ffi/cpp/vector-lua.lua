@@ -62,7 +62,7 @@ function vector:init(ctype, arg)
 				-- TODO don't use capacity, just use ffi.sizeof ?
 				error("capacity is misaligned")
 			end
-			return self.v[k]
+			return rawget(self, 'v')[k]
 		end
 		function mt:__newindex(k, v)
 			-- see if we are writing a field
@@ -109,7 +109,7 @@ function vector:reserve(newcap)
 	-- so self.capacity < newcap
 	local newv = self:alloc(self.type, newcap)
 	assert(self.size <= self.capacity)
-	ffi.copy(newv, self.v, ffi.sizeof(self.type) * self.size)
+	if self.v then ffi.copy(newv, self.v, ffi.sizeof(self.type) * self.size) end
 	self.v = newv
 	self.capacity = newcap
 end

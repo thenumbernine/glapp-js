@@ -185,7 +185,7 @@ end
 -- if x's type is a pointer hten return x's value
 local function getAddr(x)
 	local t, mt = getTypeAndMT(x)
-	if not (t == 'cdata' and mt.isCData) then error("expected cdata") end
+	if not (t == 'cdata' and mt.isCData) then error("expected cdata, got type="..t.." mt.type="..tostring(mt and mt.type or '')) end
 	local ctype = assert(mt.type)
 	local addr = assert(mt.addr)
 	if ctype.isPointer then return memGetPtr(addr) end
@@ -1958,6 +1958,7 @@ end
 
 function ffi.copy(dst, src, len)
 --DEBUG:print('ffi.copy', cdataToHex(dst), cdataToHex(src), len)
+	if len == 0 then return end
 	local dstaddr = getAddr(dst)
 	if type(src) == 'string' then
 		-- convert from lua string to js buffer
