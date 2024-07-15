@@ -178,7 +178,33 @@ struct A {
 	-- cmdline global
 	_G.arg = {}
 
+	-- shim layer stuff
 	package.loaded['audio.currentsystem'] = 'null'
+
+	local pngLoaderCwd	-- for image loader and probably a few other things ... TODO does FS do this?
+	do
+		local class = require 'ext.class'
+		local path = require 'ext.path'
+		
+		local PNGLoader = class()
+		package.loaded['image.luajit.png'] = PNGLoader
+		local Image = require 'image'	-- don't require until after setting image.luajit.png
+		
+		-- ... though it could be, right?
+		function PNGLoader:save(args) error("save not supported") end
+		
+		function PNGLoader:load(fn) 
+			-- TODO does FS do path merging?
+			local jssrc = js.loadImage(path(pngLoaderCwd .. '/' .. fn).path)
+			local len = jssrc.buffer.byteLength
+			-- copy from javascript Uint8Array to our ffi memory
+			local dstbuf = ffi.new('char[?]', len)
+			ffi.dataToArray(js.newUint8Array, dstbuf, len):set(jssrc.buffer)
+			local img = Image(jssrc.width, jssrc.height, jssrc.channels, jssrc.format)
+			img.buffer = dstbuf
+			return img
+		end
+	end
 
 	-- start it as a new thread ...
 	-- TODO can I just wrap the whole dofile() in a main thread?
@@ -187,18 +213,21 @@ struct A {
 	local sdl = require 'ffi.sdl'
 	local function run(path, file)
 		package.path = package.path .. ';/lua/'..path..'/?.lua'
+		pngLoaderCwd = 'lua/'..path
 		local fn = '/lua/'..path..'/'..file
 		arg[0] = fn
 		--dofile(fn)	-- doesn't handle ...
 		assert(loadfile(fn))(table.unpack(arg))
 	end
 	sdl.mainthread = coroutine.create(function()
-		--run('glapp/tests', 'test_es.lua')	-- WORKS gl objs
+		--run('glapp/tests', 'test_es.lua')		-- WORKS gl objs
 		--run('glapp/tests', 'test_es2.lua')	-- WORKS only gles calls
+		run('glapp/tests', 'test_es3.lua')	-- WORKS only gles calls
+		--run('glapp/tests', 'test.lua')			-- fails, glmatrixmode 
 		--run('glapp/tests', 'minimal.lua')
 		--run('glapp/tests', 'pointtest.lua')
 		--run('glapp/tests', 'info.lua')
-		run('line-integral-convolution', 'run.lua')	-- fails, glsl has smoothstep()
+		--run('line-integral-convolution', 'run.lua')	-- fails, glsl has smoothstep()
 		--run('n-points', 'run.lua')					-- fails, glColor3f
 		--run('n-points', 'run_orbit.lua')
 		--run('prime-spiral', 'run.lua')				-- fails, glColor3f

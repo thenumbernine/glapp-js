@@ -995,16 +995,13 @@ for n=1,4 do
 			local glname = 'glUniform'..n..t..'v'
 			local webglname = 'uniform'..n..t..'v'
 			local len = n
+			local jsarrayctor = t == 'f' and js.newFloat32Array or js.newInt32Array
 			gl[glname] = function(location, count, value)
 				assert(count == 1, "TODO")
 				return jsgl[webglname](
 					jsgl,
 					location,
-					ffi.dataToArray(
-						t == 'f' and js.newFloat32Array or js.newInt32Array,
-						value,
-						len * count
-					)
+					ffi.dataToArray(jsarrayctor, value, len * count)
 				)
 			end
 		end
@@ -1021,11 +1018,7 @@ for n=1,4 do
 				jsgl,
 				location,
 				jsbool(transpose),
-				ffi.dataToArray(
-					js.newFloat32Array,
-					value,
-					len * count
-				)
+				ffi.dataToArray(js.newFloat32Array, value, len * count)
 			)
 		end
 	end

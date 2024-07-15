@@ -71,13 +71,53 @@ await Promise.all([
 	addLuaDir('image', ['image.lua']),
 	addLuaDir('image/luajit', ['bmp.lua', 'fits.lua', 'gif.lua', 'image.lua', 'jpeg.lua', 'loader.lua', 'png.lua', 'tiff.lua']),
 	addLuaDir('glapp', ['glapp.lua', 'mouse.lua', 'orbit.lua', 'view.lua']),
-	addLuaDir('glapp/tests', ['compute.lua', 'compute-spirv.lua', 'cubemap.lua', 'events.lua', 'info.lua', 'minimal.lua', 'pointtest.lua', 'test_es2.lua', 'test_es.lua', 'test.lua', 'test_vertexattrib.lua', 'compute-spirv.clcpp', 'src.png']),
+	addLuaDir('glapp/tests', ['compute.lua', 'compute-spirv.lua', 'cubemap.lua', 'events.lua', 'info.lua', 'minimal.lua', 'pointtest.lua', 'test_es2.lua', 'test_es3.lua', 'test_es.lua', 'test.lua', 'test_vertexattrib.lua', 'compute-spirv.clcpp', 'src.png']),
 	addLuaDir('imgui', ['imgui.lua']),
 	addLuaDir('imguiapp', ['imguiapp.lua', 'withorbit.lua']),
 	addLuaDir('line-integral-convolution', ['run.lua']),
 ]).catch(e => { throw e; });
 
-class Foo {};
+// i hate javascript
+const FS = lua.cmodule.module.FS;
+
+// ok so wasmoon and javascript combined their tardpowers to make image loading at runtime impossible
+// this is thanks to wasmoon callbacks being retarded and not allowing async await, and javascript not allowing await in non-async functions (which is retarded)
+// so I've got to preload ALL IMAGES just in case they're needed.
+const imageCache = {};
+const preloadImage = async fn => {
+	//const fileBlob = FS.readFile(fn);	// not working for some reason
+// this example works
+const fileBlob = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 5, 0, 0, 0, 5, 8, 6, 0, 0, 0, 141, 111, 38, 229, 0, 0, 0, 28, 73, 68, 65, 84, 8, 215, 99, 248, 255, 255, 63, 195, 127, 6, 32, 5, 195, 32, 18, 132, 208, 49, 241, 130, 88, 205, 4, 0, 14, 245, 53, 203, 209, 142, 14, 31, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]);
+	
+	if (fileBlob.constructor != Uint8Array) throw 'expected Uint8Array';
+	// TODO detect mime image type from filename
+	const blobUrl = URL.createObjectURL(new Blob([new Uint8Array(fileBlob)], {'type':'image/png'}));
+	const img = new Image();
+	document.body.prepend(img);
+	img.style.display = 'none';
+	img.src = blobUrl;
+	await img.decode();
+	const width = img.width;
+	const height = img.height;
+	const canvas = document.createElement('canvas');
+	canvas.style.display = 'none';
+	document.body.prepend(canvas);
+	canvas.width = width;
+	canvas.height = height;
+	const ctx = canvas.getContext('2d');
+	ctx.drawImage(img, 0, 0);
+	const imgData = new Uint8Array(ctx.getImageData(0, 0, width, height).data.buffer);
+	document.body.removeChild(img);
+	document.body.removeChild(canvas);
+	imageCache[fn] = {
+		width : width,
+		height : height,
+		buffer : imgData,
+		channels : 4,	// always?
+		format : 'unsigned char',
+	};
+};
+await preloadImage('lua/glapp/tests/src.png');
 
 lua.global.set('js', {
 	global : window,
@@ -92,6 +132,11 @@ lua.global.set('js', {
 	newInt32Array : (...args) => new Int32Array(...args),
 	newTextDecoder : (...args) => new TextDecoder(...args),
 	dateNow : () => Date.now(),
+	loadImage : fn => {
+		const result = imageCache[fn];
+		if (!result) throw "you need to decode up front file "+fn;
+		return result;
+	},
 });
 lua.doString(`
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
