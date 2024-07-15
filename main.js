@@ -1,11 +1,11 @@
 const urlparams = new URLSearchParams(location.search);
 const rundir = urlparams.get('dir') || 'glapp/tests';
-const runfile = urlparams.get('file') || 'test_es3.lua';
+const runfile = urlparams.get('file') || 'test_tex.lua';
 
 /* progress so far
 --run('glapp/tests', 'test_es.lua')			-- WORKS gl objs
 --run('glapp/tests', 'test_es2.lua')		-- WORKS only gles calls
---run('glapp/tests', 'test_es3.lua')		-- WORKS only gles calls
+--run('glapp/tests', 'test_tex.lua')		-- WORKS only gles calls
 --run('rule110', 'rule110.lua')					-- WORKS
 --run('glapp/tests', 'test.lua')			-- fails, glmatrixmode
 --run('glapp/tests', 'minimal.lua')
@@ -197,7 +197,7 @@ await Promise.all([
 	addLuaDir('image', ['image.lua']),
 	addLuaDir('image/luajit', ['bmp.lua', 'fits.lua', 'gif.lua', 'image.lua', 'jpeg.lua', 'loader.lua', 'png.lua', 'tiff.lua']),
 	addLuaDir('glapp', ['glapp.lua', 'mouse.lua', 'orbit.lua', 'view.lua']),
-	addLuaDir('glapp/tests', ['compute.lua', 'compute-spirv.lua', 'cubemap.lua', 'events.lua', 'info.lua', 'minimal.lua', 'pointtest.lua', 'test_es2.lua', 'test_es3.lua', 'test_es.lua', 'test.lua', 'test_vertexattrib.lua', 'src.png']),
+	addLuaDir('glapp/tests', ['compute.lua', 'compute-spirv.lua', 'cubemap.lua', 'events.lua', 'info.lua', 'minimal.lua', 'pointtest.lua', 'test_es2.lua', 'test_tex.lua', 'test_es.lua', 'test.lua', 'test_vertexattrib.lua', 'src.png']),
 	addLuaDir('imgui', ['imgui.lua']),
 	addLuaDir('imguiapp', ['imguiapp.lua', 'withorbit.lua']),
 	addLuaDir('line-integral-convolution', ['run.lua']),
