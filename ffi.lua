@@ -79,10 +79,10 @@ ffi.arch = 'x64'
 -- put ffi.cdef functions here
 ffi.C = {}
 
-local membuf = js.newArrayBuffer(0x100000)
+local membuf = js.newnamed('ArrayBuffer', 0x100000)
 ffi.membuf = membuf
 
-local memview = js.newDataView(membuf)
+local memview = js.newnamed('DataView', membuf)
 ffi.memview = memview
 
 local memUsedSoFar = 0
@@ -126,12 +126,12 @@ local function mallocAddr(size)
 		js.global.ArrayBuffer.prototype.resize(membuf, newsize)	-- same
 		--]]
 		-- [[ I hate javascript so much
-		newmembuf = js.newArrayBuffer(newsize)
-		js.newUint8Array(newmembuf, 0, memUsedSoFar):set(
-			js.newUint8Array(membuf, 0, memUsedSoFar)
+		newmembuf = js.newnamed('ArrayBuffer', newsize)
+		js.newnamed('Uint8Array', newmembuf, 0, memUsedSoFar):set(
+			js.newnamed('Uint8Array', membuf, 0, memUsedSoFar)
 		)
 		membuf = newmembuf
-		memview = js.newDataView(membuf)
+		memview = js.newnamed('DataView', membuf)
 		--]]
 --print('resizing base memory to', membuf.byteLength)
 	end
@@ -269,7 +269,7 @@ args:
 	baseType = for typedefs or for arrays
 	arrayCount = if the type is an array of another type
 	size = defined for prims, computed for structs, it'll be manually set for primitives
-	get = getter function 
+	get = getter function
 	set = setter function
 	mt = is the metatype of this ctype
 	isPrimitive = if this is a primitive type
@@ -1354,7 +1354,7 @@ function CData:__index(key)
 	local ctypemt = ctype.mt
 
 	if ctype.baseType then
-		if ctype.arrayCount 
+		if ctype.arrayCount
 		or ctype.isPointer
 		then
 			-- array ...
@@ -1413,7 +1413,7 @@ function CData:__newindex(key, value)
 	local valuemt = debug.getmetatable(value)
 --DEBUG:print('CData:__newindex self=', self, 'ctype', ctype, 'key', key, 'value', value)
 	if ctype.baseType then
-		if ctype.arrayCount 
+		if ctype.arrayCount
 		or ctype.isPointer
 		then
 --DEBUG:print('...array assignment')
@@ -1679,7 +1679,7 @@ function CData.__ne(a,b)
 			return h(a,b)
 		end
 	end
-	return getAddr(a) ~= getAddr(b) 
+	return getAddr(a) ~= getAddr(b)
 end
 
 function CData.__lt(a,b)
@@ -1843,8 +1843,8 @@ function ffi.string(ptr, len)
 --DEBUG:print('...addr', addr)
 	if not len then len = strlenAddr(addr) end
 --DEBUG:print('...len', len)
-	return tostring(js.newTextDecoder():decode(
-		js.newDataView(membuf, addr, len)
+	return tostring(js.newnamed('TextDecoder'):decode(
+		js.newnamed('DataView', membuf, addr, len)
 	))
 end
 
@@ -1917,37 +1917,41 @@ local function cdataToHex(d)
 end
 
 local function memcpyAddr(dstaddr, srcaddr, len)
-	js.newUint8Array(membuf, dstaddr, len):set(
-		js.newUint8Array(membuf, srcaddr, len)
+	js.newnamed('Uint8Array', membuf, dstaddr, len):set(
+		js.newnamed('Uint8Array', membuf, srcaddr, len)
 	)
 end
 
 -- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
 -- TODO better name, this isn't a DataView is it ...
-function ffi.dataToArray(jsarrayctor, data, count)
+function ffi.dataToArray(jsArrayClassName, data, count)
+--DEBUG:print('ffi.dataToArray', jsArrayClassName, data, count)
 	if data == ffi.null or data == nil then	-- does this test pass if it's a data elsewhere but assigned to 0?
+--DEBUG:print('...returning null')
 		return js.null
 	end
---DEBUG:print('ffi.dataToArray', jsarrayctor, data, count)
 	local addr = getAddr(data)
+--DEBUG:print('...addr', addr)
 
-	local jsarrayElemType = 1
-	if jsarrayctor == js.newFloat32Array
-	or jsarrayctor == js.newInt32Array
+	local jsarrayElemSize = 1
+	-- more wasmoon retardedness ... I can't compare these, because every single time it changes
+	-- i'm getting suspicious that fengari might even run a lot faster than wasmoon because of how poorly it handles interop
+	if jsArrayClassName == 'Float32Array'
+	or jsArrayClassName == 'Int32Array'
 	then
-		jsarrayElemType = 4
+		jsarrayElemSize = 4
 	-- else use 1
 	end
+--DEBUG:print('...jsarrayElemSize', jsarrayElemSize)
 
 	-- i thought if you just let count be undefined then the js TypedArray lets it be unbound
 	-- but it's still complaining, so ...
 	if not count then
---DEBUG:print('data type', 	toctypefromdata(data).name)
-		count = (memUsedSoFar - addr) / jsarrayElemType
+		count = (memUsedSoFar - addr) / jsarrayElemSize
 --DEBUG:print('redefining count', count)
 	end
 
-	local result = jsarrayctor(membuf, addr, count)
+	local result = js.newnamed(jsArrayClassName, membuf, addr, count)
 	return result
 end
 
@@ -1973,7 +1977,7 @@ function ffi.fill(dst, len, value)
 	local addr = getAddr(dst)
 	value = value or 0
 	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
-	js.newUint8Array(membuf, addr, len):fill(value, 0, len)
+	js.newnamed('Uint8Array', membuf, addr, len):fill(value, 0, len)
 end
 
 function tonumber(x, ...)

@@ -6,6 +6,7 @@ const runfile = urlparams.get('file') || 'test_es3.lua';
 --run('glapp/tests', 'test_es.lua')			-- WORKS gl objs
 --run('glapp/tests', 'test_es2.lua')		-- WORKS only gles calls
 --run('glapp/tests', 'test_es3.lua')		-- WORKS only gles calls
+--run('rule110', 'rule110.lua')					-- WORKS
 --run('glapp/tests', 'test.lua')			-- fails, glmatrixmode
 --run('glapp/tests', 'minimal.lua')
 --run('glapp/tests', 'pointtest.lua')
@@ -14,7 +15,6 @@ const runfile = urlparams.get('file') || 'test_es3.lua';
 --run('n-points', 'run.lua')					-- fails, glColor3f
 --run('n-points', 'run_orbit.lua')
 --run('line-integral-convolution', 'run.lua')	-- fails, fbo completeness problems
---run('rule110', 'rule110.lua')					-- [.WebGL-0x383c02950d00] GL_INVALID_OPERATION: Feedback loop formed between Framebuffer and active Texture.
 --run('seashell', 'run.lua')					-- needs complex number support
 --run('SphericalHarmonicGraph', 'run.lua')		-- needs complex
 --run('sphere-grid', 'run.lua')
@@ -58,7 +58,7 @@ await import('./wasmoon.min.js');	// defines the global 'wasmoon', returns nothi
 const LuaFactory = wasmoon.LuaFactory;
 const factory = new LuaFactory();
 const lua = await factory.createEngine();
-
+window.lua = lua;
 
 // i hate javascript
 const FS = lua.cmodule.module.FS;
@@ -197,7 +197,7 @@ await Promise.all([
 	addLuaDir('image', ['image.lua']),
 	addLuaDir('image/luajit', ['bmp.lua', 'fits.lua', 'gif.lua', 'image.lua', 'jpeg.lua', 'loader.lua', 'png.lua', 'tiff.lua']),
 	addLuaDir('glapp', ['glapp.lua', 'mouse.lua', 'orbit.lua', 'view.lua']),
-	addLuaDir('glapp/tests', ['compute.lua', 'compute-spirv.lua', 'cubemap.lua', 'events.lua', 'info.lua', 'minimal.lua', 'pointtest.lua', 'test_es2.lua', 'test_es3.lua', 'test_es.lua', 'test.lua', 'test_vertexattrib.lua', 'compute-spirv.clcpp', 'src.png']),
+	addLuaDir('glapp/tests', ['compute.lua', 'compute-spirv.lua', 'cubemap.lua', 'events.lua', 'info.lua', 'minimal.lua', 'pointtest.lua', 'test_es2.lua', 'test_es3.lua', 'test_es.lua', 'test.lua', 'test_vertexattrib.lua', 'src.png']),
 	addLuaDir('imgui', ['imgui.lua']),
 	addLuaDir('imguiapp', ['imguiapp.lua', 'withorbit.lua']),
 	addLuaDir('line-integral-convolution', ['run.lua']),
@@ -210,12 +210,7 @@ lua.global.set('js', {
 	// so I cannot pass them through lua back to js for any kind of operations
 	// so all JS operations now have to be abstracted into a new api
 	// but we're still passing this back to JS ... wasmoon will probably require its own whole different ffi.lua implementation ... trashy.
-	newArrayBuffer : (...args) => new ArrayBuffer(...args),
-	newDataView : (...args) => new DataView(...args),
-	newUint8Array : (...args) => new Uint8Array(...args),
-	newFloat32Array : (...args) => new Float32Array(...args),
-	newInt32Array : (...args) => new Int32Array(...args),
-	newTextDecoder : (...args) => new TextDecoder(...args),
+	newnamed : (cl, ...args) => new window[cl](...args),
 	dateNow : () => Date.now(),
 	loadImage : fn => imageCache[fn] || (() => { throw "you need to decode up front file "+fn; })(),
 });
@@ -240,12 +235,7 @@ const m = await require('./fengari-web.js');
 
 // TODO can I do this in js instead of in lua?  then I could just copy from above
 fengari.load(`
-js.newArrayBuffer = function(...) return js.new(js.global.ArrayBuffer, ...) end
-js.newDataView = function(...) return js.new(js.global.DataView, ...) end
-js.newUint8Array = function(...) return js.new(js.global.Uint8Array, ...) end
-js.newFloat32Array = function(...) return js.new(js.global.Float32Array, ...) end
-js.newInt32Array = function(...) return js.new(js.global.Int32Array, ...) end
-js.newTextDecoder = function(...) return js.new(js.global.TextDecoder, ...) end
+js.newnamed = function(cl, ...) return js.new(js.global[cl], ...) end
 js.dateNow = function() return js.global.Date.now() end
 
 -- fengari doesn't have a fake-filesystem so ...

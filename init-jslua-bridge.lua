@@ -202,7 +202,7 @@ do
 		local len = jssrc.buffer.byteLength
 		-- copy from javascript Uint8Array to our ffi memory
 		local dstbuf = ffi.new('char[?]', len)
-		ffi.dataToArray(js.newUint8Array, dstbuf, len):set(jssrc.buffer)
+		ffi.dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
 		return {
 			data = dstbuf,
 			width = jssrc.width,

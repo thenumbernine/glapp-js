@@ -995,7 +995,7 @@ for n=1,4 do
 			local glname = 'glUniform'..n..t..'v'
 			local webglname = 'uniform'..n..t..'v'
 			local len = n
-			local jsarrayctor = t == 'f' and js.newFloat32Array or js.newInt32Array
+			local jsarrayctor = t == 'f' and 'Float32Array' or 'Int32Array'
 			gl[glname] = function(location, count, value)
 				assert(count == 1, "TODO")
 				return jsgl[webglname](
@@ -1018,7 +1018,7 @@ for n=1,4 do
 				jsgl,
 				location,
 				jsbool(transpose),
-				ffi.dataToArray(js.newFloat32Array, value, len * count)
+				ffi.dataToArray('Float32Array', value, len * count)
 			)
 		end
 	end
@@ -1111,7 +1111,7 @@ function gl.glBufferData(target, size, data, usage)
 	if data == ffi.null then
 		return jsgl:bufferData(target, size, usage)
 	else
-		return jsgl:bufferData(target, ffi.dataToArray(js.newUint8Array, data, size), usage)
+		return jsgl:bufferData(target, ffi.dataToArray('Uint8Array', data, size), usage)
 	end
 end
 
@@ -1139,14 +1139,14 @@ end
 
 function gl.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
 	pixels = ffi.dataToArray(
-		type == gl.GL_FLOAT and js.newFloat32Array or js.newUint8Array,
+		type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array',
 		pixels)
 	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, pixels)
 end
 
 function gl.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
 	pixels = ffi.dataToArray(
-		type == gl.GL_FLOAT and js.newFloat32Array or js.newUint8Array,
+		type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array',
 		pixels)
 	return jsgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
 end
