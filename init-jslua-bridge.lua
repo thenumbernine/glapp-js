@@ -1,21 +1,7 @@
 -- ok this has become the launcer of everything
 -- Lua 5.3
 xpcall(function()
-	--print(package.path)	-- ./lua/5.3/?.lua;./lua/5.3/?/init.lua;./?.lua;./?/init.lua
-	package.path = table.concat({
-		'./?.lua',
-		'/lua/?.lua',
-		'/lua/?/?.lua',
-	}, ';')
-
-	-- fengari doesn't have a fake-filesystem so ...
-	-- [[ require 'io'
-	assert(not package.io)
-	local io = require 'io'
-	package.loaded.io = io
-	_G.io = io
-	--]]
-
+	print'init-jslua-bridge.lua begin'
 	-- this modifies some of the _G functions so it should go first
 	local ffi = require 'ffi'
 
@@ -245,7 +231,7 @@ struct A {
 	print('mainthread interval', interval)
 
 --]=]
-	print'run-fengari.lua done'
+	print'init-jslua-bridge.lua done'
 end, function(err)
 	print(tostring(err)..'\n'..debug.traceback())
 end)
