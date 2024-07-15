@@ -1170,14 +1170,16 @@ end
 function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 print('SDL_CreateWindow', title, x, y, w, h, flags)
 	local window = js.global
-	window.document.title = title
-
 	window:scrollTo(0,1)
+	
+	local document = window.document
+	document.title = title
+
 	if not canvas then
 print('...creating canvas')
-		canvas = js.global.document:createElement'canvas'
-		window.canvas = canvas
-		js.global.document.body:prepend(canvas)
+		canvas = document:createElement'canvas'
+		window.canvas = canvas			-- global?  do I really need it?
+		document.body:prepend(canvas)
 	end
 
 	canvas.style.left = 0

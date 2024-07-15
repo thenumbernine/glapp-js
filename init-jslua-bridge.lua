@@ -164,6 +164,14 @@ struct A {
 	print('f == g', f == g)
 	print('g == h', g == h)
 --]=]
+--[=[ can wasmoon manipulate DOM like fengari can?
+-- or will wasmoon bungle it like it does ArrayBuffer etc builtins?
+	local document = js.global.document
+	print(document)
+	local canvas = document:createElement'canvas'
+	print(canvas)
+	document.body:prepend(canvas)
+--]=]
 -- [=[
 	-- run it and initialize glapp variable
 
