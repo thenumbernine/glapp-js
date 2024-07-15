@@ -214,6 +214,12 @@ local function free(ptr)
 end
 ffi.free = free
 
+local function memcpyAddr(dstaddr, srcaddr, len)
+	js.newnamed('Uint8Array', membuf, dstaddr, len):set(
+		js.newnamed('Uint8Array', membuf, srcaddr, len)
+	)
+end
+
 local function strlenAddr(addr)
 	local len = 0
 	while true do
@@ -1472,7 +1478,17 @@ function CData:__newindex(key, value)
 				memSetPtr(fieldAddr, value)
 				return
 			else
-				error("can't assign type '"..valuetype.."' to non-primitive type fieldType="..tostring(fieldType))
+				if valuetype == 'cdata'
+				and valuemt.type == fieldType
+				then
+					memcpyAddr(fieldAddr, getAddr(value), fieldType.size)
+					return
+				else
+					error("can't assign type '"..valuetype.."'"
+						..(valuemt and valuemt.type and (' ctype='..valuemt.type.name) or '')
+						.." to non-primitive type fieldType="..fieldType.name
+					)
+				end
 			end
 		else
 			-- typedef
@@ -1915,13 +1931,6 @@ local function cdataToHex(d)
 	end
 	return table.concat(s)
 end
-
-local function memcpyAddr(dstaddr, srcaddr, len)
-	js.newnamed('Uint8Array', membuf, dstaddr, len):set(
-		js.newnamed('Uint8Array', membuf, srcaddr, len)
-	)
-end
-
 
 local jsElemSizeForTypedArrayName = {
 	Float32Array = 4,

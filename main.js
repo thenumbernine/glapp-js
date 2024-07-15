@@ -12,7 +12,7 @@ const runfile = urlparams.get('file') || 'test_tex.lua';
 --run('glapp/tests', 'pointtest.lua')
 --run('glapp/tests', 'info.lua')
 --run('prime-spiral', 'run.lua')				-- fails, glColor3f
---run('n-points', 'run.lua')					-- fails, glColor3f
+--run('n-points', 'run.lua')					-- indexed draws are messed up
 --run('n-points', 'run_orbit.lua')
 --run('line-integral-convolution', 'run.lua')	-- fails, fbo completeness problems
 --run('seashell', 'run.lua')					-- needs complex number support

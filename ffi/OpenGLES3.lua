@@ -830,6 +830,7 @@ function gl.glDrawArrays(...) return jsgl:drawArrays(...) end
 function gl.glEnable(...) return jsgl:enable(...) end
 function gl.glDisable(...) return jsgl:disable(...) end
 function gl.glBlendFunc(...) return jsgl:blendFunc(...) end
+function gl.glLineWidth(...) return jsgl:lineWidth(...) end
 
 local getParamInfo = {
 	[gl.GL_ALIASED_LINE_WIDTH_RANGE] = {array=2},
@@ -895,6 +896,10 @@ function gl.glDrawBuffers(n, bufs)
 		ar[i] = bufs[i]
 	end
 	return jsgl:drawBuffers(ar)
+end
+
+function gl.glDrawElements(mode, count, type, indices)
+	return jsgl:drawElements(mode, count, type, tonumber(ffi.cast('intptr_t', indices)))
 end
 
 gl.glCreateProgram = res:makeCreate'createProgram'
@@ -1108,10 +1113,18 @@ function gl.glBindBuffer(target, buffer)
 end
 
 function gl.glBufferData(target, size, data, usage)
-	if data == ffi.null then
+	if data == ffi.null or data == nil then
 		return jsgl:bufferData(target, size, usage)
 	else
 		return jsgl:bufferData(target, ffi.dataToArray('Uint8Array', data, size), usage)
+	end
+end
+
+function gl.glBufferSubData(target, offset, size, data)
+	if data == ffi.null or data == nil then
+		return jsgl:bufferSubData(target, offset)
+	else
+		return jsgl:bufferSubData(target, offset, ffi.dataToArray('Uint8Array', data, size))
 	end
 end
 
