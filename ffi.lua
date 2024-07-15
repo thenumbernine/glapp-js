@@ -133,7 +133,7 @@ local function mallocAddr(size)
 		membuf = newmembuf
 		memview = js.newDataView(membuf)
 		--]]
-print('resizing base memory to', membuf.byteLength)
+--print('resizing base memory to', membuf.byteLength)
 	end
 
 	local addr = memUsedSoFar
@@ -555,7 +555,7 @@ function CType:__index(key)
 end
 --]=]
 
-CType{name='void', size=0, isPrimitive=true}	-- let's all admit that a void* is really a char*
+CType{name='void', size=1, isPrimitive=true}	-- let's all admit that a void* is really a char*
 CType{name='bool', size=1, isPrimitive=true,	-- not a typedef of char / byte ...
 	get = function(memview, addr) return memview:getUint8(addr) end,
 	set = function(memview, addr, v) return memview:setUint8(addr, v) end,
@@ -1930,12 +1930,20 @@ function ffi.dataToArray(jsarrayctor, data, count)
 	end
 --DEBUG:print('ffi.dataToArray', jsarrayctor, data, count)
 	local addr = getAddr(data)
-	
+
+	local jsarrayElemType = 1
+	if jsarrayctor == js.newFloat32Array
+	or jsarrayctor == js.newInt32Array
+	then
+		jsarrayElemType = 4
+	-- else use 1
+	end
+
 	-- i thought if you just let count be undefined then the js TypedArray lets it be unbound
 	-- but it's still complaining, so ...
 	if not count then
 --DEBUG:print('data type', 	toctypefromdata(data).name)
-		count = (memUsedSoFar - addr) / toctypefromdata(data).baseType.size
+		count = (memUsedSoFar - addr) / jsarrayElemType
 --DEBUG:print('redefining count', count)
 	end
 
