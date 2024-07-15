@@ -193,8 +193,8 @@ struct A {
 		assert(loadfile(fn))(table.unpack(arg))
 	end
 	sdl.mainthread = coroutine.create(function()
-		run('glapp/tests', 'test_es2.lua')	-- WORKS only gles calls
-		--run('glapp/tests', 'test_es.lua')	-- WORKS gl objs
+		run('glapp/tests', 'test_es.lua')	-- WORKS gl objs
+		--run('glapp/tests', 'test_es2.lua')	-- WORKS only gles calls
 		--run('glapp/tests', 'minimal.lua')
 		--run('glapp/tests', 'pointtest.lua')
 		--run('glapp/tests', 'info.lua')

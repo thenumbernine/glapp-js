@@ -198,7 +198,6 @@ ffi.getAddr = getAddr
 
 local function gc(ptr, cb)
 	-- TODO associate the memeory allocated at ptr with gc method 'cb'
-	print('TODO ffi.gc , tho idk that fengari supports it')
 	return ptr
 end
 ffi.gc = gc

@@ -35,44 +35,47 @@ const factory = new LuaFactory();
 const lua = await factory.createEngine();
 
 // https://github.com/hellpanderrr/lua-in-browser
-async function mountFile(file_path, lua_path) {
-    const fileContent = await fetch(file_path).then(data => data.text());
-    await factory.mountFile(lua_path, fileContent);
-}
+const mountFile = (file_path, lua_path) => 
+	fetch(file_path)
+	.then(data => data.text())
+	.then(fileContent => {
+//console.log('mountFile', file_path, lua_path);
+		return factory.mountFile(lua_path, fileContent);
+	});
 
 // TODO autogen this remotely ... like i did in lua.vm-util.js.lua
-async function addDir(fromPath, toPath, files) {
-	return Promise.all(files.map(f => {
-		const file_path = fromPath+'/'+f;
-		const lua_path = toPath+'/'+f;
-		return fetch(file_path)
-		.then(data => data.text())
-		.then(fileContent => {
-//console.log('mountFile', file_path, lua_path);
-			return factory.mountFile(lua_path, fileContent);
-		});
-	})).catch(e => { throw e; });
-}
-//await mountFile('/lua/bit/bit.lua', 'lua/bit/bit.lua');
+const addDir = (fromPath, toPath, files) =>
+	Promise.all(files.map(f => mountFile(fromPath+'/'+f, toPath+'/'+f)));
 
-await mountFile('ffi.lua', 'ffi.lua');
-await mountFile('init-jslua-bridge.lua', 'init-jslua-bridge.lua');
-await addDir('ffi', 'ffi', ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']);
-await addDir('ffi/c', 'ffi/c', ['errno.lua', 'stdlib.lua', 'string.lua']);
-await addDir('ffi/c/sys', 'ffi/c/sys', ['time.lua']);
-await addDir('ffi/cpp', 'ffi/cpp', ['vector-lua.lua', 'vector.lua']);
-await addDir('ffi/gcwrapper', 'ffi/gcwrapper', ['gcwrapper.lua']);
-await await addDir('/lua/bit', 'lua/bit', ['bit.lua']);
-await addDir('/lua/template', 'lua/template', ['output.lua', 'showcode.lua', 'template.lua']);
-await addDir('/lua/ext', 'lua/ext', ['assert.lua', 'class.lua', 'cmdline.lua', 'coroutine.lua', 'ctypes.lua', 'debug.lua', 'detect_ffi.lua', 'detect_lfs.lua', 'detect_os.lua', 'env.lua', 'ext.lua', 'fromlua.lua', 'gcmem.lua', 'io.lua', 'load.lua', 'math.lua', 'meta.lua', 'number.lua', 'op.lua', 'os.lua', 'path.lua', 'range.lua', 'reload.lua', 'require.lua', 'string.lua', 'table.lua', 'timer.lua', 'tolua.lua', 'xpcall.lua']);
-await addDir('/lua/matrix', 'lua/matrix', ['curl.lua', 'determinant.lua', 'div.lua', 'ffi.lua', 'grad.lua', 'helmholtzinv.lua', 'index.lua', 'inverse.lua', 'lapinv.lua', 'matrix.lua']);
-await addDir('/lua/gl', 'lua/gl', ['arraybuffer.lua', 'attribute.lua', 'buffer.lua', 'call.lua', 'elementarraybuffer.lua', 'fbo.lua', 'geometry.lua', 'get.lua', 'gl.lua', 'gradienttex2d.lua', 'gradienttex.lua', 'hsvtex2d.lua', 'hsvtex.lua', 'intersect.lua', 'kernelprogram.lua', 'pingpong3d.lua', 'pingpong.lua', 'pixelpackbuffer.lua', 'pixelunpackbuffer.lua', 'program.lua', 'report.lua', 'sceneobject.lua', 'setup.lua', 'shader.lua', 'shaderstoragebuffer.lua', 'tex1d.lua', 'tex2d.lua', 'tex3d.lua', 'texbuffer.lua', 'texcube.lua', 'tex.lua', 'vertexarray.lua']);
-await addDir('/lua/cl', 'lua/cl', ['assert.lua', 'assertparam.lua', 'buffer.lua', 'checkerror.lua', 'cl.lua', 'commandqueue.lua', 'context.lua', 'device.lua', 'event.lua', 'getinfo.lua', 'imagegl.lua', 'kernel.lua', 'memory.lua', 'platform.lua', 'program.lua']);
-await addDir('/lua/cl/obj', 'lua/cl/obj', ['buffer.lua', 'domain.lua', 'env.lua', 'half.lua', 'kernel.lua', 'number.lua', 'program.lua', 'reduce.lua']);
-await addDir('/lua/cl/tests', 'lua/cl/tests', ['cpptest-obj.lua', 'cpptest-standalone.lua', 'getbin.lua', 'info.lua', 'obj.lua', 'obj-multi.lua', 'readme-test.lua', 'reduce.lua', 'test.lua']);
-await addDir('/lua/glapp', 'lua/glapp', ['glapp.lua', 'mouse.lua', 'orbit.lua', 'view.lua']);
-await addDir('/lua/glapp/tests', 'lua/glapp/tests', ['compute.lua', 'compute-spirv.lua', 'cubemap.lua', 'events.lua', 'info.lua', 'minimal.lua', 'pointtest.lua', 'test_es2.lua', 'test_es.lua', 'test.lua', 'test_vertexattrib.lua', 'compute-spirv.clcpp', 'src.png']);
-await addDir('/lua/line-integral-convolution', 'lua/line-integral-convolution', ['run.lua']);
+const addLuaDir = (path, files) => addDir('/lua/' + path, 'lua/' + path, files);
+
+//await mountFile('/lua/bit/bit.lua', 'lua/bit/bit.lua');
+await Promise.all([
+	addDir('.', '.', ['ffi.lua', 'init-jslua-bridge.lua']),
+	addDir('ffi', 'ffi', ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']),
+	addDir('ffi/c', 'ffi/c', ['errno.lua', 'stdlib.lua', 'string.lua']),
+	addDir('ffi/c/sys', 'ffi/c/sys', ['time.lua']),
+	addDir('ffi/cpp', 'ffi/cpp', ['vector-lua.lua', 'vector.lua']),
+	addDir('ffi/gcwrapper', 'ffi/gcwrapper', ['gcwrapper.lua']),
+	
+	addLuaDir('bit', ['bit.lua']),
+	addLuaDir('template', ['output.lua', 'showcode.lua', 'template.lua']),
+	addLuaDir('ext', ['assert.lua', 'class.lua', 'cmdline.lua', 'coroutine.lua', 'ctypes.lua', 'debug.lua', 'detect_ffi.lua', 'detect_lfs.lua', 'detect_os.lua', 'env.lua', 'ext.lua', 'fromlua.lua', 'gcmem.lua', 'io.lua', 'load.lua', 'math.lua', 'meta.lua', 'number.lua', 'op.lua', 'os.lua', 'path.lua', 'range.lua', 'reload.lua', 'require.lua', 'string.lua', 'table.lua', 'timer.lua', 'tolua.lua', 'xpcall.lua']),
+	addLuaDir('struct', ['struct.lua', 'test.lua']),
+	addLuaDir('vec-ffi', ['box2f.lua', 'box2i.lua', 'box3f.lua', 'create_box.lua', 'create_plane.lua', 'create_quat.lua', 'create_vec2.lua', 'create_vec3.lua', 'create_vec.lua', 'plane2f.lua', 'plane3f.lua', 'quatd.lua', 'quatf.lua', 'suffix.lua', 'vec2b.lua', 'vec2d.lua', 'vec2f.lua', 'vec2i.lua', 'vec2s.lua', 'vec2sz.lua', 'vec2ub.lua', 'vec3b.lua', 'vec3d.lua', 'vec3f.lua', 'vec3i.lua', 'vec3s.lua', 'vec3sz.lua', 'vec3ub.lua', 'vec4b.lua', 'vec4d.lua', 'vec4f.lua', 'vec4i.lua', 'vec4ub.lua', 'vec-ffi.lua']),
+	addLuaDir('matrix', ['curl.lua', 'determinant.lua', 'div.lua', 'ffi.lua', 'grad.lua', 'helmholtzinv.lua', 'index.lua', 'inverse.lua', 'lapinv.lua', 'matrix.lua']),
+	addLuaDir('gl', ['arraybuffer.lua', 'attribute.lua', 'buffer.lua', 'call.lua', 'elementarraybuffer.lua', 'fbo.lua', 'geometry.lua', 'get.lua', 'gl.lua', 'gradienttex2d.lua', 'gradienttex.lua', 'hsvtex2d.lua', 'hsvtex.lua', 'intersect.lua', 'kernelprogram.lua', 'pingpong3d.lua', 'pingpong.lua', 'pixelpackbuffer.lua', 'pixelunpackbuffer.lua', 'program.lua', 'report.lua', 'sceneobject.lua', 'setup.lua', 'shader.lua', 'shaderstoragebuffer.lua', 'tex1d.lua', 'tex2d.lua', 'tex3d.lua', 'texbuffer.lua', 'texcube.lua', 'tex.lua', 'vertexarray.lua']),
+	addLuaDir('cl', ['assert.lua', 'assertparam.lua', 'buffer.lua', 'checkerror.lua', 'cl.lua', 'commandqueue.lua', 'context.lua', 'device.lua', 'event.lua', 'getinfo.lua', 'imagegl.lua', 'kernel.lua', 'memory.lua', 'platform.lua', 'program.lua']),
+	addLuaDir('cl/obj', ['buffer.lua', 'domain.lua', 'env.lua', 'half.lua', 'kernel.lua', 'number.lua', 'program.lua', 'reduce.lua']),
+	addLuaDir('cl/tests', ['cpptest-obj.lua', 'cpptest-standalone.lua', 'getbin.lua', 'info.lua', 'obj.lua', 'obj-multi.lua', 'readme-test.lua', 'reduce.lua', 'test.lua']),
+	addLuaDir('image', ['image.lua']),
+	addLuaDir('image/luajit', ['bmp.lua', 'fits.lua', 'gif.lua', 'image.lua', 'jpeg.lua', 'loader.lua', 'png.lua', 'tiff.lua']),
+	addLuaDir('glapp', ['glapp.lua', 'mouse.lua', 'orbit.lua', 'view.lua']),
+	addLuaDir('glapp/tests', ['compute.lua', 'compute-spirv.lua', 'cubemap.lua', 'events.lua', 'info.lua', 'minimal.lua', 'pointtest.lua', 'test_es2.lua', 'test_es.lua', 'test.lua', 'test_vertexattrib.lua', 'compute-spirv.clcpp', 'src.png']),
+	addLuaDir('imgui', ['imgui.lua']),
+	addLuaDir('imguiapp', ['imguiapp.lua', 'withorbit.lua']),
+	addLuaDir('line-integral-convolution', ['run.lua']),
+]).catch(e => { throw e; });
 
 class Foo {};
 
