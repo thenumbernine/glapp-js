@@ -46,6 +46,8 @@ lua.global.set('js', {
 	global : window,
 	['log'] : (...args) => { console.log(...args); },
 	['new'] : (cl, ...args) => {
+		// HOW DO I JUST MAKE A JS OBJECT FROM WITH LUA ?!??!?!
+		// ALL THE WASMOON DEMOS ONLY SHOW MAKING A JS OBJECT USING PRIMITIVES -- NO JS OBJECTS CAN BE PASSED THROUGH! !+! ! ! !!  !
 		//console.log(window.ArrayBuffer);	// ArrayBuffer
 		//console.log('cl', cl);	// ArrayBuffer wrapped in wasmoon trash
 		//console.log('cl', cl());	// error requires 'new' ... so it is passing me a js function that can be used as the class constructor ... why not just pass the class?!?!?!
