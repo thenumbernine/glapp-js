@@ -21,6 +21,9 @@ local ig = setmetatable({}, {
 	__index = ffi.C,
 })
 
+function ig.igNewFrame() end
+function ig.igRender() end
+function ig.igGetDrawData() end
 function ig.igCreateContext() end
 function ig.igDestroyContext() end
 function ig.igCheckbox() end
@@ -32,8 +35,11 @@ function ig.ImFontAtlas_Build() return true end
 function ig.ImGui_ImplSDL2_InitForOpenGL() end
 function ig.ImGui_ImplSDL2_Shutdown() end
 function ig.ImGui_ImplSDL2_ProcessEvent() end
+function ig.ImGui_ImplSDL2_NewFrame() end
 function ig.ImGui_ImplOpenGL3_Init() end
 function ig.ImGui_ImplOpenGL3_Shutdown() end
+function ig.ImGui_ImplOpenGL3_NewFrame() end
+function ig.ImGui_ImplOpenGL3_RenderDrawData() end
 
 function ig.igGetIO()
 	-- TODO imgui cdata

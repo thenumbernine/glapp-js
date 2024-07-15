@@ -805,6 +805,24 @@ function ResMap:makeCreate(webglfuncname)
 	end
 end
 
+local res = ResMap()
+gl.res = res	--debuggin
+
+local function getObj(id)
+	local entry = res:get(id)
+	if not entry then return js.null end	-- webgl is stingy, needs null, not undefined
+	return entry.obj
+end
+
+local function findObj(obj, objtype)
+	for id,v in pairs(res) do
+		if v.obj == obj then
+			if objtype then assert(v.type == objtype) end
+			return id
+		end
+	end
+end
+
 function gl.glViewport(...) return jsgl:viewport(...) end
 function gl.glClearColor(...) return jsgl:clearColor(...) end
 function gl.glClear(...) return jsgl:clear(...) end
@@ -813,8 +831,62 @@ function gl.glEnable(...) return jsgl:enable(...) end
 function gl.glDisable(...) return jsgl:disable(...) end
 function gl.glBlendFunc(...) return jsgl:blendFunc(...) end
 
+local getParamInfo = {
+	[gl.GL_ALIASED_LINE_WIDTH_RANGE] = {array=2},
+	[gl.GL_ALIASED_POINT_SIZE_RANGE] = {array=2},
+	[gl.GL_ARRAY_BUFFER_BINDING] = {res='createBuffer'},
+	[gl.GL_BLEND_COLOR] = {array=4},
+	[gl.GL_COLOR_CLEAR_VALUE] = {array=4},
+	[gl.GL_COLOR_WRITEMASK] = {array=4},	--	sequence<GLboolean> (with 4 values)
+	--gl.COMPRESSED_TEXTURE_FORMATS	Uint32Array
+	[gl.GL_CURRENT_PROGRAM] = {res='createProgram'},
+	[gl.GL_DEPTH_RANGE] = {array=2},
+	[gl.GL_ELEMENT_ARRAY_BUFFER_BINDING] = {res='createBuffer'},
+	[gl.GL_FRAMEBUFFER_BINDING] = {res='createFramebuffer'},
+	[gl.GL_MAX_VIEWPORT_DIMS] = {array=2},
+	[gl.GL_RENDERBUFFER_BINDING] = {res='createRenderbuffer'},
+	[gl.GL_SCISSOR_BOX] = {array=4},
+	[gl.GL_TEXTURE_BINDING_2D] = {res='createTexture'},
+	[gl.GL_TEXTURE_BINDING_CUBE_MAP] = {res='createTexture'},
+	[gl.GL_RENDERER] = {string=true},
+	[gl.GL_VENDOR] = {string=true},
+	[gl.GL_VERSION] = {string=true},
+	[gl.GL_VIEWPORT] = {array=4},
+
+	[gl.GL_COPY_READ_BUFFER_BINDING] = {res='createBuffer'},
+	[gl.GL_COPY_WRITE_BUFFER_BINDING] = {res='createBuffer'},
+	[gl.GL_DRAW_FRAMEBUFFER_BINDING] = {res='createFramebuffer'},
+	[gl.GL_PIXEL_PACK_BUFFER_BINDING] = {res='createBuffer'},
+	[gl.GL_PIXEL_UNPACK_BUFFER_BINDING] = {res='createBuffer'},
+	[gl.GL_READ_FRAMEBUFFER_BINDING] = {res='createFramebuffer'},
+	[gl.GL_SAMPLER_BINDING] = {res='createSampler'},
+	[gl.GL_TEXTURE_BINDING_2D_ARRAY] = {res='createTexture'},
+	[gl.GL_TEXTURE_BINDING_3D] = {res='createTexture'},
+	[gl.GL_TRANSFORM_FEEDBACK_BINDING] = {res='createTransformFeedback'},
+	[gl.GL_TRANSFORM_FEEDBACK_BUFFER_BINDING] = {res='createBuffer'},
+	[gl.GL_UNIFORM_BUFFER_BINDING] = {res='createBuffer'},
+	[gl.GL_VERTEX_ARRAY_BINDING] = {res='createVertexArray'}
+}
+
 function gl.glGetIntegerv(pname, data)
-	data[0] = jsgl:getParameter(pname)
+	local v = jsgl:getParameter(pname)
+	local info = getParamInfo[pname]
+	if info then
+		assert(not info.string, "I don't think you're supposed to call glGetIntegerv on this")
+		if info.array then
+			-- TODO weird GL_VIEWPORT is getting 0 0 0 1042. ..
+			for i=0,info.array-1 do
+				data[i] = v[i]
+			end
+			return
+		elseif info.res then
+			if v == js.null then return 0 end
+			local id = findObj(v, info.res)
+			if not id then error("somehow webgl returned a resource that I didn't have") end
+			v = id
+		end
+	end
+	data[0] = v
 end
 
 function gl.glDrawBuffers(n, bufs)
@@ -823,15 +895,6 @@ function gl.glDrawBuffers(n, bufs)
 		ar[i] = bufs[i]
 	end
 	return jsgl:drawBuffers(ar)
-end
-
-local res = ResMap()
-gl.res = res	--debuggin
-
-local function getObj(id)
-	local entry = res:get(id)
-	if not entry then return js.null end	-- webgl is stingy, needs null, not undefined
-	return entry.obj
 end
 
 gl.glCreateProgram = res:makeCreate'createProgram'

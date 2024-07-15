@@ -193,12 +193,12 @@ struct A {
 		assert(loadfile(fn))(table.unpack(arg))
 	end
 	sdl.mainthread = coroutine.create(function()
-		run('glapp/tests', 'test_es.lua')	-- WORKS gl objs
+		--run('glapp/tests', 'test_es.lua')	-- WORKS gl objs
 		--run('glapp/tests', 'test_es2.lua')	-- WORKS only gles calls
 		--run('glapp/tests', 'minimal.lua')
 		--run('glapp/tests', 'pointtest.lua')
 		--run('glapp/tests', 'info.lua')
-		--run('line-integral-convolution', 'run.lua')	-- fails, glsl has smoothstep()
+		run('line-integral-convolution', 'run.lua')	-- fails, glsl has smoothstep()
 		--run('n-points', 'run.lua')					-- fails, glColor3f
 		--run('n-points', 'run_orbit.lua')
 		--run('prime-spiral', 'run.lua')				-- fails, glColor3f

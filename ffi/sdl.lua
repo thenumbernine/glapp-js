@@ -790,6 +790,17 @@ typedef enum {
 	SDL_GL_CONTEXT_RESET_LOSE_CONTEXT = 0x0001
 } SDL_GLContextResetNotification;
 
+enum { SDL_BUTTON_LEFT = 1 };
+enum { SDL_BUTTON_MIDDLE = 2 };
+enum { SDL_BUTTON_RIGHT = 3 };
+enum { SDL_BUTTON_X1 = 4 };
+enum { SDL_BUTTON_X2 = 5 };
+enum { SDL_BUTTON_LMASK = 1 };
+enum { SDL_BUTTON_MMASK = 2 };
+enum { SDL_BUTTON_RMASK = 4 };
+enum { SDL_BUTTON_X1MASK = 8 };
+enum { SDL_BUTTON_X2MASK = 16 };
+
 typedef struct SDL_version {
 	Uint8 major;
 	Uint8 minor;
@@ -1245,6 +1256,13 @@ function sdl.SDL_GetVersion(version)
 	version[0].major = 2
 	version[0].minor = 0
 	version[0].patch = 0
+end
+
+function sdl.SDL_GetMouseState(x, y)
+	--local window = js.global	-- TODO I'll need a mouse callback for tracking this ...
+	x[0] = 0--window.
+	y[0] = 0
+	return 0
 end
 
 -- double buffering isn't a thing in WebGL eh?
