@@ -42,15 +42,22 @@ async function mountFile(file_path, lua_path) {
 await mountFile('./ffi.lua', 'ffi.lua');
 await mountFile('./init-jslua-bridge.lua', 'init-jslua-bridge.lua');
 
+lua.global.set('js', {
+	global : window,
+	['log'] : (...args) => { console.log(...args); },
+	['new'] : (cl, ...args) => {
+		//console.log(window.ArrayBuffer);	// ArrayBuffer
+		//console.log('cl', cl);	// ArrayBuffer wrapped in wasmoon trash
+		console.log('cl', cl);
+		//return new cl(...args);
+	},
+});
 lua.doString(`
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
-	-- HOW DO YOU ACCESS THE DOM!?!?!?!??
-	--print(js)
-	--print(window)
-	--print(global)
-	--print(require('window'))
-	--for k,v in pairs(_G) do print(k,v) end
-
+	js.log('js', js)
+	js.log('global', js.global)
+	js.log('ArrayBuffer', js.global.ArrayBuffer)
+	print(js.new(js.global.ArrayBuffer, 10, 20))
 end, function(err)
 	print(err)
 	print(debug.traceback())
