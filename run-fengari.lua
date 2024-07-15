@@ -1,4 +1,4 @@
--- fengari launcher
+-- ok this has become the launcer of everything
 -- Lua 5.3
 xpcall(function()
 	--print(package.path)	-- ./lua/5.3/?.lua;./lua/5.3/?/init.lua;./?.lua;./?/init.lua
@@ -178,7 +178,7 @@ struct A {
 	print('f == g', f == g)
 	print('g == h', g == h)
 --]=]
--- [=[
+--[=[
 	-- run it and initialize glapp variable
 
 	-- cmdline global
