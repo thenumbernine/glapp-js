@@ -1145,11 +1145,17 @@ function gl.glBindTexture(target, texture)
 end
 
 function gl.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
-	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, ffi.dataToArray(type == gl.GL_FLOAT and js.newFloat32Array or js.newUint8Array, pixels))
+	pixels = ffi.dataToArray(
+		type == gl.GL_FLOAT and js.newFloat32Array or js.newUint8Array,
+		pixels)
+	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, pixels)
 end
 
 function gl.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
-	return jsgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, ffi.dataToArray(type == gl.GL_FLOAT and js.newFloat32Array or js.newUint8Array, pixels))
+	pixels = ffi.dataToArray(
+		type == gl.GL_FLOAT and js.newFloat32Array or js.newUint8Array,
+		pixels)
+	return jsgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
 end
 
 function gl.glTexParameterf(...)

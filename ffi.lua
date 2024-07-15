@@ -86,6 +86,7 @@ local memview = js.newDataView(membuf)
 ffi.memview = memview
 
 local memUsedSoFar = 0
+function ffi.getMemUsedSoFar() return memUsedSoFar end
 
 function ffi.memdump(from, len)
 	from = from or 0
@@ -1929,6 +1930,15 @@ function ffi.dataToArray(jsarrayctor, data, count)
 	end
 --DEBUG:print('ffi.dataToArray', jsarrayctor, data, count)
 	local addr = getAddr(data)
+	
+	-- i thought if you just let count be undefined then the js TypedArray lets it be unbound
+	-- but it's still complaining, so ...
+	if not count then
+--DEBUG:print('data type', 	toctypefromdata(data).name)
+		count = (memUsedSoFar - addr) / toctypefromdata(data).baseType.size
+--DEBUG:print('redefining count', count)
+	end
+
 	local result = jsarrayctor(membuf, addr, count)
 	return result
 end
