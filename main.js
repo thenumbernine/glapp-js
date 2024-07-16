@@ -10,16 +10,16 @@ const runargs = ((args) => {
 --run('glapp/tests', 'test_tex.lua')			-- WORKS only gles calls
 --run('rule110', 'rule110.lua')					-- WORKS
 --run('line-integral-convolution', 'run.lua')	-- WORKS
---run('n-points', 'run.lua')					-- works but fails for indexes of type short or int ...
---run('n-points', 'run_orbit.lua')
+--run('geographic-charts', 'test.lua')			-- WORKS but indexed geometry could help it
+--run('n-points', 'run.lua')					-- WORKS but fails for indexes of type short or int ...
+--run('prime-spiral', 'run.lua')				-- WORKS but needs zoom
+--run('n-points', 'run_orbit.lua')				-- todo
 --run('seashell', 'run.lua')					-- very slow (didn't finish)
 --run('SphericalHarmonicGraph', 'run.lua')		-- very slow (didn't finish)
---run('geographic-charts', 'test.lua')			-- very slow
 --run('glapp/tests', 'test.lua')				-- fails, glmatrixmode
 --run('glapp/tests', 'minimal.lua')
 --run('glapp/tests', 'pointtest.lua')
 --run('glapp/tests', 'info.lua')
---run('prime-spiral', 'run.lua')				-- fails, glColor3f
 --run('sphere-grid', 'run.lua')
 --run('metric', 'run.lua')
 --run('sand-attack', 'run.lua', 'skipCustomFont', 'gl=OpenGLES3')
@@ -228,6 +228,7 @@ await Promise.all([
 	addLuaDir('symmath/tensor', ['Chart.lua', 'DenseCache.lua', 'dual.lua', 'Index.lua', 'KronecherDelta.lua', 'LeviCivita.lua', 'Manifold.lua', 'Ref.lua', 'symbols.lua', 'wedge.lua']),
 	addLuaDir('symmath/visitor', ['DistributeDivision.lua', 'Expand.lua', 'ExpandPolynomial.lua', 'FactorDivision.lua', 'Factor.lua', 'Prune.lua', 'Tidy.lua', 'Visitor.lua']),
 	addLuaDir('geographic-charts', ['code.lua', 'geographic-charts.lua', 'test.lua', 'earth-color.png']),
+	addLuaDir('prime-spiral', ['run.lua', 'pi']),
 ]).catch(e => { throw e; });
 
 lua.global.set('js', {
