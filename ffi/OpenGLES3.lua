@@ -1197,13 +1197,9 @@ function gl.glTexSubImage2D(target, level, xoffset, yoffset, width, height, form
 	return jsgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
 end
 
-function gl.glTexParameterf(...)
-	return jsgl:texParameterf(...)
-end
-
-function gl.glActiveTexture(...)
-	return jsgl:activeTexture(...)
-end
+function gl.glTexParameterf(...) return jsgl:texParameterf(...) end
+function gl.glActiveTexture(...) return jsgl:activeTexture(...) end
+function gl.glGenerateMipmap(...) return jsgl:generateMipmap(...) end
 
 local createFramebuffer = res:makeCreate'createFramebuffer'
 function gl.glGenFramebuffers(n, framebuffers)
@@ -1220,9 +1216,7 @@ function gl.glFramebufferTexture2D(target, attachment, textarget, texture, level
 	return jsgl:framebufferTexture2D(target, attachment, textarget, getObj(texture), level)
 end
 
-function gl.glCheckFramebufferStatus(...)
-	return jsgl:checkFramebufferStatus(...)
-end
+function gl.glCheckFramebufferStatus(...) return jsgl:checkFramebufferStatus(...) end
 
 local createRenderbuffer = res:makeCreate'createRenderbuffer'
 function gl.glGenRenderbuffers(n, renderbuffers)
