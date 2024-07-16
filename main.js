@@ -237,6 +237,7 @@ lua.global.set('js', {
 	loadImage : fn => {
 		if (fn.substr(0,1) != '/') fn = FS.cwd() + '/' + fn;
 console.log('loadImage', fn);
+		if (fn.substr(0,1) == '/') fn = fn.substr(1);
 		const img = imageCache[fn];
 		if (!img) throw "you need to decode up front file "+fn;
 		return img;
