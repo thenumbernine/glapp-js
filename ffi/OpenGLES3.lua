@@ -1129,7 +1129,7 @@ function gl.glBufferData(target, size, data, usage)
 		data = ffi.dataToArray('Uint16Array', data, size >> 1)
 print('glBufferData', target, data.BYTES_PER_ELEMENT, usage)
 		return jsgl:bufferData(target, data, usage)
---]]	
+--]]
 	else
 		data = ffi.dataToArray('Uint8Array', data, size)
 		return jsgl:bufferData(target, data, usage)
@@ -1139,13 +1139,13 @@ end
 function gl.glBufferSubData(target, offset, size, data)
 	if data == ffi.null or data == nil then
 		return jsgl:bufferSubData(target, offset)
---[[ does webgl drawElements require that the data uploaded came from the correct TypedArray type?  that'd be ridiculous, and how can I track it?	
+--[[ does webgl drawElements require that the data uploaded came from the correct TypedArray type?  that'd be ridiculous, and how can I track it?
 	elseif target == gl.GL_ELEMENT_ARRAY_BUFFER then
 --print('glBufferSubData', target, offset, size, data)
 		data = ffi.dataToArray('Uint16Array', data, size >> 1)
 print('glBufferSubData', target, offset, data.BYTES_PER_ELEMENT)
 		return jsgl:bufferSubData(target, offset, data)
---]]	
+--]]
 	else
 		data = ffi.dataToArray('Uint8Array', data, size)
 		return jsgl:bufferSubData(target, offset, data)

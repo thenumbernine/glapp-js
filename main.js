@@ -6,13 +6,13 @@ const runfile = urlparams.get('file') || 'test_tex.lua';
 --run('glapp/tests', 'test_es.lua')			-- WORKS gl objs
 --run('glapp/tests', 'test_es2.lua')		-- WORKS only gles calls
 --run('glapp/tests', 'test_tex.lua')		-- WORKS only gles calls
---run('rule110', 'rule110.lua')					-- WORKS
+--run('rule110', 'rule110.lua')				-- WORKS
 --run('glapp/tests', 'test.lua')			-- fails, glmatrixmode
 --run('glapp/tests', 'minimal.lua')
 --run('glapp/tests', 'pointtest.lua')
 --run('glapp/tests', 'info.lua')
 --run('prime-spiral', 'run.lua')				-- fails, glColor3f
---run('n-points', 'run.lua')					-- indexed draws are messed up
+--run('n-points', 'run.lua')					-- fails for indexes of type short or int ...
 --run('n-points', 'run_orbit.lua')
 --run('line-integral-convolution', 'run.lua')	-- fails, fbo completeness problems
 --run('seashell', 'run.lua')					-- needs complex number support
