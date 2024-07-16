@@ -6,9 +6,8 @@ _G.arg = {select(3, ...)}
 
 package.path = table.concat({
 	'./?.lua',
-	'/?.lua',		-- glapp-js files are mounted in root
-	'/lua/?.lua',		-- everything else is in the lua subdir ... don't need anymore? it was only for fengari compat, but fengari's filesystem is missing so i need to replace it with emscripten's eventually ...
-	'/lua/?/?.lua',
+	'/?.lua',
+	'/?/?.lua',
 }, ';')
 
 -- this modifies some of the _G functions so it should go first
@@ -252,8 +251,7 @@ end
 -- or maybe I should shim that function as well ...
 local sdl = require 'ffi.sdl'
 local function run(path, file, ...)
-	package.path = package.path .. ';/lua/'..path..'/?.lua'
-	local fn = '/lua/'..path..'/'..file
+	local fn = '/'..path..'/'..file
 	arg[0] = fn
 	--dofile(fn)	-- doesn't handle ...
 	assert(loadfile(fn))(table.unpack(arg))

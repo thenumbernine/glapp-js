@@ -64,6 +64,8 @@ window.lua = lua;
 
 // i hate javascript
 const FS = lua.cmodule.module.FS;
+FS.chdir('/');
+window.FS = FS;
 
 // ok so wasmoon and javascript combined their tardpowers to make image loading at runtime impossible
 // this is thanks to wasmoon callbacks being retarded and not allowing async await, and javascript not allowing await in non-async functions (which is retarded)
@@ -176,22 +178,22 @@ const mountFile = (filePath, luaPath) => {
 }
 
 // TODO autogen this remotely ... like i did in lua.vm-util.js.lua
-const addDir = (fromPath, toPath, files) =>
+const addFromToDir = (fromPath, toPath, files) =>
 	Promise.all(files.map(f => mountFile(fromPath+'/'+f, toPath+'/'+f)));
 
-const addLuaDir = (path, files) => addDir('/lua/' + path, 'lua/' + path, files);
+const addLuaDir = (path, files) => addFromToDir('/lua/'+path, path, files);
 
-//await mountFile('/lua/bit/bit.lua', 'lua/bit/bit.lua');
+//await mountFile('/bit/bit.lua', 'bit/bit.lua');
 // in a smart future, this would be executed upon callback of any filesystem read event to see if the file is there, and wait and load, or cache the failure ...
 // and in a smarter future, you'd do a first pass of running the app to capture all associated files to preload ...
 // but for now just load everything
 await Promise.all([
-	addDir('.', '.', ['ffi.lua', 'init-jslua-bridge.lua']),
-	addDir('ffi', 'ffi', ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']),
-	addDir('ffi/c', 'ffi/c', ['errno.lua', 'stdlib.lua', 'string.lua']),
-	addDir('ffi/c/sys', 'ffi/c/sys', ['time.lua']),
-	addDir('ffi/cpp', 'ffi/cpp', ['vector-lua.lua', 'vector.lua']),
-	addDir('ffi/gcwrapper', 'ffi/gcwrapper', ['gcwrapper.lua']),
+	addFromToDir('.', '.', ['ffi.lua', 'init-jslua-bridge.lua']),
+	addFromToDir('ffi', 'ffi', ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']),
+	addFromToDir('ffi/c', 'ffi/c', ['errno.lua', 'stdlib.lua', 'string.lua']),
+	addFromToDir('ffi/c/sys', 'ffi/c/sys', ['time.lua']),
+	addFromToDir('ffi/cpp', 'ffi/cpp', ['vector-lua.lua', 'vector.lua']),
+	addFromToDir('ffi/gcwrapper', 'ffi/gcwrapper', ['gcwrapper.lua']),
 
 	addLuaDir('bit', ['bit.lua']),
 	addLuaDir('template', ['output.lua', 'showcode.lua', 'template.lua']),
@@ -254,7 +256,7 @@ console.log('loadImage', fn);
 });
 
 // ofc you can't push extra args into the call, i guess you only can via global assignments?
-FS.chdir('/lua/'+rundir);
+FS.chdir(rundir);
 lua.doString(`
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
 	assert(loadfile'/init-jslua-bridge.lua')(
