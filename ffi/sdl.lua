@@ -1212,6 +1212,8 @@ local function xpwrap(cb)
 	end
 end
 
+local jsKeyCodeToSDLKeySym = {}
+
 function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 --DEBUG:print('SDL_CreateWindow', title, x, y, w, h, flags)
 	local window = js.global
@@ -1257,7 +1259,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		sdlev[0].key.state = 0
 		sdlev[0].key['repeat'] = jsev['repeat'] and 1 or 0
 		sdlev[0].key.keysym.scancode = jsev.code
-		sdlev[0].key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.keyCode]
+		sdlev[0].key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.keyCode] or jsev.keyCode
 		sdlev[0].key.keysym.mod = jsKeyEventMod(jsev)
 	end))
 	window:addEventListener('keydown', xpwrap(function(jsev)
@@ -1268,7 +1270,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		sdlev[0].key.state = 1
 		sdlev[0].key['repeat'] = jsev['repeat'] and 1 or 0
 		sdlev[0].key.keysym.scancode = jsev.code
-		sdlev[0].key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.keyCode]
+		sdlev[0].key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.keyCode] or jsev.keyCode
 		sdlev[0].key.keysym.mod = jsKeyEventMod(jsev)
 	end))
 
