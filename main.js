@@ -214,6 +214,15 @@ lua.global.set('js', {
 	newnamed : (cl, ...args) => new window[cl](...args),
 	dateNow : () => Date.now(),
 	loadImage : fn => imageCache[fn] || (() => { throw "you need to decode up front file "+fn; })(),
+
+	fixYourShitWASMOON : (gl) => {
+		// these calls didn't work from within Lua, but they work fine here.
+		gl.getExtension('OES_element_index_uint');
+		gl.getExtension('OES_standard_derivatives');
+		gl.getExtension('OES_texture_float');	//needed for webgl framebuffer+rgba32f
+		gl.getExtension('OES_texture_float_linear');
+		gl.getExtension('EXT_color_buffer_float');	//needed for webgl2 framebuffer+rgba32f
+	},
 });
 
 // ofc you can't push extra args into the call, i guess you only can via global assignments?

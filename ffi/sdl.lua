@@ -1186,10 +1186,9 @@ local function setMouseFlags(jsbuttons)
 	mouseButtonFlags = 0
 	-- https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/buttons
 	-- this says 1 = primary, 2 = right, 4 = middle
-	if jsbuttons & 1 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_LMASK end
-	if jsbuttons & 2 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_RMASK end
-	if jsbuttons & 4 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_MMASK end
-	return mouseButtonFlags
+	if jsbuttons & 1 ~= 0 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_LMASK end
+	if jsbuttons & 2 ~= 0 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_RMASK end
+	if jsbuttons & 4 ~= 0 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_MMASK end
 end
 
 -- I like fengari so much
@@ -1255,7 +1254,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	end))
 	window:addEventListener('mousedown', xpwrap(function(jsev)
 		setMousePos(jsev.pageX, jsev.pageY)
-		mouseButtonFlags = setMouseFlags(jsev.buttons)
+		setMouseFlags(jsev.buttons)
 
 		local sdlbutton
 		-- https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button
@@ -1281,7 +1280,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	end))
 	window:addEventListener('mouseup', xpwrap(function(jsev)
 		setMousePos(jsev.pageX, jsev.pageY)
-		mouseButtonFlags = setMouseFlags(jsev.buttons)
+		setMouseFlags(jsev.buttons)
 
 		local sdlev = eventQueue:emplace_back()
 		sdlev[0].type = sdl.SDL_MOUSEBUTTONUP
@@ -1316,12 +1315,12 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 
 	return ffi.new'SDL_Window'
 end
-function sdl.SDL_DestroyWindow(window) return 0 end
-function sdl.SDL_SetWindowSize(window, width, height) end
+function sdl.SDL_DestroyWindow(sdlWindow) return 0 end
+function sdl.SDL_SetWindowSize(sdlWindow, width, height) end
 
-local gl	-- this is the webgl gl-context object (not the luajit gles lib wrapper object)
+local jsgl
 -- oof, this returns on-stack a SDL_GLContext ... how to handle that ...
-function sdl.SDL_GL_CreateContext(window)
+function sdl.SDL_GL_CreateContext(sdlWindow)
 	local contextName
 	local webGLNames = {
 		'webgl2',
@@ -1331,22 +1330,37 @@ function sdl.SDL_GL_CreateContext(window)
 	for i,name in ipairs(webGLNames) do
 		xpcall(function()
 --DEBUG:print('trying to init gl context of type', name)
-			gl = canvas:getContext(name)
+			jsgl = canvas:getContext(name)
 			contextName = name
 		end, function(err)
 			print('canvas:getContext('..name..') failed with exception '..err)
 		end)
-		if gl then
+		if jsgl then
 --DEBUG:print('...got gl')
 			break
 		end
 	end
-	if not gl then
+	if not jsgl then
 		error "Couldn't initialize WebGL =("
 	end
 
 	-- behind the scenes hack
-	require 'gl'.setJSGL(gl)
+	require 'gl'.setJSGL(jsgl)
+
+	-- get exts we want to use
+	-- TypeError: Cannot read properties of null (reading 'then')
+	-- wtf "then" ?  wasmoon...
+	--[[
+	jsgl:getExtension'OES_element_index_uint'
+	jsgl:getExtension'OES_standard_derivatives'
+	jsgl:getExtension'OES_texture_float'	--needed for webgl framebuffer+rgba32f
+	jsgl:getExtension'OES_texture_float_linear'
+	jsgl:getExtension'EXT_color_buffer_float'	--needed for webgl2 framebuffer+rgba32f
+	--]]
+	-- or I can just call them from JS and it works
+	js.fixYourShitWASMOON(jsgl)
+
+js.global.gl = jsgl	-- debugging
 
 	coroutine.yield(sdl.mainthread)
 
@@ -1376,9 +1390,9 @@ function sdl.SDL_GL_SwapWindow(window)
 	-- and a new frame loop starts ...
 
 	-- jump through webgl bs
-	gl:colorMask(false, false, false, true)
-	gl:clear(gl.COLOR_BUFFER_BIT)
-	gl:colorMask(true, true, true, true)
+	jsgl:colorMask(false, false, false, true)
+	jsgl:clear(jsgl.COLOR_BUFFER_BIT)
+	jsgl:colorMask(true, true, true, true)
 end
 
 -- returns the # of events

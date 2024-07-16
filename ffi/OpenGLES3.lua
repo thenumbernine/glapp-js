@@ -899,7 +899,15 @@ function gl.glDrawBuffers(n, bufs)
 end
 
 function gl.glDrawElements(mode, count, type, indices)
-	return jsgl:drawElements(mode, count, type, tonumber(ffi.cast('intptr_t', indices)))
+	indices = tonumber(ffi.cast('intptr_t', ffi.cast('void*', indices)))
+	return jsgl:drawElements(mode, count, type, indices)
+end
+
+-- I added this to circumvent webgl drawElements errors but it is even more touchy
+function gl.glDrawRangeElements(mode, indexStart, indexEnd, count, type, indices)
+	indices = tonumber(ffi.cast('intptr_t', ffi.cast('void*', indices)))
+--print('glDrawRangeElements', mode, indexStart, indexEnd, count, type, indices)
+	return jsgl:drawRangeElements(mode, indexStart, indexEnd, count, type, indices)
 end
 
 gl.glCreateProgram = res:makeCreate'createProgram'
@@ -999,7 +1007,7 @@ for n=1,4 do
 		do
 			local glname = 'glUniform'..n..t..'v'
 			local webglname = 'uniform'..n..t..'v'
-			local len = n
+			local len = n	-- js typed arrays use # elements, not byte size ...
 			local jsarrayctor = t == 'f' and 'Float32Array' or 'Int32Array'
 			gl[glname] = function(location, count, value)
 				assert(count == 1, "TODO")
@@ -1115,16 +1123,32 @@ end
 function gl.glBufferData(target, size, data, usage)
 	if data == ffi.null or data == nil then
 		return jsgl:bufferData(target, size, usage)
+-- [[
+	elseif target == gl.GL_ELEMENT_ARRAY_BUFFER then
+--print('glBufferData', target, size, data, usage)
+		data = ffi.dataToArray('Uint16Array', data, size >> 1)
+print('glBufferData', target, data.BYTES_PER_ELEMENT, usage)
+		return jsgl:bufferData(target, data, usage)
+--]]	
 	else
-		return jsgl:bufferData(target, ffi.dataToArray('Uint8Array', data, size), usage)
+		data = ffi.dataToArray('Uint8Array', data, size)
+		return jsgl:bufferData(target, data, usage)
 	end
 end
 
 function gl.glBufferSubData(target, offset, size, data)
 	if data == ffi.null or data == nil then
 		return jsgl:bufferSubData(target, offset)
+-- [[ does webgl drawElements require that the data uploaded came from the correct TypedArray type?  that'd be ridiculous, and how can I track it?	
+	elseif target == gl.GL_ELEMENT_ARRAY_BUFFER then
+--print('glBufferSubData', target, offset, size, data)
+		data = ffi.dataToArray('Uint16Array', data, size >> 1)
+print('glBufferSubData', target, offset, data.BYTES_PER_ELEMENT)
+		return jsgl:bufferSubData(target, offset, data)
+--]]	
 	else
-		return jsgl:bufferSubData(target, offset, ffi.dataToArray('Uint8Array', data, size))
+		data = ffi.dataToArray('Uint8Array', data, size)
+		return jsgl:bufferSubData(target, offset, data)
 	end
 end
 

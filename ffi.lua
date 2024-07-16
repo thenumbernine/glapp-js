@@ -1933,8 +1933,12 @@ local function cdataToHex(d)
 end
 
 local jsElemSizeForTypedArrayName = {
+	Float64Array = 8,
 	Float32Array = 4,
 	Int32Array = 4,
+	Uint32Array = 4,
+	Int16Array = 2,
+	Uint16Array = 2,
 }
 
 -- count is in number of jsarray elements, so divide bytes by sizeof whatever that is
@@ -1957,8 +1961,8 @@ function ffi.dataToArray(jsArrayClassName, data, count)
 	-- but it's still complaining, so ...
 	if not count then
 		count = (memUsedSoFar - addr) / jsarrayElemSize
---DEBUG:print('redefining count', count)
 	end
+--print('count', count)
 
 	local result = js.newnamed(jsArrayClassName, membuf, addr, count)
 	return result
