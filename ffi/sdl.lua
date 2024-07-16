@@ -1237,6 +1237,12 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	--also call resize after init is done
 	window:setTimeout(resize, 0)
 
+	-- i'm not capturing right-clicks, and idk why ...
+	window:addEventListener('contextmenu', function(jsev)
+		jsev:preventDefault()
+		return false
+	end)
+
 	window:addEventListener('mousemove', xpwrap(function(jsev)
 		setMousePos(jsev.pageX, jsev.pageY)
 
