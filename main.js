@@ -12,7 +12,7 @@ const runargs = ((args) => {
 --run('line-integral-convolution', 'run.lua')	-- WORKS
 --run('geographic-charts', 'test.lua')			-- WORKS but indexed geometry could help it
 --run('n-points', 'run.lua')					-- WORKS but fails for indexes of type short or int ...
---run('prime-spiral', 'run.lua')				-- WORKS but needs zoom
+--run('prime-spiral', 'run.lua')				-- WORKS but needs tracking shift for key events for it to work ...
 --run('n-points', 'run_orbit.lua')				-- todo
 --run('seashell', 'run.lua')					-- very slow (didn't finish)
 --run('SphericalHarmonicGraph', 'run.lua')		-- very slow (didn't finish)
@@ -23,6 +23,32 @@ const runargs = ((args) => {
 --run('sphere-grid', 'run.lua')
 --run('metric', 'run.lua')
 --run('sand-attack', 'run.lua', 'skipCustomFont', 'gl=OpenGLES3')
+TODO fibonacci-modulo
+TODO mesh viewer
+TODO chess on manifold
+TODO chompman
+TODO tetris-attack
+TODO dumpworld/zeta2d
+TODO farmgame
+TODO imgui library <-> html shim layer
+TODO hydro-cl
+TODO zeta3d / zetatron 3d metroidvania voxel
+TODO lambda-cdm
+TODO nbody-gpu
+TODO waves-in-curved space ... ?
+TODO celestial-gravitomagnetics ... ?
+TODO seismograph-stations ... ?
+TODO earth-magnetic-field ... ?
+TODO gravitational-waves
+TODO hydro-cl
+TODO cdfmesh
+TODO VectorFieldDecomposition ... ?
+TODO geo-center-earth ... ?
+TODO surface-from-connection
+TODO asteroids3d
+TODO tacticslua
+TODO inspiration engine
+TODO ... solarsystem graph ... takes GBs of data ...
 */
 
 async function require(path) {
