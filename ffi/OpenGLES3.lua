@@ -1237,4 +1237,8 @@ end
 
 function gl.glRenderbufferStorage(...) return jsgl:renderbufferStorage(...) end
 
+function gl.glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer)
+	return jsgl:framebufferRenderbuffer(target, attachment, renderbuffertarget, getObj(renderbuffer))
+end
+
 return gl
