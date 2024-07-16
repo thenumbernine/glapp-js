@@ -1552,9 +1552,14 @@ end
 
 function CData:add(index)
 	local mt = debug.getmetatable(self)
+	local ctype = mt.type
+	local typeSize = ctype.size
+	if ctype.arrayCount then	-- implicit convert to pointer before add
+		typeSize = ctype.baseType.size
+	end
 	return CData(
-		mt.type,
-		mt.addr + index * mt.type.size
+		ctype,
+		mt.addr + index * typeSize
 	)
 end
 

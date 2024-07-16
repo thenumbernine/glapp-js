@@ -23,6 +23,8 @@ local ig = setmetatable({}, {
 
 function ig.igInputInt() end
 function ig.igInputFloat() end
+function ig.igSliderFloat() end
+function ig.igText() end
 function ig.igButton() end
 function ig.igSameLine() end
 function ig.igNewFrame() end
