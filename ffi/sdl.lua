@@ -1191,6 +1191,16 @@ local function setMouseFlags(jsbuttons)
 	if jsbuttons & 4 ~= 0 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_MMASK end
 end
 
+local function jsKeyEventMod(jsev)
+	local mod = 0
+	-- TODO SDL KMOD uses LSHIFT and RSHIFT but browsers only care about SHIFT so ... I'd have to track them myself ...
+	if jsev.shiftKey then mod = mod | sdl.KMOD_SHIFT end
+	if jsev.ctrlKey then mod = mod | sdl.KMOD_CTRL end
+	if jsev.altKey then mod = mod | sdl.KMOD_ALT end
+	if jsev.metaKey then mod = mod | sdl.KMOD_META end
+	return mod
+end
+
 -- I like fengari so much
 -- wasmoon doesn't give you stack traces for errors within JS callbacks
 local function xpwrap(cb)
@@ -1229,6 +1239,8 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		-- push resize event
 		local sdlev = eventQueue:emplace_back()
 		sdlev[0].type = sdl.SDL_WINDOWEVENT
+		sdlev[0].window.timestamp = os.time()
+		sdlev[0].window.windowID = 0	-- TODO SDL windowID
 		sdlev[0].window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
 		sdlev[0].window.data1 = window.innerWidth
 		sdlev[0].window.data2 = window.innerHeight
@@ -1236,6 +1248,29 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	window:addEventListener('resize', xpwrap(resize))
 	--also call resize after init is done
 	window:setTimeout(resize, 0)
+
+	window:addEventListener('keyup', xpwrap(function(jsev)
+		local sdlev = eventQueue:emplace_back()
+		sdlev[0].type = sdl.SDL_KEYUP
+		sdlev[0].key.timestamp = os.time()
+		sdlev[0].key.windowID = 0	-- TODO SDL windowID
+		sdlev[0].key.state = 0
+		sdlev[0].key['repeat'] = jsev['repeat'] and 1 or 0
+		sdlev[0].key.keysym.scancode = jsev.code
+		sdlev[0].key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.keyCode]
+		sdlev[0].key.keysym.mod = jsKeyEventMod(jsev)
+	end))
+	window:addEventListener('keydown', xpwrap(function(jsev)
+		local sdlev = eventQueue:emplace_back()
+		sdlev[0].type = sdl.SDL_KEYDOWN
+		sdlev[0].key.timestamp = os.time()
+		sdlev[0].key.windowID = 0	-- TODO SDL windowID
+		sdlev[0].key.state = 1
+		sdlev[0].key['repeat'] = jsev['repeat'] and 1 or 0
+		sdlev[0].key.keysym.scancode = jsev.code
+		sdlev[0].key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.keyCode]
+		sdlev[0].key.keysym.mod = jsKeyEventMod(jsev)
+	end))
 
 	-- i'm not capturing right-clicks, and idk why ...
 	window:addEventListener('contextmenu', function(jsev)

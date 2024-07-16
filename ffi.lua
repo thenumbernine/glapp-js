@@ -1558,7 +1558,7 @@ function CData:add(index)
 		typeSize = ctype.baseType.size
 	end
 	return CData(
-		ctype,
+		ctype,			-- TODO this could still be a giant array.  but if we ptr-cast it then we need to save the ptr somewhere ... if it's an array wes hould instead do a single-elem array, buthonestly we really should do a reference ...
 		mt.addr + index * typeSize
 	)
 end
