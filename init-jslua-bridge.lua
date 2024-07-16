@@ -1,7 +1,7 @@
 local rundir, runfile = ...
 -- ok this has become the launcer of everything
 -- Lua 5.3
--- TODO move this into main.js 
+-- TODO move this into main.js
 
 package.path = table.concat({
 	'./?.lua',
@@ -194,20 +194,44 @@ document.body:prepend(canvas)
 -- shim layer stuff
 package.loaded['audio.currentsystem'] = 'null'
 
-local pngLoaderCwd	-- for image loader and probably a few other things ... TODO does FS do this?
+-- shim complex to not try to use ffi complex types (until I implement them)
+do
+	local pushffi = ffi
+	_G.ffi = nil
+	package.loaded.ffi = nil
+	local pushreq = require
+	require = function(fn, ...)
+		if fn == 'ffi' then return false, "nope" end
+		return pushreq(fn, ...)
+	end
+
+	require 'complex'
+
+	_G.ffi = pushffi
+	require = pushreq
+	package.loaded.ffi = pushffi
+end
+
+-- shim layer canvas loader
+local imageLoaderCwd	-- for image loader and probably a few other things ... TODO does FS do this?
 do
 	local class = require 'ext.class'
 	local path = require 'ext.path'
 
-	local PNGLoader = class()
-	package.loaded['image.luajit.png'] = PNGLoader
+	local CanvasImageLoader = class()
+	package.loaded['image.luajit.png'] = CanvasImageLoader
+	package.loaded['image.luajit.jpeg'] = CanvasImageLoader
+	package.loaded['image.luajit.bmp'] = CanvasImageLoader
+	package.loaded['image.luajit.gif'] = CanvasImageLoader
+	package.loaded['image.luajit.tiff'] = CanvasImageLoader
+	--package.loaded['image.luajit.fits'] = CanvasImageLoader	-- I'm pretty sure canvases can't load FITS files
 	local Image = require 'image'	-- don't require until after setting image.luajit.png
 
 	-- ... though it could be, right?
-	function PNGLoader:save(args) error("save not supported") end
+	function CanvasImageLoader:save(args) error("save not supported") end
 
-	function PNGLoader:load(fn)
-		local jssrc = js.loadImage(path(pngLoaderCwd .. '/' .. fn).path)
+	function CanvasImageLoader:load(fn)
+		local jssrc = js.loadImage(path(imageLoaderCwd .. '/' .. fn).path)
 		local len = jssrc.buffer.byteLength
 		-- copy from javascript Uint8Array to our ffi memory
 		local dstbuf = ffi.new('char[?]', len)
@@ -228,7 +252,7 @@ end
 local sdl = require 'ffi.sdl'
 local function run(path, file, ...)
 	package.path = package.path .. ';/lua/'..path..'/?.lua'
-	pngLoaderCwd = 'lua/'..path
+	imageLoaderCwd = 'lua/'..path
 	local fn = '/lua/'..path..'/'..file
 	arg = {[0]=fn, ...}	-- cmdline global
 	--dofile(fn)	-- doesn't handle ...

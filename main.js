@@ -3,22 +3,22 @@ const rundir = urlparams.get('dir') || 'glapp/tests';
 const runfile = urlparams.get('file') || 'test_tex.lua';
 
 /* progress so far
---run('glapp/tests', 'test_es.lua')			-- WORKS gl objs
---run('glapp/tests', 'test_es2.lua')		-- WORKS only gles calls
---run('glapp/tests', 'test_tex.lua')		-- WORKS only gles calls
---run('rule110', 'rule110.lua')				-- WORKS
+--run('glapp/tests', 'test_es.lua')				-- WORKS gl objs
+--run('glapp/tests', 'test_es2.lua')			-- WORKS only gles calls
+--run('glapp/tests', 'test_tex.lua')			-- WORKS only gles calls
+--run('rule110', 'rule110.lua')					-- WORKS
 --run('line-integral-convolution', 'run.lua')	-- WORKS
---run('glapp/tests', 'test.lua')			-- fails, glmatrixmode
+--run('n-points', 'run.lua')					-- fails for indexes of type short or int ...
+--run('seashell', 'run.lua')					-- needs complex number support
+--run('SphericalHarmonicGraph', 'run.lua')		-- needs complex
+--run('geographic-charts', 'test.lua')			-- needs complex
+--run('glapp/tests', 'test.lua')				-- fails, glmatrixmode
 --run('glapp/tests', 'minimal.lua')
 --run('glapp/tests', 'pointtest.lua')
 --run('glapp/tests', 'info.lua')
 --run('prime-spiral', 'run.lua')				-- fails, glColor3f
---run('n-points', 'run.lua')					-- fails for indexes of type short or int ...
 --run('n-points', 'run_orbit.lua')
---run('seashell', 'run.lua')					-- needs complex number support
---run('SphericalHarmonicGraph', 'run.lua')		-- needs complex
 --run('sphere-grid', 'run.lua')
---run('geographic-charts', 'test.lua')			-- needs complex
 --run('metric', 'run.lua')
 --run('sand-attack', 'run.lua', 'skipCustomFont', 'gl=OpenGLES3')
 */
@@ -67,7 +67,7 @@ const FS = lua.cmodule.module.FS;
 // this is thanks to wasmoon callbacks being retarded and not allowing async await, and javascript not allowing await in non-async functions (which is retarded)
 // so I've got to preload ALL IMAGES just in case they're needed.
 const imageCache = {};
-const preloadImage = async fn => {
+const preloadImage = async (fn, ext) => {
 	try {
 //console.log('preloadImage', fn);
 		// why is the world so retarded
@@ -75,7 +75,7 @@ const preloadImage = async fn => {
 		const fileBlob = FS.readFile(fn, {encoding:'binary'});
 if (fileBlob.constructor != Uint8Array) throw 'expected Uint8Array';
 		// TODO detect mime image type from filename
-		const blobUrl = URL.createObjectURL(new Blob([new Uint8Array(fileBlob)], {'type':'image/png'}));
+		const blobUrl = URL.createObjectURL(new Blob([new Uint8Array(fileBlob)], {'type':'image/'+ext}));
 		const img = new Image();
 		document.body.prepend(img);
 		img.style.display = 'none';
@@ -160,8 +160,15 @@ const mountFile = (filePath, luaPath) => {
 		FS.writeFile(luaPath, fileContent, {encoding:'binary'});
 
 		// and now the images separately, because javascript and wasmoon is retarded
-		if (luaPath.substr(-4) == '.png') {
-			return preloadImage(luaPath);
+		const ext = luaPath.split('.').pop();
+		if (ext == 'png' ||
+			ext == 'jpg' ||
+			ext == 'jpeg' ||
+			ext == 'gif' ||
+			ext == 'tiff' ||
+			ext == 'bmp'
+		) {
+			return preloadImage(luaPath, ext);
 		}
 	});
 }
@@ -203,6 +210,17 @@ await Promise.all([
 	addLuaDir('line-integral-convolution', ['run.lua']),
 	addLuaDir('rule110', ['rule110.lua']),
 	addLuaDir('n-points', ['run.lua', 'run_orbit.lua']),
+	addLuaDir('seashell', ['eqn.lua', 'run.lua']),
+	addLuaDir('complex', ['complex.lua']),
+	addLuaDir('bignumber', ['bignumber.lua', 'test.lua']),
+	addLuaDir('symmath', ['abs.lua', 'acosh.lua', 'acos.lua', 'Array.lua', 'asinh.lua', 'asin.lua', 'atan2.lua', 'atanh.lua', 'atan.lua', 'cbrt.lua', 'clone.lua', 'commutativeRemove.lua', 'conj.lua', 'Constant.lua', 'cosh.lua', 'cos.lua', 'Derivative.lua', 'distributeDivision.lua', 'eval.lua', 'expand.lua', 'exp.lua', 'Expression.lua', 'factorDivision.lua', 'factorial.lua', 'factorLinearSystem.lua', 'factor.lua', 'Function.lua', 'hasChild.lua', 'Heaviside.lua', 'Im.lua', 'Integral.lua', 'Invalid.lua', 'Limit.lua', 'log.lua', 'make_README.lua', 'map.lua', 'Matrix.lua', 'multiplicity.lua', 'namespace.lua', 'polyCoeffs.lua', 'polydiv.lua', 'prune.lua', 'Re.lua', 'replace.lua', 'setup.lua', 'simplify.lua', 'sinh.lua', 'sin.lua', 'solve.lua', 'sqrt.lua', 'Sum.lua', 'symmath.lua', 'tableCommutativeEqual.lua', 'tanh.lua', 'tan.lua', 'taylor.lua', 'Tensor.lua', 'tidy.lua', 'TotalDerivative.lua', 'UserFunction.lua', 'Variable.lua', 'Vector.lua', 'Wildcard.lua']),
+	addLuaDir('symmath/export', ['C.lua', 'Console.lua', 'Export.lua', 'GnuPlot.lua', 'JavaScript.lua', 'Language.lua', 'LaTeX.lua', 'Lua.lua', 'Mathematica.lua', 'MathJax.lua', 'MultiLine.lua', 'SingleLine.lua', 'SymMath.lua', 'Verbose.lua']),
+	addLuaDir('symmath/matrix', ['determinant.lua', 'diagonal.lua', 'eigen.lua', 'EulerAngles.lua', 'exp.lua', 'hermitian.lua', 'identity.lua', 'inverse.lua', 'nullspace.lua', 'pseudoInverse.lua', 'Rotation.lua', 'trace.lua', 'transpose.lua']),
+	addLuaDir('symmath/op', ['add.lua', 'approx.lua', 'Binary.lua', 'div.lua', 'eq.lua', 'Equation.lua', 'ge.lua', 'gt.lua', 'le.lua', 'lt.lua', 'mod.lua', 'mul.lua', 'ne.lua', 'pow.lua', 'sub.lua', 'unm.lua']),
+	addLuaDir('symmath/physics', ['diffgeom.lua', 'Faraday.lua', 'MatrixBasis.lua', 'StressEnergy.lua', 'units.lua']),
+	addLuaDir('symmath/set', ['Complex.lua', 'EvenInteger.lua', 'Integer.lua', 'Natural.lua', 'Null.lua', 'OddInteger.lua', 'RealInterval.lua', 'RealSubset.lua', 'Set.lua', 'sets.lua', 'Universal.lua']),
+	addLuaDir('symmath/tensor', ['Chart.lua', 'DenseCache.lua', 'dual.lua', 'Index.lua', 'KronecherDelta.lua', 'LeviCivita.lua', 'Manifold.lua', 'Ref.lua', 'symbols.lua', 'wedge.lua']),
+	addLuaDir('symmath/visitor', ['DistributeDivision.lua', 'Expand.lua', 'ExpandPolynomial.lua', 'FactorDivision.lua', 'Factor.lua', 'Prune.lua', 'Tidy.lua', 'Visitor.lua']),
 ]).catch(e => { throw e; });
 
 lua.global.set('js', {
