@@ -1,7 +1,9 @@
 const urlparams = new URLSearchParams(location.search);
 const rundir = urlparams.get('dir') || 'glapp/tests';
 const runfile = urlparams.get('file') || 'test_tex.lua';
-
+const runargs = ((args) => {
+	return args ? JSON.parse(args) : [];	// assume it's a JS array
+})(urlparams.get('args'));
 /* progress so far
 --run('glapp/tests', 'test_es.lua')				-- WORKS gl objs
 --run('glapp/tests', 'test_es2.lua')			-- WORKS only gles calls
@@ -247,7 +249,10 @@ lua.global.set('js', {
 lua.doString(`
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
 	assert(loadfile'init-jslua-bridge.lua')(
-		"`+rundir+`", "`+runfile+`"
+		`+[rundir, runfile]
+			.concat(runargs).map(arg => '"'+arg+'"')
+			.join(', ')
+		+`
 	)
 end, function(err)
 	print(err)

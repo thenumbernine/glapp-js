@@ -1,4 +1,5 @@
 local rundir, runfile = ...
+local arg = {select(3, ...)}
 -- ok this has become the launcer of everything
 -- Lua 5.3
 -- TODO move this into main.js
@@ -254,9 +255,9 @@ local function run(path, file, ...)
 	package.path = package.path .. ';/lua/'..path..'/?.lua'
 	imageLoaderCwd = 'lua/'..path
 	local fn = '/lua/'..path..'/'..file
-	arg = {[0]=fn, ...}	-- cmdline global
+	arg[0] = fn
 	--dofile(fn)	-- doesn't handle ...
-	assert(loadfile(fn))(...)
+	assert(loadfile(fn))(table.unpack(arg))
 end
 sdl.mainthread = coroutine.create(function()
 	run(rundir, runfile)
