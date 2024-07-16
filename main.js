@@ -10,16 +10,16 @@ const runargs = ((args) => {
 --run('glapp/tests', 'test_tex.lua')			-- WORKS only gles calls
 --run('rule110', 'rule110.lua')					-- WORKS
 --run('line-integral-convolution', 'run.lua')	-- WORKS
---run('n-points', 'run.lua')					-- fails for indexes of type short or int ...
---run('seashell', 'run.lua')					-- needs complex number support
---run('SphericalHarmonicGraph', 'run.lua')		-- needs complex
---run('geographic-charts', 'test.lua')			-- needs complex
+--run('n-points', 'run.lua')					-- works but fails for indexes of type short or int ...
+--run('n-points', 'run_orbit.lua')
+--run('seashell', 'run.lua')					-- very slow (didn't finish)
+--run('SphericalHarmonicGraph', 'run.lua')		-- very slow (didn't finish)
+--run('geographic-charts', 'test.lua')			-- very slow
 --run('glapp/tests', 'test.lua')				-- fails, glmatrixmode
 --run('glapp/tests', 'minimal.lua')
 --run('glapp/tests', 'pointtest.lua')
 --run('glapp/tests', 'info.lua')
 --run('prime-spiral', 'run.lua')				-- fails, glColor3f
---run('n-points', 'run_orbit.lua')
 --run('sphere-grid', 'run.lua')
 --run('metric', 'run.lua')
 --run('sand-attack', 'run.lua', 'skipCustomFont', 'gl=OpenGLES3')
@@ -199,6 +199,7 @@ await Promise.all([
 	addLuaDir('template', ['output.lua', 'showcode.lua', 'template.lua']),
 	addLuaDir('ext', ['assert.lua', 'class.lua', 'cmdline.lua', 'coroutine.lua', 'ctypes.lua', 'debug.lua', 'detect_ffi.lua', 'detect_lfs.lua', 'detect_os.lua', 'env.lua', 'ext.lua', 'fromlua.lua', 'gcmem.lua', 'io.lua', 'load.lua', 'math.lua', 'meta.lua', 'number.lua', 'op.lua', 'os.lua', 'path.lua', 'range.lua', 'reload.lua', 'require.lua', 'string.lua', 'table.lua', 'timer.lua', 'tolua.lua', 'xpcall.lua']),
 	addLuaDir('struct', ['struct.lua', 'test.lua']),
+	addLuaDir('modules', ['module.lua', 'modules.lua']),
 	addLuaDir('vec-ffi', ['box2f.lua', 'box2i.lua', 'box3f.lua', 'create_box.lua', 'create_plane.lua', 'create_quat.lua', 'create_vec2.lua', 'create_vec3.lua', 'create_vec.lua', 'plane2f.lua', 'plane3f.lua', 'quatd.lua', 'quatf.lua', 'suffix.lua', 'vec2b.lua', 'vec2d.lua', 'vec2f.lua', 'vec2i.lua', 'vec2s.lua', 'vec2sz.lua', 'vec2ub.lua', 'vec3b.lua', 'vec3d.lua', 'vec3f.lua', 'vec3i.lua', 'vec3s.lua', 'vec3sz.lua', 'vec3ub.lua', 'vec4b.lua', 'vec4d.lua', 'vec4f.lua', 'vec4i.lua', 'vec4ub.lua', 'vec-ffi.lua']),
 	addLuaDir('matrix', ['curl.lua', 'determinant.lua', 'div.lua', 'ffi.lua', 'grad.lua', 'helmholtzinv.lua', 'index.lua', 'inverse.lua', 'lapinv.lua', 'matrix.lua']),
 	addLuaDir('gl', ['arraybuffer.lua', 'attribute.lua', 'buffer.lua', 'call.lua', 'elementarraybuffer.lua', 'fbo.lua', 'geometry.lua', 'get.lua', 'gl.lua', 'gradienttex2d.lua', 'gradienttex.lua', 'hsvtex2d.lua', 'hsvtex.lua', 'intersect.lua', 'kernelprogram.lua', 'pingpong3d.lua', 'pingpong.lua', 'pixelpackbuffer.lua', 'pixelunpackbuffer.lua', 'program.lua', 'report.lua', 'sceneobject.lua', 'setup.lua', 'shader.lua', 'shaderstoragebuffer.lua', 'tex1d.lua', 'tex2d.lua', 'tex3d.lua', 'texbuffer.lua', 'texcube.lua', 'tex.lua', 'types.lua', 'vertexarray.lua']),
@@ -226,6 +227,7 @@ await Promise.all([
 	addLuaDir('symmath/set', ['Complex.lua', 'EvenInteger.lua', 'Integer.lua', 'Natural.lua', 'Null.lua', 'OddInteger.lua', 'RealInterval.lua', 'RealSubset.lua', 'Set.lua', 'sets.lua', 'Universal.lua']),
 	addLuaDir('symmath/tensor', ['Chart.lua', 'DenseCache.lua', 'dual.lua', 'Index.lua', 'KronecherDelta.lua', 'LeviCivita.lua', 'Manifold.lua', 'Ref.lua', 'symbols.lua', 'wedge.lua']),
 	addLuaDir('symmath/visitor', ['DistributeDivision.lua', 'Expand.lua', 'ExpandPolynomial.lua', 'FactorDivision.lua', 'Factor.lua', 'Prune.lua', 'Tidy.lua', 'Visitor.lua']),
+	addLuaDir('geographic-charts', ['code.lua', 'geographic-charts.lua', 'test.lua', 'earth-color.png']),
 ]).catch(e => { throw e; });
 
 lua.global.set('js', {
@@ -237,9 +239,10 @@ lua.global.set('js', {
 	newnamed : (cl, ...args) => new window[cl](...args),
 	dateNow : () => Date.now(),
 	loadImage : fn => {
-		if (fn.substr(0,1) != '/') fn = FS.cwd() + '/' + fn;
-console.log('loadImage', fn);
-		if (fn.substr(0,1) == '/') fn = fn.substr(1);
+		if (fn.substr(0,1) != '/') {
+			fn = FS.cwd() + '/' + fn;
+			if (fn.substr(0,1) == '/') fn = fn.substr(1);
+		}
 		const img = imageCache[fn];
 		if (!img) throw "you need to decode up front file "+fn;
 		return img;
