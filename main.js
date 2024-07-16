@@ -212,7 +212,8 @@ await Promise.all([
 	addLuaDir('line-integral-convolution', ['run.lua']),
 	addLuaDir('rule110', ['rule110.lua']),
 	addLuaDir('n-points', ['run.lua', 'run_orbit.lua']),
-	addLuaDir('seashell', ['eqn.lua', 'run.lua']),
+	addLuaDir('seashell', ['eqn.lua', 'run.lua', 'cached-eqns.glsl']),
+	addLuaDir('seashell/cloudy', ['bluecloud_bk.jpg', 'bluecloud_dn.jpg', 'bluecloud_ft.jpg', 'bluecloud_lf.jpg', 'bluecloud_rt.jpg', 'bluecloud_up.jpg', 'browncloud_bk.jpg', 'browncloud_dn.jpg', 'browncloud_ft.jpg', 'browncloud_lf.jpg', 'browncloud_rt.jpg', 'browncloud_up.jpg', 'graycloud_bk.jpg', 'graycloud_dn.jpg', 'graycloud_ft.jpg', 'graycloud_lf.jpg', 'graycloud_rt.jpg', 'graycloud_up.jpg', 'yellowcloud_bk.jpg', 'yellowcloud_dn.jpg', 'yellowcloud_ft.jpg', 'yellowcloud_lf.jpg', 'yellowcloud_rt.jpg', 'yellowcloud_up.jpg']),
 	addLuaDir('complex', ['complex.lua']),
 	addLuaDir('bignumber', ['bignumber.lua', 'test.lua']),
 	addLuaDir('symmath', ['abs.lua', 'acosh.lua', 'acos.lua', 'Array.lua', 'asinh.lua', 'asin.lua', 'atan2.lua', 'atanh.lua', 'atan.lua', 'cbrt.lua', 'clone.lua', 'commutativeRemove.lua', 'conj.lua', 'Constant.lua', 'cosh.lua', 'cos.lua', 'Derivative.lua', 'distributeDivision.lua', 'eval.lua', 'expand.lua', 'exp.lua', 'Expression.lua', 'factorDivision.lua', 'factorial.lua', 'factorLinearSystem.lua', 'factor.lua', 'Function.lua', 'hasChild.lua', 'Heaviside.lua', 'Im.lua', 'Integral.lua', 'Invalid.lua', 'Limit.lua', 'log.lua', 'make_README.lua', 'map.lua', 'Matrix.lua', 'multiplicity.lua', 'namespace.lua', 'polyCoeffs.lua', 'polydiv.lua', 'prune.lua', 'Re.lua', 'replace.lua', 'setup.lua', 'simplify.lua', 'sinh.lua', 'sin.lua', 'solve.lua', 'sqrt.lua', 'Sum.lua', 'symmath.lua', 'tableCommutativeEqual.lua', 'tanh.lua', 'tan.lua', 'taylor.lua', 'Tensor.lua', 'tidy.lua', 'TotalDerivative.lua', 'UserFunction.lua', 'Variable.lua', 'Vector.lua', 'Wildcard.lua']),
@@ -233,7 +234,13 @@ lua.global.set('js', {
 	// but we're still passing this back to JS ... wasmoon will probably require its own whole different ffi.lua implementation ... trashy.
 	newnamed : (cl, ...args) => new window[cl](...args),
 	dateNow : () => Date.now(),
-	loadImage : fn => imageCache[fn] || (() => { throw "you need to decode up front file "+fn; })(),
+	loadImage : fn => {
+		if (fn.substr(0,1) != '/') fn = FS.cwd() + '/' + fn;
+console.log('loadImage', fn);
+		const img = imageCache[fn];
+		if (!img) throw "you need to decode up front file "+fn;
+		return img;
+	},
 
 	fixYourShitWASMOON : (gl) => {
 		// these calls didn't work from within Lua, but they work fine here.
@@ -246,9 +253,10 @@ lua.global.set('js', {
 });
 
 // ofc you can't push extra args into the call, i guess you only can via global assignments?
+FS.chdir('/lua/'+rundir);
 lua.doString(`
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
-	assert(loadfile'init-jslua-bridge.lua')(
+	assert(loadfile'/init-jslua-bridge.lua')(
 		`+[rundir, runfile]
 			.concat(runargs).map(arg => '"'+arg+'"')
 			.join(', ')

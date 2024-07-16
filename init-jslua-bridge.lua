@@ -6,7 +6,8 @@ local arg = {select(3, ...)}
 
 package.path = table.concat({
 	'./?.lua',
-	'/lua/?.lua',
+	'/?.lua',		-- glapp-js files are mounted in root
+	'/lua/?.lua',		-- everything else is in the lua subdir ... don't need anymore? it was only for fengari compat, but fengari's filesystem is missing so i need to replace it with emscripten's eventually ...
 	'/lua/?/?.lua',
 }, ';')
 
@@ -214,7 +215,6 @@ do
 end
 
 -- shim layer canvas loader
-local imageLoaderCwd	-- for image loader and probably a few other things ... TODO does FS do this?
 do
 	local class = require 'ext.class'
 	local path = require 'ext.path'
@@ -232,7 +232,7 @@ do
 	function CanvasImageLoader:save(args) error("save not supported") end
 
 	function CanvasImageLoader:load(fn)
-		local jssrc = js.loadImage(path(imageLoaderCwd .. '/' .. fn).path)
+		local jssrc = js.loadImage(path(fn).path)
 		local len = jssrc.buffer.byteLength
 		-- copy from javascript Uint8Array to our ffi memory
 		local dstbuf = ffi.new('char[?]', len)
@@ -253,7 +253,6 @@ end
 local sdl = require 'ffi.sdl'
 local function run(path, file, ...)
 	package.path = package.path .. ';/lua/'..path..'/?.lua'
-	imageLoaderCwd = 'lua/'..path
 	local fn = '/lua/'..path..'/'..file
 	arg[0] = fn
 	--dofile(fn)	-- doesn't handle ...

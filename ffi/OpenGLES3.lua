@@ -805,6 +805,15 @@ function ResMap:makeCreate(webglfuncname)
 	end
 end
 
+function ResMap:makeGen(webglfuncname)
+	local create = self:makeCreate(webglfuncname)
+	return function(n, buffers)
+		for i=1,n-1 do
+			buffers[i] = create()
+		end
+	end
+end
+
 local res = ResMap()
 gl.res = res	--debuggin
 
@@ -1214,5 +1223,18 @@ end
 function gl.glCheckFramebufferStatus(...)
 	return jsgl:checkFramebufferStatus(...)
 end
+
+local createRenderbuffer = res:makeCreate'createRenderbuffer'
+function gl.glGenRenderbuffers(n, renderbuffers)
+	for i=0,n-1 do
+		renderbuffers[i] = createRenderbuffer()
+	end
+end
+
+function gl.glBindRenderbuffer(target, renderbuffer)
+	return jsgl:bindRenderbuffer(target, getObj(renderbuffer))
+end
+
+function gl.glRenderbufferStorage(...) return jsgl:renderbufferStorage(...) end
 
 return gl
