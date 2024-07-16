@@ -1,5 +1,5 @@
 local rundir, runfile = ...
-local arg = {select(3, ...)}
+_G.arg = {select(3, ...)}
 -- ok this has become the launcer of everything
 -- Lua 5.3
 -- TODO move this into main.js
