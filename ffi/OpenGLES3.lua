@@ -882,7 +882,7 @@ function gl.glGetIntegerv(pname, data)
 	local v = jsgl:getParameter(pname)
 	local info = getParamInfo[pname]
 	if info then
-		assert(not info.string, "I don't think you're supposed to call glGetIntegerv on this")
+		assert(not info.string, "can't get a string value")
 		if info.array then
 			-- TODO weird GL_VIEWPORT is getting 0 0 0 1042. ..
 			for i=0,info.array-1 do
@@ -898,6 +898,7 @@ function gl.glGetIntegerv(pname, data)
 	end
 	data[0] = v
 end
+gl.glGetFloatv = gl.glGetIntegerv
 
 function gl.glDrawBuffers(n, bufs)
 	local ar = js.global:Array()
@@ -1004,9 +1005,7 @@ for n=1,4 do
 		do
 			local glname = 'glUniform'..n..t
 			local webglname = 'uniform'..n..t
-			gl[glname] = function(...)
-				return jsgl[webglname](jsgl, ...)
-			end
+			gl[glname] = function(...) return jsgl[webglname](jsgl, ...) end
 		end
 
 		-- TODO 'location' is coming from lua,
@@ -1019,12 +1018,9 @@ for n=1,4 do
 			local len = n	-- js typed arrays use # elements, not byte size ...
 			local jsarrayctor = t == 'f' and 'Float32Array' or 'Int32Array'
 			gl[glname] = function(location, count, value)
-				assert(count == 1, "TODO")
-				return jsgl[webglname](
-					jsgl,
-					location,
-					ffi.dataToArray(jsarrayctor, value, len * count)
-				)
+				--assert(count == 1, "TODO")
+				value = ffi.dataToArray(jsarrayctor, value, len * count)
+				return jsgl[webglname](jsgl, location, value)
 			end
 		end
 	end
@@ -1034,14 +1030,23 @@ for n=1,4 do
 		local webglname = 'uniformMatrix'..n..'fv'
 		local len = n * n
 		gl[glname] = function(location, count, transpose, value)
-			assert(count == 1, "TODO")
---print(glname, location, transpose, value)
-			return jsgl[webglname](
-				jsgl,
-				location,
-				jsbool(transpose),
-				ffi.dataToArray('Float32Array', value, len * count)
-			)
+			--assert(count == 1, "TODO")
+			value = ffi.dataToArray('Float32Array', value, len * count)
+			return jsgl[webglname](jsgl, location, jsbool(transpose), value)
+		end
+	end
+
+	do
+		local glname = 'glVertexAttrib'..n..'f'
+		local webglname = 'vertexAttrib'..n..'f'
+		gl[glname] = function(...) return jsgl[webglname](jsgl, ...) end
+	end
+	do
+		local glname = 'glVertexAttrib'..n..'fv'
+		local webglname = 'vertexAttrib'..n..'fv'
+		gl[glname] = function(index, value)
+			value = ffi.dataToArray('Float32Array', value, n)
+			return jsgl[webglname](jsgl, index, value)
 		end
 	end
 end
