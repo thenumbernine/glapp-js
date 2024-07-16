@@ -1,6 +1,7 @@
 local rundir, runfile = ...
 -- ok this has become the launcer of everything
 -- Lua 5.3
+-- TODO move this into main.js 
 
 package.path = table.concat({
 	'./?.lua',
@@ -169,6 +170,14 @@ print('g', g)
 local h = ffi.new('float*', g)
 print('f == g', f == g)
 print('g == h', g == h)
+--]=]
+--[=[
+	local sdl = require 'ffi.sdl'
+	local s = ffi.new'SDL_Event[1]'
+	s[0].type = 1
+	s[0].button.state = 2
+	print(s[0].type)
+	print(s[0].button.state)
 --]=]
 --[=[ can wasmoon manipulate DOM like fengari can?
 -- or will wasmoon bungle it like it does ArrayBuffer etc builtins?

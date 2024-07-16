@@ -1151,6 +1151,8 @@ enum {
 };
 ]]
 
+local vector = require 'ffi.cpp.vector-lua'
+
 local sdl = setmetatable({}, {
 	__index = ffi.C,
 })
@@ -1165,24 +1167,47 @@ function sdl.SDL_Quit() return 0 end
 function sdl.SDL_GetError() end	-- TODO return a ffiblob / ptr of a string of the error
 
 local canvas
-local eventQueue = table()
+local eventQueue = vector'SDL_Event'
 
-local function pushResizeEvent()
-	-- TODO reuse these
-	local event = ffi.new'SDL_Event'
-	local window = js.global
-	event.type = sdl.SDL_WINDOWEVENT
-	event.window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
-	event.window.data1 = window.innerWidth
-	event.window.data2 = window.innerHeight
-	eventQueue:insert(1, event)
+local mouseX = 0
+local mouseY = 0
+local mouseDX = 0
+local mouseDY = 0
+local mouseButtonFlags = 0	-- SDL_BUTTON_*MASK flags
+
+local function setMousePos(x, y)
+	mouseDX = x - mouseX
+	mouseDY = y - mouseY
+	mouseX = x
+	mouseY = y
+end
+
+local function setMouseFlags(jsbuttons)
+	mouseButtonFlags = 0
+	-- https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/buttons
+	-- this says 1 = primary, 2 = right, 4 = middle
+	if jsbuttons & 1 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_LMASK end
+	if jsbuttons & 2 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_RMASK end
+	if jsbuttons & 4 then mouseButtonFlags = mouseButtonFlags | sdl.SDL_BUTTON_MMASK end
+	return mouseButtonFlags
+end
+
+-- I like fengari so much
+-- wasmoon doesn't give you stack traces for errors within JS callbacks
+local function xpwrap(cb)
+	return function(...)
+		assert(xpcall(cb, function(err)
+			print(err)
+			print(debug.traceback())
+		end, ...))
+	end
 end
 
 function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 --DEBUG:print('SDL_CreateWindow', title, x, y, w, h, flags)
 	local window = js.global
 	window:scrollTo(0,1)
-	
+
 	local document = window.document
 	document.title = title
 
@@ -1198,14 +1223,94 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	canvas.style.position = 'absolute'
 	canvas.style.userSelect = 'none'
 
-	local resize = function(e)
+	local resize = function(jsev)
 		canvas.width = window.innerWidth
 		canvas.height = window.innerHeight
-		pushResizeEvent()
+
+		-- push resize event
+		local sdlev = eventQueue:emplace_back()
+		sdlev[0].type = sdl.SDL_WINDOWEVENT
+		sdlev[0].window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
+		sdlev[0].window.data1 = window.innerWidth
+		sdlev[0].window.data2 = window.innerHeight
 	end
-	window:addEventListener('resize', resize)
+	window:addEventListener('resize', xpwrap(resize))
 	--also call resize after init is done
 	window:setTimeout(resize, 0)
+
+	window:addEventListener('mousemove', xpwrap(function(jsev)
+		setMousePos(jsev.pageX, jsev.pageY)
+
+		-- TODO I don't even use this ...
+		local sdlev = eventQueue:emplace_back()
+		sdlev[0].type = sdl.SDL_MOUSEMOTION
+		sdlev[0].motion.timestamp = os.time()
+		sdlev[0].motion.windowID = 0	-- TODO SDL windowID
+		sdlev[0].motion.which = 0
+		sdlev[0].motion.state = mouseButtonFlags
+		sdlev[0].motion.x = mouseX
+		sdlev[0].motion.y = mouseY
+		sdlev[0].motion.xrel = mouseDX
+		sdlev[0].motion.yrel = mouseDY
+	end))
+	window:addEventListener('mousedown', xpwrap(function(jsev)
+		setMousePos(jsev.pageX, jsev.pageY)
+		mouseButtonFlags = setMouseFlags(jsev.buttons)
+
+		local sdlbutton
+		-- https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button
+		-- this says (contrary to the 'buttons' order, that 0 = main, 1 = middle, 2 = right)
+		if jsev.button == 0 then
+			sdlbutton = sdl.SDL_BUTTON_LEFT
+		elseif jsev.button == 1 then
+			sdlbutton = sdl.SDL_BUTTON_MIDDLE
+		elseif jsev.button == 2 then
+			sdlbutton = sdl.SDL_BUTTON_RIGHT
+		end
+
+		local sdlev = eventQueue:emplace_back()
+		sdlev[0].type = sdl.SDL_MOUSEBUTTONDOWN
+		sdlev[0].button.timestamp = os.time()
+		sdlev[0].button.windowID = 0
+		sdlev[0].button.which = 0
+		sdlev[0].button.button = sdlbutton
+		sdlev[0].button.state = 1	--mouseButtonFlags
+		sdlev[0].button.clicks = 1
+		sdlev[0].button.x = mouseX
+		sdlev[0].button.y = mouseY
+	end))
+	window:addEventListener('mouseup', xpwrap(function(jsev)
+		setMousePos(jsev.pageX, jsev.pageY)
+		mouseButtonFlags = setMouseFlags(jsev.buttons)
+
+		local sdlev = eventQueue:emplace_back()
+		sdlev[0].type = sdl.SDL_MOUSEBUTTONUP
+		sdlev[0].button.timestamp = os.time()
+		sdlev[0].button.windowID = 0
+		sdlev[0].button.which = 0
+		sdlev[0].button.button = sdlbutton
+		sdlev[0].button.state = 0	--mouseButtonFlags
+		sdlev[0].button.clicks = 1
+		sdlev[0].button.x = mouseX
+		sdlev[0].button.y = mouseY
+	end))
+	--[[
+	window:addEventListener('click', function(jsev)
+	end)
+	--]]
+	--[[ SDL_MOUSEWHEEL
+	window:addEventListener('mousewheel', function(jsev)
+	end)
+	window:addEventListener('DOMMouseScroll', function(jsev)
+	end)
+	--]]
+	--[[ should I pass additional SDL touch events?
+	-- SDL_FINGERDOWN SDL_FINGERUP SDL_FINGERMOTION
+	window:addEventListener('touchstart', function(jsev) end)
+	window:addEventListener('touchmove', function(jsev) end)
+	window:addEventListener('touchend', function(jsev) end)
+	window:addEventListener('touchcancel', function(jsev) end)
+	--]]
 
 	coroutine.yield(sdl.mainthread)
 
@@ -1259,10 +1364,9 @@ function sdl.SDL_GetVersion(version)
 end
 
 function sdl.SDL_GetMouseState(x, y)
-	--local window = js.global	-- TODO I'll need a mouse callback for tracking this ...
-	x[0] = 0--window.
-	y[0] = 0
-	return 0
+	x[0] = mouseX
+	y[0] = mouseY
+	return mouseButtonFlags
 end
 
 -- double buffering isn't a thing in WebGL eh?
@@ -1282,7 +1386,8 @@ end
 function sdl.SDL_PollEvent(event)
 	-- return our events
 	if #eventQueue > 0 then
-		local srcEvent = eventQueue:remove()	-- pop back, push front
+		local srcEvent = eventQueue:back()
+		eventQueue:resize(#eventQueue-1)	-- pop_back function?
 		ffi.copy(event, srcEvent, ffi.sizeof'SDL_Event')
 		return 1
 	end
