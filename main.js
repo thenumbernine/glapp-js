@@ -5,25 +5,25 @@ const runargs = ((args) => {
 	return args ? JSON.parse(args) : [];	// assume it's a JS array
 })(urlparams.get('args'));
 /* progress so far
---run('glapp/tests', 'test_es.lua')				-- WORKS gl objs
---run('glapp/tests', 'test_es2.lua')			-- WORKS only gles calls
---run('glapp/tests', 'test_tex.lua')			-- WORKS only gles calls
---run('rule110', 'rule110.lua')					-- WORKS
---run('line-integral-convolution', 'run.lua')	-- WORKS
---run('geographic-charts', 'test.lua')			-- WORKS but indexed geometry could help it
---run('n-points', 'run.lua')					-- WORKS but fails for indexes of type short or int ...
---run('prime-spiral', 'run.lua')				-- WORKS but needs tracking shift for key events for it to work ...
---run('n-points', 'run_orbit.lua')				-- todo
---run('seashell', 'run.lua')					-- very slow (didn't finish)
---run('SphericalHarmonicGraph', 'run.lua')		-- very slow (didn't finish)
---run('glapp/tests', 'test.lua')				-- fails, glmatrixmode
---run('glapp/tests', 'minimal.lua')
---run('glapp/tests', 'pointtest.lua')
---run('glapp/tests', 'info.lua')
---run('sphere-grid', 'run.lua')
---run('metric', 'run.lua')
---run('sand-attack', 'run.lua', 'skipCustomFont', 'gl=OpenGLES3')
-TODO fibonacci-modulo
+--rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS
+--rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS
+--rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS
+--rundir='rule110'; runfile='rule110.lua';					-- WORKS
+--rundir='line-integral-convolution'; runfile='run.lua';	-- WORKS
+--rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS but indexed geometry ...
+--rundir='n-points'; runfile='run.lua';						-- WORKS but fails for indexes of type short or int ...
+--rundir='geographic-charts'; runfile='test.lua';			-- WORKS but indexed geometry could help it
+--rundir='prime-spiral'; runfile='run.lua';					-- WORKS but needs tracking shift for key events for it to work ...
+--rundir='n-points'; runfile='run_orbit.lua';				-- todo
+--rundir='seashell'; runfile='run.lua';						-- very slow (didn't finish)
+--rundir='SphericalHarmonicGraph'; runfile='run.lua';		-- very slow (didn't finish)
+--rundir='glapp/tests'; runfile='test.lua';					-- fails, glmatrixmode
+--rundir='glapp/tests'; runfile='minimal.lua';
+--rundir='glapp/tests'; runfile='pointtest.lua';
+--rundir='glapp/tests'; runfile='info.lua';
+--rundir='sphere-grid'; runfile='run.lua';
+--rundir='metric'; runfile='run.lua';
+--rundir='sand-attack'; runfile='run.lua'; runargs=['skipCustomFont', 'gl=OpenGLES3'];
 TODO mesh viewer
 TODO chess on manifold
 TODO chompman
@@ -255,6 +255,7 @@ await Promise.all([
 	addLuaDir('symmath/visitor', ['DistributeDivision.lua', 'Expand.lua', 'ExpandPolynomial.lua', 'FactorDivision.lua', 'Factor.lua', 'Prune.lua', 'Tidy.lua', 'Visitor.lua']),
 	addLuaDir('geographic-charts', ['code.lua', 'geographic-charts.lua', 'test.lua', 'earth-color.png']),
 	addLuaDir('prime-spiral', ['run.lua', 'pi']),
+	addLuaDir('fibonacci-modulo', ['run.lua', 'fibonacci.lua']),
 ]).catch(e => { throw e; });
 
 lua.global.set('js', {
