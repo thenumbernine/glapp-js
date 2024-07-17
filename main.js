@@ -5,16 +5,17 @@ const runargs = ((args) => {
 	return args ? JSON.parse(args) : [];	// assume it's a JS array
 })(urlparams.get('args'));
 /* progress so far
---rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS
---rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS
---rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS
---rundir='line-integral-convolution'; runfile='run.lua';	-- WORKS
---rundir='rule110'; runfile='rule110.lua';					-- WORKS but imgui
---rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS but imgui
---rundir='n-points'; runfile='run.lua';						-- WORKS but imgui
---rundir='geographic-charts'; runfile='test.lua';			-- WORKS but indexed geometry could help it
---rundir='prime-spiral'; runfile='run.lua';					-- WORKS but needs tracking shift for key events for it to work ...
---rundir='n-points'; runfile='run_orbit.lua';				-- todo
+--rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
+--rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS README
+--rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS README
+--rundir='line-integral-convolution'; runfile='run.lua';	-- WORKS README
+--rundir='rule110'; runfile='rule110.lua';					-- WORKS README but imgui
+--rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README but imgui
+--rundir='n-points'; runfile='run.lua';						-- WORKS README but imgui
+--rundir='geographic-charts'; runfile='test.lua';			-- WORKS README but indexed geometry could help it
+--rundir='prime-spiral'; runfile='run.lua';					-- WORKS README but needs tracking shift for key events for it to work ...
+TODO lambda-cdm
+--rundir='n-points'; runfile='run_orbit.lua';				-- todo ... or not, it's kinda dumb i guess
 --rundir='seashell'; runfile='run.lua';						-- very slow (didn't finish)
 --rundir='SphericalHarmonicGraph'; runfile='run.lua';		-- very slow (didn't finish)
 --rundir='glapp/tests'; runfile='test.lua';					-- fails, glmatrixmode
@@ -33,7 +34,6 @@ TODO farmgame
 TODO imgui library <-> html shim layer
 TODO hydro-cl
 TODO zeta3d / zetatron 3d metroidvania voxel
-TODO lambda-cdm
 TODO nbody-gpu
 TODO waves-in-curved space ... ?
 TODO celestial-gravitomagnetics ... ?
