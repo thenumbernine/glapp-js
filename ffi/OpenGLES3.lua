@@ -693,7 +693,7 @@ local gl = setmetatable({}, {
 
 local function jsbool(b)
 	if b == 0 then return false end
-	return b	-- not not b
+	return not not b	-- not not b
 end
 
 local jsgl

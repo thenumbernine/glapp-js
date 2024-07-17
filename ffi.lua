@@ -563,32 +563,32 @@ end
 
 CType{name='void', size=1, isPrimitive=true}	-- let's all admit that a void* is really a char*
 CType{name='bool', size=1, isPrimitive=true,	-- not a typedef of char / byte ...
-	get = function(memview, addr) return memview:getUint8(addr) end,
-	set = function(memview, addr, v) return memview:setUint8(addr, v) end,
+	get = function(memview, addr) return memview:getUint8(addr, true) end,
+	set = function(memview, addr, v) return memview:setUint8(addr, v, true) end,
 }
 CType{name='int8_t', size=1, isPrimitive=true,
-	get = function(memview, addr) return memview:getInt8(addr) end,
-	set = function(memview, addr, v) return memview:setInt8(addr, v) end,
+	get = function(memview, addr) return memview:getInt8(addr, true) end,
+	set = function(memview, addr, v) return memview:setInt8(addr, v, true) end,
 }
 CType{name='uint8_t', size=1, isPrimitive=true,
-	get = function(memview, addr) return memview:getUint8(addr) end,
-	set = function(memview, addr, v) return memview:setUint8(addr, v) end,
+	get = function(memview, addr) return memview:getUint8(addr, true) end,
+	set = function(memview, addr, v) return memview:setUint8(addr, v, true) end,
 }
 CType{name='int16_t', size=2, isPrimitive=true,
-	get = function(memview, addr) return memview:getInt16(addr) end,
-	set = function(memview, addr, v) return memview:setInt16(addr, v) end,
+	get = function(memview, addr) return memview:getInt16(addr, true) end,
+	set = function(memview, addr, v) return memview:setInt16(addr, v, true) end,
 }
 CType{name='uint16_t', size=2, isPrimitive=true,
-	get = function(memview, addr) return memview:getUint16(addr) end,
-	set = function(memview, addr, v) return memview:setUint16(addr, v) end,
+	get = function(memview, addr) return memview:getUint16(addr, true) end,
+	set = function(memview, addr, v) return memview:setUint16(addr, v, true) end,
 }
 CType{name='int32_t', size=4, isPrimitive=true,
-	get = function(memview, addr) return memview:getInt32(addr) end,
-	set = function(memview, addr, v) return memview:setInt32(addr, v) end,
+	get = function(memview, addr) return memview:getInt32(addr, true) end,
+	set = function(memview, addr, v) return memview:setInt32(addr, v, true) end,
 }
 CType{name='uint32_t', size=4, isPrimitive=true,
-	get = function(memview, addr) return memview:getUint32(addr) end,
-	set = function(memview, addr, v) return memview:setUint32(addr, v) end,
+	get = function(memview, addr) return memview:getUint32(addr, true) end,
+	set = function(memview, addr, v) return memview:setUint32(addr, v, true) end,
 }
 
 CType{name='int64_t', size=8, isPrimitive=true,
@@ -597,7 +597,8 @@ CType{name='int64_t', size=8, isPrimitive=true,
 		return memview:getBigInt64(addr)
 		--]]
 		-- [[
-		return memview:getUint32(addr) | (memview:getUint32(addr + 4) << 32)
+		return memview:getUint32(addr, true) |
+			(memview:getUint32(addr + 4, true) << 32)
 		--]]
 	end,
 	set=function(memview, addr, v)
@@ -611,20 +612,21 @@ CType{name='int64_t', size=8, isPrimitive=true,
 		return memview:setBigInt64(addr, js.global.BigInt(js.global.BigInt, v))
 		--]]
 		-- [[
-		memview:setInt32(addr, v & 0xffffffff)
-		memview:setInt32(addr + 4, (v >> 32) & 0xffffffff)
+		memview:setInt32(addr, v & 0xffffffff, true)
+		memview:setInt32(addr + 4, (v >> 32) & 0xffffffff, true)
 		--]]
 	end,
 }	-- why Big?
 CType{name='uint64_t', size=8, isPrimitive=true,
 	get=function(memview, addr)
 		--return memview:getBigUInt64(addr)
-		return memview:getUint32(addr) | (memview:getUint32(addr + 4) << 32)
+		return memview:getUint32(addr, true) |
+			(memview:getUint32(addr + 4, true) << 32)
 	end,
 	set=function(memview, addr, v)
 		--return memview:setBigUInt64(addr, js.global.BigInt(v))
-		memview:setUint32(addr, v & 0xffffffff)
-		memview:setUint32(addr + 4, (v >> 32) & 0xffffffff)
+		memview:setUint32(addr, v & 0xffffffff, true)
+		memview:setUint32(addr + 4, (v >> 32) & 0xffffffff, true)
 	end,
 }
 
@@ -1556,9 +1558,11 @@ function CData:add(index)
 	local typeSize = ctype.size
 	if ctype.arrayCount then	-- implicit convert to pointer before add
 		typeSize = ctype.baseType.size
+		-- don't use the whole array - just use an array[1] like its a ref, i.e. like a ptr (without allocating the pointer)
+		ctype = getArrayType(ctype.baseType, 1)
 	end
 	return CData(
-		ctype,			-- TODO this could still be a giant array.  but if we ptr-cast it then we need to save the ptr somewhere ... if it's an array wes hould instead do a single-elem array, buthonestly we really should do a reference ...
+		ctype,
 		mt.addr + index * typeSize
 	)
 end
