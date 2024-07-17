@@ -10,8 +10,8 @@ const runargs = ((args) => {
 --rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS
 --rundir='line-integral-convolution'; runfile='run.lua';	-- WORKS
 --rundir='rule110'; runfile='rule110.lua';					-- WORKS but imgui
---rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS but imgui and indexed geometry ...
---rundir='n-points'; runfile='run.lua';						-- WORKS but imgui and fails for indexes of type short or int ...
+--rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS but imgui
+--rundir='n-points'; runfile='run.lua';						-- WORKS but imgui
 --rundir='geographic-charts'; runfile='test.lua';			-- WORKS but indexed geometry could help it
 --rundir='prime-spiral'; runfile='run.lua';					-- WORKS but needs tracking shift for key events for it to work ...
 --rundir='n-points'; runfile='run_orbit.lua';				-- todo
