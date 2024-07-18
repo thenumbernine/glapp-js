@@ -96,7 +96,9 @@ print(js.global)
 
 /* WASMOON ... WELL, EMSCRIPTEN-LUA WORKS GREAT, AND ITS FILESYSTEM SUPPORT IS GREAT, BUT WASMOON'S DUTY TO GLUE IT TO JS AND MITIGATE API AND ERRORS IS NOT SO CLEAN ... */
 await import('./wasmoon.min.js');	// defines the global 'wasmoon', returns nothing, and that isn't documented in any corner of all of the internet
-const lua = await new wasmoon.LuaFactory().createEngine({
+const factory = new wasmoon.LuaFactory();
+window.factory = factory;
+const lua = await factory.createEngine({
 	// looks like this is true by default, and if it's false then i get the same error within js instead of within lua ...
 	// was this what was screwing up my ability to allocate ArrayBuffer from within the Lua code? gah...
 	// disabling this does lose me my Lua call stack upon getting that same error...
@@ -408,9 +410,12 @@ console.log('creating button', label);
 // resize uses this too
 let fsDiv;
 let taDiv;
+let outDiv;
+let outTextArea;
 // store as pixel <=> smoother scrolling when resizing divider, store as fraction <=> smoother when resizing window ... shrug
 let fsFrac = .25;
 let taFrac = .5;
+let outFrac = .5;
 
 let editorTextArea;
 let editorPath;
@@ -561,6 +566,26 @@ console.log('running', rundir, runfile);
 		editorSaveButton.removeAttribute('disabled');
 	});
 	taDiv.appendChild(editorTextArea);
+
+	outDiv = document.createElement('div');
+	outDiv.style.position = 'absolute';
+	outDiv.style.display = 'none';
+	outDiv.style.zIndex = -1;	//under imgui div
+	document.body.appendChild(outDiv);
+
+	outTextArea = document.createElement('textarea');
+	outTextArea.readOnly = true;
+	outTextArea.style.backgroundColor = '#000000';
+	outTextArea.style.color = '#ffffff';
+	outTextArea.style.width = '100%';
+	outTextArea.style.height = '100%';
+	outTextArea.style.tabSize = 4;
+	outTextArea.style.MozTabSize = 4;
+	outTextArea.style.OTabSize = 4;
+	outTextArea.style.whiteSpace = 'pre';
+	outTextArea.style.overflowWrap = 'normal';
+	outTextArea.style.overflow = 'scroll';
+	outDiv.appendChild(outTextArea);
 }
 window.imgui = imgui;
 if (rundir && runfile) {
@@ -590,12 +615,19 @@ const resize = e => {
 		if (canvas) {
 			canvas.style.left = ((fsFrac + taFrac) * w) + 'px';
 			canvas.style.top = '0px';
-			canvas.width = (1 - fsFrac - taFrac) * w;
-			canvas.height = h;
+			canvas.width = ((1 - fsFrac - taFrac) * w);
+			canvas.height = (outFrac * h);
 		}
+
+		outDiv.style.display = 'block';
+		outDiv.style.left = ((fsFrac + taFrac) * w) + 'px';
+		outDiv.style.width = ((1 - fsFrac - taFrac) * w) + 'px';
+		outDiv.style.top = (outFrac * h) + 'px';
+		outDiv.style.height = ((1 - outFrac) * h) + 'px';
 	} else {		// fullscreen
 		fsDiv.style.display = 'none';
 		taDiv.style.display = 'none';
+		outDiv.style.display = 'none';
 		if (canvas) {
 			canvas.style.left = '0px';
 			canvas.style.top = '0px';
@@ -667,13 +699,35 @@ lua.global.set('js', {
 	imguiButton : (...args) => imgui.button(...args),
 	imguiInputFloat : (...args) => imgui.inputFloat(...args),
 	imguiInputInt : (...args) => imgui.inputInt(...args),
+
+	// https://devcodef1.com/news/1119293/stdout-stderr-in-webassembly
+	// if only it was this easy
+	// why am I even using wasmoon?
+	// https://github.com/ceifa/wasmoon/issues/21
+	// wait does this say to just overwrite _G.print?  like you can't do that in a single line of "print=function..."
+	// no, I want to override all output, including the stack traces that Lua prints when an error happens ... smh everyone ...
+	redirectPrint : (s) => {
+		outTextArea.value += s + '\n';
+		console.log('> '+s);	//log here too?
+	},
 });
 
 const doRun = () => {
 	imgui.clear();
+	outTextArea.value = '';
+
 	// ofc you can't push extra args into the call, i guess you only can via global assignments?
 	FS.chdir(rundir);
 	lua.doString(`
+	print = function(...)
+		local s = ''
+		local sep = ''
+		for i=1,select('#', ...) do
+			s = s .. sep .. tostring((select(i, ...)))
+			sep = '\t'
+		end
+		js.redirectPrint(s)
+	end
 	xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
 		assert(loadfile'/init-jslua-bridge.lua')(
 			`+[rundir, runfile]
