@@ -450,6 +450,7 @@ const setEditorFilePath = path => {
 	const fileStr = new TextDecoder().decode(FS.readFile(path, {encoding:'binary'}));
 	//editorTextArea.value = fileStr;
 	aceEditor.setValue(fileStr);
+	aceEditor.clearSelection();
 };
 
 {	// add an edit button

@@ -53,3 +53,7 @@ I'm going through different Lua/JS libraries to see which works best.
 
 - Other contenders?
 	- https://github.com/Doridian/LuaJS
+
+### Editor
+
+I'm using [Ace](https://github.com/ajaxorg/ace) for the code editor.
