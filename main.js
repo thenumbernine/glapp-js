@@ -25,6 +25,7 @@ const runargs = ((args) => {
 --rundir='SphericalHarmonicGraph'; runfile='run.lua';		-- very slow (didn't finish)
 --rundir='metric'; runfile='run.lua';
 --rundir='sand-attack'; runfile='run.lua'; runargs=['skipCustomFont', 'gl=OpenGLES3'];
+--surface-from-connection
 TODO mesh viewer
 TODO chess on manifold
 TODO chompman
@@ -44,7 +45,6 @@ TODO hydro-cl
 TODO cdfmesh
 TODO VectorFieldDecomposition ... ?
 TODO geo-center-earth ... ?
-TODO surface-from-connection
 TODO asteroids3d
 TODO tacticslua
 TODO inspiration engine
@@ -264,6 +264,7 @@ await Promise.all([
 	addLuaDir('prime-spiral', ['run.lua', 'pi']),
 	addLuaDir('fibonacci-modulo', ['run.lua', 'fibonacci.lua']),
 	addLuaDir('lambda-cdm', ['bisect.lua', 'run.lua']),
+	addLuaDir('surface-from-connection', ['run.lua']),
 ]).catch(e => { throw e; });
 
 // imgui binding code.
