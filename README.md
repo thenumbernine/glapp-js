@@ -2,6 +2,13 @@
 
 ### LuaJIT + OpenGL + SDL in Browser
 
+-	[[launch]](https://thenumbernine.github.io/glapp-js/index.html?dir=glapp/tests&file=test_es.lua)
+	[[source]](https://thenumbernine.github.io/lua/glapp/tests/test_es.lua)
+	polygon demo
+-	[[launch]](https://thenumbernine.github.io/glapp-js/index.html?dir=glapp/tests&file=test_tex.lua)
+	[[source]](https://thenumbernine.github.io/lua/glapp/tests/test_tex.lua)
+	texture demo
+
 This tool runs LuaJIT + SDL + OpenGL + ImGui code in browser.
 
 The Lua is handled by one of a few Lua/JS backends.

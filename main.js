@@ -403,7 +403,7 @@ const setEditorFilePath = path => {
 	fsDiv.style.position = 'absolute';
 	fsDiv.style.display = 'none';
 	fsDiv.style.zIndex = -1;	//under imgui div
-	fsDiv.style.paddingTop = '40px';
+	fsDiv.style.paddingTop = '20px';
 	fsDiv.style.backgroundColor = '#ffffff';
 	fsDiv.style.color = '#000000';
 	document.body.appendChild(fsDiv);
@@ -411,13 +411,13 @@ const setEditorFilePath = path => {
 	const makeFileDiv = (path, name) => {
 		//FS.chdir(path);
 		const filediv = document.createElement('div');
-		filediv.style.marginLeft = '16px';
 		filediv.style.border = '1px solid black';
 		const title = document.createElement('div');
 		filediv.appendChild(title);
 		const stat = FS.lstat(path);
 		if (stat.mode & 0x4000) {
 			const chdiv = document.createElement('div');
+			chdiv.style.marginLeft = '16px';
 			chdiv.style.display = path == '/' ? 'block' 
 				: (rundir+'/').substr(0, (path+'/').length) == (path+'/') ? 'block' : 'none';
 			filediv.appendChild(chdiv);
