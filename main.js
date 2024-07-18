@@ -1,13 +1,22 @@
 const urlparams = new URLSearchParams(location.search);
-let rundir = urlparams.get('dir') || 'glapp/tests';
-let runfile = urlparams.get('file') || 'test_tex.lua';
+
+let rundir = urlparams.get('dir');
+let runfile = urlparams.get('file');
+
 let runargs = ((args) => {
 	return args ? JSON.parse(args) : [];	// assume it's a JS array
 })(urlparams.get('args'));
+
 let editmode = urlparams.get('edit');
-if (!runfile && !rundir) editmode = true;
-if (rundir.substr(0, 1) != '/') rundir = '/' + rundir;
-if (rundir.substr(-1) == '/') rundir = rundir.substr(0, rundir.length-1);
+if (!runfile || !rundir) {
+	runfile = undefined;
+	rundir = undefined;
+	editmode = true;
+}
+if (rundir) {
+	if (rundir.substr(0, 1) != '/') rundir = '/' + rundir;
+	if (rundir.substr(-1) == '/') rundir = rundir.substr(0, rundir.length-1);
+}
 /* progress so far
 --rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS README
@@ -526,7 +535,9 @@ console.log('running', rundir, runfile);
 	taDiv.appendChild(editorTextArea);
 }
 window.imgui = imgui;
-setEditorFilePath(rundir+'/'+runfile);
+if (rundir && runfile) {
+	setEditorFilePath(rundir+'/'+runfile);
+}
 
 document.body.style.overflow = 'hidden';	//slowly sorting this out ...
 let canvas;
