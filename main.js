@@ -281,14 +281,14 @@ await Promise.all([
 	addLuaDir('fibonacci-modulo', ['run.lua', 'fibonacci.lua']),
 	addLuaDir('lambda-cdm', ['bisect.lua', 'run.lua']),
 	addLuaDir('surface-from-connection', ['run.lua']),
-	addLuaDir('sand-attack', ['app.lua', 'config.lua', 'player.lua', 'run.lua', 'serialize.lua', 'splash.demo']),
+	addLuaDir('sand-attack', ['app.lua', 'player.lua', 'run.lua', 'serialize.lua', 'splash.demo']), // isn't in the repo: 'config.lua'
 	addLuaDir('sand-attack/font', ['Billow twirl Demo.ttf', 'Billow twirl Demo.url']),
 	addLuaDir('sand-attack/menu', ['config.lua', 'highscore.lua', 'main.lua', 'menu.lua', 'newgame.lua', 'playerkeys.lua', 'playing.lua', 'splashscreen.lua']),
 	//addLuaDir('sand-attack/music', ['Desert-City.ogg', 'Exotic-Plains.ogg', 'Ibn-Al-Noor.ogg', 'Market_Day.ogg', 'Return-of-the-Mummy.ogg', 'temple-of-endless-sands.ogg', 'wombat-noises-audio-the-legend-of-narmer.ogg'),
 	addLuaDir('sand-attack/sandmodel', ['all.lua', 'automatacpu.lua', 'automatagpu.lua', 'cfd.lua', 'sandmodel.lua', 'sph.lua']),
 	addLuaDir('sand-attack/sfx', ['levelup.url', 'levelup.wav', 'line.url', 'line.wav', 'place.url', 'place.wav']),
 	addLuaDir('sand-attack/tex', ['splash.png', 'youlose.png']),
-	addLuaDir('sand-attack/highscores', ['2024-06-21-22-05-44.demo']),	//interesting, mkdir didn't seem to work ... also interesting making an empty dir ?
+	//addLuaDir('sand-attack/highscores', ['2024-06-21-22-05-44.demo']),	// ... isn't in the repo ... interesting, mkdir didn't seem to work ... also interesting making an empty dir ?
 ]).catch(e => { throw e; });
 // why is this here when it's not down there in FS.readdir'/' ?
 //console.log('glapp', FS.stat('/glapp'));
