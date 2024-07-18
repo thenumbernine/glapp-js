@@ -332,7 +332,9 @@ const imgui = {
 		//clear all taggedThisFrame
 		for (let i = this.div.children.length-1; i >= 0; --i) {
 			const ch = this.div.children[i];
-			ch.taggedThisFrame = false;
+			if (ch != this.editButton) {
+				ch.taggedThisFrame = false;
+			}
 		}
 		this.lastTouchedDom = undefined;
 	},
@@ -340,8 +342,10 @@ const imgui = {
 		//remove old dom elements that didn't get tagged
 		for (let i = this.div.children.length-1; i >= 0; --i) {
 			const ch = this.div.children[i];
-			if (!ch.taggedThisFrame) {
-				this.div.removeChild(ch);
+			if (ch != this.editButton) {
+				if (!ch.taggedThisFrame) {
+					this.div.removeChild(ch);
+				}
 			}
 		}
 	},
