@@ -1214,8 +1214,12 @@ end
 
 local jsKeyCodeToSDLKeySym = {}
 
+local lastWindowWidth
+local lastWindowHeight
 function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 --DEBUG:print('SDL_CreateWindow', title, x, y, w, h, flags)
+	lastWindowWidth = nil
+	lastWindowHeight = nil
 	local window = js.global
 	window:scrollTo(0,1)
 
@@ -1401,8 +1405,6 @@ function sdl.SDL_GetMouseState(x, y)
 end
 
 -- double buffering isn't a thing in WebGL eh?
-local lastWindowWidth
-local lastWindowHeight
 function sdl.SDL_GL_SwapWindow(window)
 	-- give up control to the browser again
 	coroutine.yield(sdl.mainthread)

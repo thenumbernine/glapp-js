@@ -1,10 +1,11 @@
 const urlparams = new URLSearchParams(location.search);
-const rundir = urlparams.get('dir') || 'glapp/tests';
-const runfile = urlparams.get('file') || 'test_tex.lua';
-const runargs = ((args) => {
+let rundir = urlparams.get('dir') || 'glapp/tests';
+let runfile = urlparams.get('file') || 'test_tex.lua';
+let runargs = ((args) => {
 	return args ? JSON.parse(args) : [];	// assume it's a JS array
 })(urlparams.get('args'));
 let editmode = urlparams.get('edit');
+if (!runfile && !rundir) editmode = true;
 /* progress so far
 --rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS README
@@ -361,19 +362,33 @@ console.log('creating button', label);
 // resize uses this too
 let fsDiv;
 let taDiv;
-let codeTextArea;
 // store as pixel <=> smoother scrolling when resizing divider, store as fraction <=> smoother when resizing window ... shrug
 let fsFrac = .25;
 let taFrac = .5;
 
-const setTextAreaFile = (path, name) => {
-	codeTextArea.value = new TextDecoder().decode(FS.readFile(path, {encoding:'binary'}));
+let editorTextArea;
+let editorPath;
+let editorFileNameSpan;
+let editorSaveButton;
+const editorSave = () => {
+	FS.writeFile(editorPath, new TextEncoder().encode(editorTextArea.value), {encoding:'binary'});
+	editorSaveButton.setAttribute('disabled', 'disabled');
+};
+
+const setEditorFilePath = path => {
+	if (editorPath) {
+		editorSave();
+	}
+
+	editorPath = path;
+	editorFileNameSpan.innerText = editorPath;
+	editorTextArea.value = new TextDecoder().decode(FS.readFile(path, {encoding:'binary'}));
 };
 
 {	// add an edit button
 	imgui.newFrame();	// make the imgui div
 	const b = document.createElement('button');
-	b.innerText = 'edit';
+	b.innerText = '[.]';
 	b.addEventListener('click', e => {
 		editmode = !editmode;
 		resize();	// refresh size
@@ -427,7 +442,7 @@ const setTextAreaFile = (path, name) => {
 		} else {
 			title.style.cursor = 'pointer';
 			title.addEventListener('click', e => {
-				setTextAreaFile(path, name);
+				setEditorFilePath(path);
 			});
 		}
 		title.innerText = name;
@@ -443,19 +458,53 @@ const setTextAreaFile = (path, name) => {
 	//taDiv.style.overflow = 'hidden';
 	taDiv.style.zIndex = -1;	//under imgui div
 	document.body.appendChild(taDiv);
+
+	const titleBar = document.createElement('div');
+	taDiv.appendChild(titleBar);
 	
-	codeTextArea = document.createElement('textarea');
-	codeTextArea.style.width = '100%';
-	codeTextArea.style.height = '100%';
-	codeTextArea.style.tabSize = 4;
-	codeTextArea.style.MozTabSize = 4;
-	codeTextArea.style.OTabSize = 4;
-	codeTextArea.style.whiteSpace = 'pre';
-	codeTextArea.style.overflowWrap = 'normal';
-	codeTextArea.style.overflow = 'scroll';
-	taDiv.appendChild(codeTextArea);
+
+	const run = document.createElement('button');
+	run.innerText = 'run';
+	run.addEventListener('click', e => {
+		editorSave();
+		// run it
+		const parts = editorPath.split('/');
+		runfile = parts.pop();
+		rundir = parts.join('/');
+		runargs = [];	//TODO somewhere ... 
+		doRun();
+console.log('running', rundir, runfile);	
+	});
+	titleBar.appendChild(run);
+
+	// TODO grey out upon textarea change?
+	editorSaveButton = document.createElement('button');
+	editorSaveButton.innerText = 'save';
+	editorSaveButton.setAttribute('disabled', 'disabled');
+	editorSaveButton.addEventListener('click', e => editorSave);
+	titleBar.appendChild(editorSaveButton);
+
+	editorFileNameSpan = document.createElement('span');
+	titleBar.appendChild(editorFileNameSpan);
+
+	// TODO line numbers?
+	editorTextArea = document.createElement('textarea');
+	editorTextArea.style.width = '100%';
+	editorTextArea.style.height = '100%';
+	editorTextArea.style.tabSize = 4;
+	editorTextArea.style.MozTabSize = 4;
+	editorTextArea.style.OTabSize = 4;
+	editorTextArea.style.whiteSpace = 'pre';
+	editorTextArea.style.overflowWrap = 'normal';
+	editorTextArea.style.overflow = 'scroll';
+	editorTextArea.addEventListener('input', e => {
+		editorSaveButton.removeAttribute('disabled');
+	});
+	taDiv.appendChild(editorTextArea);
 }
 window.imgui = imgui;
+
+setEditorFilePath('/'+rundir+'/'+runfile);
 
 let canvas;
 const resize = e => {
@@ -487,12 +536,14 @@ const resize = e => {
 		taDiv.style.display = 'none';
 		if (canvas) {
 			canvas.style.left = '0px';
+			canvas.style.top = '0px';
 			canvas.width = w;
 			canvas.height = h;
 		}
 	}
 };
 resize();	//initialize fs and codetextarea
+window.addEventListener('resize', resize);
 
 lua.global.set('js', {
 	global : window,	//for fengari compat
@@ -513,17 +564,14 @@ lua.global.set('js', {
 	},
 
 	createCanvas : () => {
+		if (canvas) document.body.removeChild(canvas);
 	
 		canvas = document.createElement('canvas');
-		window.canvas = canvas;			// global?  do I really need it? debugging?
-		document.body.prepend(canvas);
-
-		canvas.style.left = 0;
-		canvas.style.top = 0;
 		canvas.style.position = 'absolute';
 		canvas.style.userSelect = 'none';
+		document.body.prepend(canvas);
+		window.canvas = canvas;			// global?  do I really need it? debugging?
 
-		window.addEventListener('resize', resize);
 		resize();	// set our initial size
 		
 		return canvas;
@@ -551,21 +599,25 @@ lua.global.set('js', {
 	imguiInputInt : (...args) => imgui.inputInt(...args),
 });
 
-// ofc you can't push extra args into the call, i guess you only can via global assignments?
-FS.chdir(rundir);
-lua.doString(`
-xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
-	assert(loadfile'/init-jslua-bridge.lua')(
-		`+[rundir, runfile]
-			.concat(runargs).map(arg => '"'+arg+'"')
-			.join(', ')
-		+`
-	)
-end, function(err)
-	print(err)
-	print(debug.traceback())
-end)`);
-//await lua.doFile(`init-jslua-bridge.lua`);
+const doRun = () => {
+	// ofc you can't push extra args into the call, i guess you only can via global assignments?
+	FS.chdir(rundir);
+	lua.doString(`
+	xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
+		assert(loadfile'/init-jslua-bridge.lua')(
+			`+[rundir, runfile]
+				.concat(runargs).map(arg => '"'+arg+'"')
+				.join(', ')
+			+`
+		)
+	end, function(err)
+		print(err)
+		print(debug.traceback())
+	end)`);
+};
+if (runfile && rundir) {
+	doRun();
+}
 /* */
 
 
