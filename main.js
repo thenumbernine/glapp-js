@@ -417,12 +417,16 @@ let fsFrac = .25;
 let taFrac = .5;
 let outFrac = .5;
 
-let editorTextArea;
+//let editorTextArea;
+let aceEditor;
 let editorPath;
 let editorFileNameSpan;
 let editorSaveButton;
 const editorSave = () => {
-	FS.writeFile(editorPath, new TextEncoder().encode(editorTextArea.value), {encoding:'binary'});
+	FS.writeFile(editorPath, new TextEncoder().encode(
+		//editorTextArea.value
+		aceEditor.getValue()
+	), {encoding:'binary'});
 	editorSaveButton.setAttribute('disabled', 'disabled');
 };
 
@@ -443,7 +447,9 @@ const setEditorFilePath = path => {
 
 	editorPath = path;
 	editorFileNameSpan.innerText = editorPath;
-	editorTextArea.value = new TextDecoder().decode(FS.readFile(path, {encoding:'binary'}));
+	const fileStr = new TextDecoder().decode(FS.readFile(path, {encoding:'binary'}));
+	//editorTextArea.value = fileStr;
+	aceEditor.setValue(fileStr);
 };
 
 {	// add an edit button
@@ -516,6 +522,7 @@ const setEditorFilePath = path => {
 	FS.chdir('/');
 
 	taDiv = document.createElement('div');
+	taDiv.id = 'taDiv';
 	taDiv.style.position = 'absolute';
 	taDiv.style.display = 'none';
 	//taDiv.style.overflow = 'hidden';
@@ -551,6 +558,7 @@ console.log('running', rundir, runfile);
 	titleBar.appendChild(editorFileNameSpan);
 
 	// TODO line numbers?
+	/*
 	editorTextArea = document.createElement('textarea');
 	editorTextArea.style.backgroundColor = '#000000';
 	editorTextArea.style.color = '#ffffff';
@@ -566,6 +574,13 @@ console.log('running', rundir, runfile);
 		editorSaveButton.removeAttribute('disabled');
 	});
 	taDiv.appendChild(editorTextArea);
+	*/	
+    /* ace editor: https://github.com/ajaxorg/ace */
+	aceEditor = ace.edit("taDiv");
+	aceEditor.setTheme("ace/theme/tomorrow_night_bright");
+	const LuaMode = ace.require("ace/mode/lua").Mode;
+	aceEditor.session.setMode(new LuaMode());
+	/* */
 
 	outDiv = document.createElement('div');
 	outDiv.style.position = 'absolute';
