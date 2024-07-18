@@ -96,9 +96,7 @@ print(js.global)
 
 /* WASMOON ... WELL, EMSCRIPTEN-LUA WORKS GREAT, AND ITS FILESYSTEM SUPPORT IS GREAT, BUT WASMOON'S DUTY TO GLUE IT TO JS AND MITIGATE API AND ERRORS IS NOT SO CLEAN ... */
 await import('./wasmoon.min.js');	// defines the global 'wasmoon', returns nothing, and that isn't documented in any corner of all of the internet
-const LuaFactory = wasmoon.LuaFactory;
-const factory = new LuaFactory();
-const lua = await factory.createEngine({
+const lua = await new wasmoon.LuaFactory().createEngine({
 	// looks like this is true by default, and if it's false then i get the same error within js instead of within lua ...
 	// was this what was screwing up my ability to allocate ArrayBuffer from within the Lua code? gah...
 	// disabling this does lose me my Lua call stack upon getting that same error...
@@ -109,6 +107,7 @@ const lua = await factory.createEngine({
 window.lua = lua;
 
 // i hate javascript
+// can I get FS without getting lua?  would be nice to reset the Lua state without destroying the filesystem ...
 const FS = lua.cmodule.module.FS;
 window.FS = FS;
 
