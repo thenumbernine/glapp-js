@@ -281,6 +281,8 @@ const imgui = {
 			// TODO make sure this.div is attached too? or trust it's not tampered with ...
 			this.div = document.createElement('div');
 			this.div.style.position = 'absolute';
+			this.div.style.left = '0px';
+			this.div.style.top = '0px';
 			document.body.appendChild(this.div);
 		}
 	},
@@ -508,9 +510,9 @@ console.log('running', rundir, runfile);
 	taDiv.appendChild(editorTextArea);
 }
 window.imgui = imgui;
-
 setEditorFilePath(rundir+'/'+runfile);
 
+document.body.style.overflow = 'hidden';	//slowly sorting this out ...
 let canvas;
 const resize = e => {
 	const w = window.innerWidth;
@@ -520,7 +522,7 @@ const resize = e => {
 		fsDiv.style.left = '0px';
 		fsDiv.style.top = '0px';
 		fsDiv.style.width = (fsFrac * w) + 'px';
-		fsDiv.style.height = (h - 5) + 'px';
+		fsDiv.style.height = (h - 32) + 'px';
 		fsDiv.style.overflow = 'scroll';
 		// TODO resize bar / save ratio
 
@@ -528,7 +530,7 @@ const resize = e => {
 		taDiv.style.left = (fsFrac * w) + 'px';
 		taDiv.style.top = '0px';
 		taDiv.style.width = (taFrac * w) + 'px';
-		taDiv.style.height = (h - 5) + 'px';
+		taDiv.style.height = (h - 32) + 'px';
 	
 		if (canvas) {
 			canvas.style.left = ((fsFrac + taFrac) * w) + 'px';
