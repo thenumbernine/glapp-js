@@ -256,7 +256,7 @@ await Promise.all([
 	addLuaDir('geographic-charts', ['code.lua', 'geographic-charts.lua', 'test.lua', 'earth-color.png']),
 	addLuaDir('prime-spiral', ['run.lua', 'pi']),
 	addLuaDir('fibonacci-modulo', ['run.lua', 'fibonacci.lua']),
-	addLuaDir('lambda-cdm', ['run.lua']),
+	addLuaDir('lambda-cdm', ['bisect.lua', 'run.lua']),
 ]).catch(e => { throw e; });
 
 lua.global.set('js', {
