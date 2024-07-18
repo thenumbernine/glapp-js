@@ -1222,35 +1222,8 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	local document = window.document
 	document.title = title
 
-	if not canvas then
---DEBUG:print('...creating canvas')
-		canvas = document:createElement'canvas'
-		window.canvas = canvas			-- global?  do I really need it?
-		document.body:prepend(canvas)
-	end
-
-	canvas.style.left = 0
-	canvas.style.top = 0
-	canvas.style.position = 'absolute'
-	canvas.style.userSelect = 'none'
-
-	local resize = function(jsev)
-		canvas.width = window.innerWidth
-		canvas.height = window.innerHeight
-
-		-- push resize event
-		local sdlev = eventQueue:emplace_back()
-		sdlev[0].type = sdl.SDL_WINDOWEVENT
-		sdlev[0].window.timestamp = os.time()
-		sdlev[0].window.windowID = 0	-- TODO SDL windowID
-		sdlev[0].window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
-		sdlev[0].window.data1 = window.innerWidth
-		sdlev[0].window.data2 = window.innerHeight
-	end
-	window:addEventListener('resize', xpwrap(resize))
-	--also call resize after init is done
-	window:setTimeout(resize, 0)
-
+	canvas = js.createCanvas()
+	
 	window:addEventListener('keyup', xpwrap(function(jsev)
 		local sdlev = eventQueue:emplace_back()
 		sdlev[0].type = sdl.SDL_KEYUP
@@ -1428,6 +1401,8 @@ function sdl.SDL_GetMouseState(x, y)
 end
 
 -- double buffering isn't a thing in WebGL eh?
+local lastWindowWidth
+local lastWindowHeight
 function sdl.SDL_GL_SwapWindow(window)
 	-- give up control to the browser again
 	coroutine.yield(sdl.mainthread)
@@ -1437,6 +1412,25 @@ function sdl.SDL_GL_SwapWindow(window)
 	jsgl:colorMask(false, false, false, true)
 	jsgl:clear(jsgl.COLOR_BUFFER_BIT)
 	jsgl:colorMask(true, true, true, true)
+
+	-- test for resize events based on canvas size
+	if canvas then
+		local width =  canvas.offsetWidth
+		local height = canvas.offsetHeight
+		if width ~= lastWindowWidth or height ~= lastWindowHeight then
+			lastWindowWidth = width
+			lastWindowHeight = height
+
+			-- push resize event
+			local sdlev = eventQueue:emplace_back()
+			sdlev[0].type = sdl.SDL_WINDOWEVENT
+			sdlev[0].window.timestamp = os.time()
+			sdlev[0].window.windowID = 0	-- TODO SDL windowID
+			sdlev[0].window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
+			sdlev[0].window.data1 = width
+			sdlev[0].window.data2 = height
+		end
+	end
 end
 
 -- returns the # of events

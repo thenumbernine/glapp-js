@@ -4,6 +4,7 @@ const runfile = urlparams.get('file') || 'test_tex.lua';
 const runargs = ((args) => {
 	return args ? JSON.parse(args) : [];	// assume it's a JS array
 })(urlparams.get('args'));
+const editmode = urlparams.get('edit');
 /* progress so far
 --rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS README
@@ -25,7 +26,7 @@ const runargs = ((args) => {
 --rundir='SphericalHarmonicGraph'; runfile='run.lua';		-- very slow (didn't finish)
 --rundir='metric'; runfile='run.lua';
 --rundir='sand-attack'; runfile='run.lua'; runargs=['skipCustomFont', 'gl=OpenGLES3'];
---surface-from-connection
+--rundir='surface-from-connection'; runfile='run.lua';		-- needs to be glsl-remade
 TODO mesh viewer
 TODO chess on manifold
 TODO chompman
@@ -211,6 +212,7 @@ const mountFile = (filePath, luaPath) => {
 }
 
 // TODO autogen this remotely ... like i did in lua.vm-util.js.lua
+// or TODO autogen this from lua rockspec file
 const addFromToDir = (fromPath, toPath, files) =>
 	Promise.all(files.map(f => mountFile(fromPath+'/'+f, toPath+'/'+f)));
 
@@ -356,6 +358,7 @@ console.log('creating button', label);
 };
 window.imgui = imgui;
 
+let canvas;
 lua.global.set('js', {
 	global : window,	//for fengari compat
 	// welp looks like wasmoon wraps only some builtin classes (ArrayBuffer) into lambdas to treat them all ONLY AS CTORS so i can't access properties of them, because retarded
@@ -372,6 +375,27 @@ lua.global.set('js', {
 		const img = imageCache[fn];
 		if (!img) throw "you need to decode up front file "+fn;
 		return img;
+	},
+
+	createCanvas : () => {
+	
+		canvas = document.createElement('canvas');
+		window.canvas = canvas;			// global?  do I really need it? debugging?
+		document.body.prepend(canvas);
+
+		canvas.style.left = 0;
+		canvas.style.top = 0;
+		canvas.style.position = 'absolute';
+		canvas.style.userSelect = 'none';
+
+		const resize = e => {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		};
+		window.addEventListener('resize', resize);
+		resize();	// set our initial size
+		
+		return canvas;
 	},
 
 	// these functions should have been easy to do in lua ... 

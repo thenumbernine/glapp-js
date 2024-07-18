@@ -18,7 +18,7 @@ The `main.js` and `ffi/sdl.lua` files handle the canvas object and the Lua wrapp
 
 ### Why?
 
-Because the FFI code is emulated, the whole thing goes slow af.  Why would I make such an abomination?  Because the LuaJIT native version is fast af, and always runs at least twice or more as fast as a browser+JS+WebGL-equivalent app.
+Since the FFI code is emulated the whole thing goes slow af.  Why would I make such an abomination?  Because the LuaJIT native version is fast af, and always runs at least twice or more as fast as a browser+JS+WebGL-equivalent app.
 Too bad the modern standard browser platform sucks so much, and is so slow.  
 I'm only making this for compatability's sake, not as a primary deployment option.
 
@@ -26,7 +26,10 @@ I'm only making this for compatability's sake, not as a primary deployment optio
 
 I'm going through different Lua/JS libraries to see which works best.
 
-- Fengari is great to work with, interop is flawless, however it's missing filesystem support.  Since it is not Emscripten-compiled, it does not come with Emscripten's filesystem library.
+- Fengari 
+	- JS interop is flawless
+	- Sadly it is missing filesystem support.  Since it is not Emscripten-compiled, it does not come with Emscripten's filesystem library.
+	- There's no `__gc` overloading since JS handles the object lifespan (at least I think that's why).  Sadly my Lua GL library frees resources upon `__gc`, so that means GL resources won't get automatically freed.  Neither will FFI memory ... so better not leak anything!
 
 - Wasmoon is Emscripten-compiled and so you do get Emscripten's filesystem for free, however everything Wasmoon itself brings to the table makes things more difficult.
 	- The Wasmoon wrapping filesystem calls are all in TEXT, not BINARY, so I have to side-step them.
