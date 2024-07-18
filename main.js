@@ -363,8 +363,8 @@ const imgui = {
 		this.lastTouchedDom = dom;
 		dom.id = id;
 		if (!this.div) throw "imgui.create called before imgui.newFrame...";
-		if (this.lastTouchedDom) {
-			this.lastTouchedDom.after(dom);
+		if (this.lastTouchedDom && this.lastTouchedDom.nextSibling) {
+			this.div.insertBefore(dom, this.lastTouchedDom.nextSibling);
 		} else {
 			this.div.appendChild(dom);
 		}
