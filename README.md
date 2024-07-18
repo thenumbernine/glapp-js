@@ -49,6 +49,7 @@ I'm going through different Lua/JS libraries to see which works best.
 		- Lua calls to JS code will detect different objects every time for the same Lua object (or for the same original JS object even),
 		- There's strange cases where my own classes and objects will be passed through fine, but builtin functions like `ArrayBuffer` when passed through will get extra crap wrapped around them.
 		- Randomly within Lua, some `jsobj:memberFuncCall()`'s will work and some will not.  I can't figure out what the difference is and I don't plan to waste my time finding out.
+			If you ever see `TypeError: Cannot read properties of null (reading 'then')`, this is it, and this is why I want to replace wasmoon.
 
 - Other contenders?
 	- https://github.com/Doridian/LuaJS
