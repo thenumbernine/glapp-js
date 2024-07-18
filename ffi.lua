@@ -410,26 +410,36 @@ end
 
 function CType:assign(addr, ...)
 --DEBUG:print('CType:assign', addr, ...)
+	local src = ...
+	local srctype = type(src)
+	local srcmt = debug.getmetatable(src)
 	if select('#', ...) > 0 then
 		if self.fields then
 --DEBUG:print('...assigning to struct')
-			-- structs
-			if self.isunion then
-				-- then only assign to the first entry? hmmm ...
-				self.fields[1].type:assign(addr, ...)
+			-- assigning struct to struct ... what if the types don't match?  what if they do ...
+			if srctype == 'cdata' 
+			and srcmt.isCData
+			and srcmt.type == self
+			then
+				memcpyAddr(addr, srcmt.addr, self.size)
 			else
-				for i=1,math.min(#self.fields, select('#', ...)) do
-					local field = self.fields[i]
-					field.type:assign(addr + field.offset, (select(i, ...)))
+				-- structs
+				if self.isunion then
+					-- then only assign to the first entry? hmmm ...
+					self.fields[1].type:assign(addr, ...)
+				else
+					for i=1,math.min(#self.fields, select('#', ...)) do
+						local field = self.fields[i]
+						field.type:assign(addr + field.offset, (select(i, ...)))
+					end
 				end
 			end
 		elseif self.arrayCount then
 --DEBUG:print('...assigning to array')
 			-- arrays
-			local v = ...
-			if type(v) == 'table' then
-				for i=1, #v do
-					self.baseType:assign(addr + (i-1) * self.baseType.size, v[i])
+			if type(src) == 'table' then
+				for i=1, #src do
+					self.baseType:assign(addr + (i-1) * self.baseType.size, src[i])
 				end
 			else
 				for i=1, select('#', ...) do
@@ -439,13 +449,10 @@ function CType:assign(addr, ...)
 			end
 		else
 --DEBUG:print('...assigning to primitive or pointer')
-			local v = ...
-			local vt = type(v)
-			local srcmt = debug.getmetatable(v)
 			-- TODO maybe all this goes inside self.set?
-			if v == nil then
+			if src == nil then
 				self.set(memview, addr, 0)
-			elseif vt == 'cdata'
+			elseif srctype == 'cdata'
 			and srcmt.isCData
 			then
 --DEBUG:print('...assigning from cdata')
@@ -470,13 +477,13 @@ function CType:assign(addr, ...)
 					assert(self.isPrimitive, "assigning to a non-primitive...")
 					self.set(memview, addr, value)
 				end
-			elseif vt ~= 'number' then
-				error("can't convert "..vt.." to number")
+			elseif srctype ~= 'number' then
+				error("can't convert "..srctype.." to number")
 			else
 assert(self.set, "expected primitive to have a setter")
-				self.set(memview, addr, v)
+				self.set(memview, addr, src)
 			end
---DEBUG:print('TODO *('..tostring(self)..')(ptr+'..tostring(addr)..') = '..tostring(v))
+--DEBUG:print('TODO *('..tostring(self)..')(ptr+'..tostring(addr)..') = '..tostring(src))
 --DEBUG:print(debug.traceback())
 		end
 	end
