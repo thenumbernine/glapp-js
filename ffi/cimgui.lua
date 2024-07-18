@@ -28,6 +28,13 @@ function ig.igNewFrame()
 	js.imguiNewFrame()
 end
 
+-- end of frame in order
+function ig.igRender()
+	js.imguiRender()
+end
+function ig.igGetDrawData() end
+function ig.ImGui_ImplOpenGL3_RenderDrawData() end
+
 function ig.igText(...)
 	return js.imguiText(...)
 end
@@ -56,8 +63,6 @@ end
 
 function ig.igSameLine() end
 
-function ig.igRender() end
-function ig.igGetDrawData() end
 function ig.igCreateContext() end
 function ig.igDestroyContext() end
 function ig.igCheckbox() end
@@ -71,7 +76,6 @@ function ig.ImGui_ImplSDL2_Shutdown() end
 function ig.ImGui_ImplSDL2_ProcessEvent() end
 function ig.ImGui_ImplOpenGL3_Init() end
 function ig.ImGui_ImplOpenGL3_Shutdown() end
-function ig.ImGui_ImplOpenGL3_RenderDrawData() end
 
 function ig.igGetIO()
 	-- TODO imgui cdata

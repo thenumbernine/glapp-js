@@ -25,8 +25,7 @@ if (rundir) {
 --rundir='glapp/tests'; runfile='minimal.lua';
 --rundir='glapp/tests'; runfile='pointtest.lua';
 --rundir='glapp/tests'; runfile='info.lua';
---rundir='sphere-grid'; runfile='run.lua';
---rundir='line-integral-convolution'; runfile='run.lua';	-- WORKS README
+--rundir='line-integral-convolution'; runfile='run.lua';	-- welp this was working for a good long while until I started adding imgui stuff ... now it's not working anymore ... 
 --rundir='rule110'; runfile='rule110.lua';					-- WORKS README but imgui
 --rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README but imgui
 --rundir='n-points'; runfile='run.lua';						-- WORKS README but imgui
@@ -62,6 +61,7 @@ TODO asteroids3d
 TODO tacticslua
 TODO inspiration engine
 TODO ... solarsystem graph ... takes GBs of data ...
+--rundir='sphere-grid'; runfile='run.lua';
 */
 
 async function require(path) {
@@ -329,19 +329,43 @@ const imgui = {
 		}
 	},
 	newFrame : function() {
+		//clear all taggedThisFrame
+		for (let i = this.div.children.length-1; i >= 0; --i) {
+			const ch = this.div.children[i];
+			ch.taggedThisFrame = false;
+		}
+		this.lastTouchedDom = undefined;
+	},
+	render : function() {
+		//remove old dom elements that didn't get tagged
+		for (let i = this.div.children.length-1; i >= 0; --i) {
+			const ch = this.div.children[i];
+			if (!ch.taggedThisFrame) {
+				this.div.removeChild(ch);
+			}
+		}
 	},
 	create : function(idsuffix, tag, createCB) {
+		// TODO maybe I should be using order of creation instead of text names?
 		const id = 'imgui_'+idsuffix; // ... plus id stack
 		let dom = document.getElementById(id);
 		if (dom) {
 			// TODO and make sure the dom tag is correct
+			dom.taggedThisFrame = true;
+			this.lastTouchedDom = dom;
 			return dom;
 		}
 		dom = document.createElement(tag);
+		this.lastTouchedDom = dom;
 		dom.id = id;
 		if (!this.div) throw "imgui.create called before imgui.newFrame...";
-		this.div.appendChild(dom);
+		if (this.lastTouchedDom) {
+			this.lastTouchedDom.after(dom);
+		} else {
+			this.div.appendChild(dom);
+		}
 		if (createCB) createCB(dom);
+		dom.taggedThisFrame = true;
 		return dom;
 	},
 
@@ -353,7 +377,6 @@ const imgui = {
 
 	button : function(label, size) {
 		const button = this.create(label, 'button', button => {
-console.log('creating button', label);
 			button.innerText = label;
 			button.style.display = 'block';
 			button.addEventListener('click', e => {
@@ -722,6 +745,7 @@ lua.global.set('js', {
 	// the more i push code back into js the smoother things seem to go, but never 100%
 	// so here's me pushing a lot of the cimgui stuff into js ...
 	imguiNewFrame : () => imgui.newFrame(),
+	imguiRender : () => imgui.render(),
 	imguiText : (...args) => imgui.text(...args),
 	imguiButton : (...args) => imgui.button(...args),
 	imguiInputFloat : (...args) => imgui.inputFloat(...args),
