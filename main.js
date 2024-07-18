@@ -4,7 +4,7 @@ const runfile = urlparams.get('file') || 'test_tex.lua';
 const runargs = ((args) => {
 	return args ? JSON.parse(args) : [];	// assume it's a JS array
 })(urlparams.get('args'));
-const editmode = urlparams.get('edit');
+let editmode = urlparams.get('edit');
 /* progress so far
 --rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS README
@@ -98,7 +98,6 @@ window.lua = lua;
 
 // i hate javascript
 const FS = lua.cmodule.module.FS;
-FS.chdir('/');
 window.FS = FS;
 
 // ok so wasmoon and javascript combined their tardpowers to make image loading at runtime impossible
@@ -268,6 +267,8 @@ await Promise.all([
 	addLuaDir('lambda-cdm', ['bisect.lua', 'run.lua']),
 	addLuaDir('surface-from-connection', ['run.lua']),
 ]).catch(e => { throw e; });
+// why is this here when it's not down there in FS.readdir'/' ?
+//console.log('glapp', FS.stat('/glapp'));
 
 // imgui binding code.
 // i wanted to do this in lua but wasmoon disagrees.
@@ -356,9 +357,143 @@ console.log('creating button', label);
 	},
 
 };
+
+// resize uses this too
+let fsDiv;
+let taDiv;
+let codeTextArea;
+// store as pixel <=> smoother scrolling when resizing divider, store as fraction <=> smoother when resizing window ... shrug
+let fsFrac = .25;
+let taFrac = .5;
+
+const setTextAreaFile = (path, name) => {
+	codeTextArea.value = new TextDecoder().decode(FS.readFile(path, {encoding:'binary'}));
+};
+
+{	// add an edit button
+	imgui.newFrame();	// make the imgui div
+	const b = document.createElement('button');
+	b.innerText = 'edit';
+	b.addEventListener('click', e => {
+		editmode = !editmode;
+		resize();	// refresh size
+	});
+	imgui.div.appendChild(b);
+
+	fsDiv = document.createElement('div');
+	fsDiv.style.position = 'absolute';
+	fsDiv.style.display = 'none';
+	fsDiv.style.zIndex = -1;	//under imgui div
+	fsDiv.style.paddingTop = '40px';
+	fsDiv.style.backgroundColor = '#ffffff';
+	fsDiv.style.color = '#000000';
+	document.body.appendChild(fsDiv);
+
+	const makeFileDiv = (path, name) => {
+		//FS.chdir(path);
+		const filediv = document.createElement('div');
+		filediv.style.marginLeft = '16px';
+		filediv.style.border = '1px solid black';
+		const title = document.createElement('div');
+		filediv.appendChild(title);
+		const stat = FS.lstat(path);
+		if (stat.mode & 0x4000) {
+			const chdiv = document.createElement('div');
+			chdiv.style.display = path == '/' ? 'block' : 'none';
+			filediv.appendChild(chdiv);
+			name = name.substr(0,1) == '/' ? name : '/' + name;
+			try {
+//console.log('readdir', path);						
+				if (path != '/dev' && path != '/proc') {	//giving exceptions from accessing them
+					FS.readdir(path).forEach(f => {
+						if (f != '.' && f != '..') {
+							let chpath = path.substr(-1) == '/' ? path + f : path + '/' + f;
+//console.log('got file', chpath);						
+							chdiv.appendChild(makeFileDiv(chpath, f));
+						}
+					});
+				}
+			} catch (e) {
+				console.log('for path '+path+' thought it was a dir '+stat.mode.toString(16)+' but it wasnt: '+e);
+			}
+			title.style.cursor = 'pointer';
+			title.addEventListener('click', e => {
+				if (chdiv.style.display == 'none') {
+					chdiv.style.display = 'block';
+				} else {
+					chdiv.style.display = 'none';
+				}
+			});
+		} else {
+			title.style.cursor = 'pointer';
+			title.addEventListener('click', e => {
+				setTextAreaFile(path, name);
+			});
+		}
+		title.innerText = name;
+		return filediv;
+	};
+	FS.chdir('/');
+	fsDiv.appendChild(makeFileDiv('/', '/'));
+	FS.chdir('/');
+
+	taDiv = document.createElement('div');
+	taDiv.style.position = 'absolute';
+	taDiv.style.display = 'none';
+	//taDiv.style.overflow = 'hidden';
+	taDiv.style.zIndex = -1;	//under imgui div
+	document.body.appendChild(taDiv);
+	
+	codeTextArea = document.createElement('textarea');
+	codeTextArea.style.width = '100%';
+	codeTextArea.style.height = '100%';
+	codeTextArea.style.tabSize = 4;
+	codeTextArea.style.MozTabSize = 4;
+	codeTextArea.style.OTabSize = 4;
+	codeTextArea.style.whiteSpace = 'pre';
+	codeTextArea.style.overflowWrap = 'normal';
+	codeTextArea.style.overflow = 'scroll';
+	taDiv.appendChild(codeTextArea);
+}
 window.imgui = imgui;
 
 let canvas;
+const resize = e => {
+	const w = window.innerWidth;
+	const h = window.innerHeight;
+	if (editmode) {
+		fsDiv.style.display = 'block';
+		fsDiv.style.left = '0px';
+		fsDiv.style.top = '0px';
+		fsDiv.style.width = (fsFrac * w) + 'px';
+		fsDiv.style.height = (.95 * h) + 'px';
+		fsDiv.style.overflow = 'scroll';
+		// TODO resize bar / save ratio
+
+		taDiv.style.display = 'block';
+		taDiv.style.left = (fsFrac * w) + 'px';
+		taDiv.style.top = '0px';
+		taDiv.style.width = (taFrac * w) + 'px';
+		taDiv.style.height = (.95 * h) + 'px';
+	
+		if (canvas) {
+			canvas.style.left = ((fsFrac + taFrac) * w) + 'px';
+			canvas.style.top = '0px';
+			canvas.width = (1 - fsFrac - taFrac) * w;
+			canvas.height = h;
+		}
+	} else {		// fullscreen
+		fsDiv.style.display = 'none';
+		taDiv.style.display = 'none';
+		if (canvas) {
+			canvas.style.left = '0px';
+			canvas.width = w;
+			canvas.height = h;
+		}
+	}
+};
+resize();	//initialize fs and codetextarea
+
 lua.global.set('js', {
 	global : window,	//for fengari compat
 	// welp looks like wasmoon wraps only some builtin classes (ArrayBuffer) into lambdas to treat them all ONLY AS CTORS so i can't access properties of them, because retarded
@@ -388,10 +523,6 @@ lua.global.set('js', {
 		canvas.style.position = 'absolute';
 		canvas.style.userSelect = 'none';
 
-		const resize = e => {
-			canvas.width = window.innerWidth;
-			canvas.height = window.innerHeight;
-		};
 		window.addEventListener('resize', resize);
 		resize();	// set our initial size
 		
