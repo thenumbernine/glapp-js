@@ -245,6 +245,13 @@ do
 	end
 end
 
+-- shim audio TODO
+do
+	-- TODO change to browser-based audio
+	package.loaded['audio.currentsystem'] = 'null'
+	-- TODO provide audio, buffer, source classes
+end
+
 -- start it as a new thread ...
 -- TODO can I just wrap the whole dofile() in a main thread?
 -- the tradeoff is I'd lose my ability for main coroutine detection ...

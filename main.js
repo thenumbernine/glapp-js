@@ -37,7 +37,7 @@ if (rundir) {
 --rundir='seashell'; runfile='run.lua';						-- very slow (didn't finish)
 --rundir='SphericalHarmonicGraph'; runfile='run.lua';		-- very slow (didn't finish)
 --rundir='metric'; runfile='run.lua';
---rundir='sand-attack'; runfile='run.lua'; runargs=['skipCustomFont', 'gl=OpenGLES3'];
+--rundir='sand-attack'; runfile='run.lua'; runargs=["skipCustomFont","config=nil"]		-- dir() is failing ... hmm
 --rundir='surface-from-connection'; runfile='run.lua';		-- needs to be glsl-remade
 TODO mesh viewer
 TODO chess on manifold
@@ -253,6 +253,8 @@ await Promise.all([
 	addLuaDir('cl/tests', ['cpptest-obj.lua', 'cpptest-standalone.lua', 'getbin.lua', 'info.lua', 'obj.lua', 'obj-multi.lua', 'readme-test.lua', 'reduce.lua', 'test.lua']),
 	addLuaDir('image', ['image.lua']),
 	addLuaDir('image/luajit', ['bmp.lua', 'fits.lua', 'gif.lua', 'image.lua', 'jpeg.lua', 'loader.lua', 'png.lua', 'tiff.lua']),
+	addLuaDir('audio', ['audio.lua', 'buffer.lua', 'currentsystem.lua', 'source.lua']),
+	addLuaDir('audio/null', ['audio.lua', 'buffer.lua', 'source.lua']),
 	addLuaDir('glapp', ['glapp.lua', 'mouse.lua', 'orbit.lua', 'view.lua']),
 	addLuaDir('glapp/tests', ['compute.lua', 'compute-spirv.lua', 'cubemap.lua', 'events.lua', 'info.lua', 'minimal.lua', 'pointtest.lua', 'test_es2.lua', 'test_tex.lua', 'test_es.lua', 'test.lua', 'test_vertexattrib.lua', 'src.png']),
 	addLuaDir('imgui', ['imgui.lua']),
@@ -277,6 +279,14 @@ await Promise.all([
 	addLuaDir('fibonacci-modulo', ['run.lua', 'fibonacci.lua']),
 	addLuaDir('lambda-cdm', ['bisect.lua', 'run.lua']),
 	addLuaDir('surface-from-connection', ['run.lua']),
+	addLuaDir('sand-attack', ['app.lua', 'config.lua', 'player.lua', 'run.lua', 'serialize.lua', 'splash.demo']),
+	addLuaDir('sand-attack/font', ['Billow twirl Demo.ttf', 'Billow twirl Demo.url']),
+	addLuaDir('sand-attack/menu', ['config.lua', 'highscore.lua', 'main.lua', 'menu.lua', 'newgame.lua', 'playerkeys.lua', 'playing.lua', 'splashscreen.lua']),
+	//addLuaDir('sand-attack/music', ['Desert-City.ogg', 'Exotic-Plains.ogg', 'Ibn-Al-Noor.ogg', 'Market_Day.ogg', 'Return-of-the-Mummy.ogg', 'temple-of-endless-sands.ogg', 'wombat-noises-audio-the-legend-of-narmer.ogg'),
+	addLuaDir('sand-attack/sandmodel', ['all.lua', 'automatacpu.lua', 'automatagpu.lua', 'cfd.lua', 'sandmodel.lua', 'sph.lua']),
+	addLuaDir('sand-attack/sfx', ['levelup.url', 'levelup.wav', 'line.url', 'line.wav', 'place.url', 'place.wav']),
+	addLuaDir('sand-attack/tex', ['splash.png', 'youlose.png']),
+	addLuaDir('sand-attack/highscores', ['2024-06-21-22-05-44.demo']),	//interesting, mkdir didn't seem to work ... also interesting making an empty dir ?
 ]).catch(e => { throw e; });
 // why is this here when it's not down there in FS.readdir'/' ?
 //console.log('glapp', FS.stat('/glapp'));
