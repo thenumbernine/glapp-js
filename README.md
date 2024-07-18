@@ -2,8 +2,8 @@
 
 ### LuaJIT + OpenGL + SDL in Browser
 
--	[[interactive editor]](https://thenumbernine.github.io/glapp/?dir=glapp/tests&file=test_tex.lua&edit=true)
-[![](pic.png)](https://thenumbernine.github.io/glapp/?dir=glapp/tests&file=test_tex.lua&edit=true)
+-	[[interactive editor]](https://thenumbernine.github.io/glapp/)
+[![](pic.png)](https://thenumbernine.github.io/glapp/)
 
 
 -	[[launch]](https://thenumbernine.github.io/glapp/?dir=glapp/tests&file=test_es.lua)
