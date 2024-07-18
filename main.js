@@ -273,6 +273,7 @@ const imgui = {
 		if (!this.div) {
 			// TODO make sure this.div is attached too? or trust it's not tampered with ...
 			this.div = document.createElement('div');
+			this.div.style.position = 'absolute';
 			document.body.appendChild(this.div);
 		}
 	},
@@ -290,13 +291,18 @@ const imgui = {
 		if (createCB) createCB(dom);
 		return dom;
 	},
+	
 	text : function(fmt) {
-		this.create(fmt, 'div').innerText = fmt;
+		this.create(fmt, 'div', text => {
+			text.innerText = fmt;
+		});
 	},
+	
 	button : function(label, size) {
 		const button = this.create(label, 'button', button => {
 console.log('creating button', label);			
 			button.innerText = label;
+			button.style.display = 'block';
 			button.addEventListener('click', e => {
 				button.imguiClicked = true;
 			});
@@ -306,7 +312,10 @@ console.log('creating button', label);
 		return clicked;
 	},
 	inputFloat : function(label, v, v_min, v_max, format, flags) {
-		this.create(label, 'span').innerText = label;
+		this.create(label, 'span', span => {
+			span.innerText = label;
+			span.style.paddingRight = '20px';
+		});
 		// TODO use id stack instead of label, or something, idk
 		const input = this.create(label+'_value', 'input', input => {
 			input.value = v[0];
@@ -323,7 +332,10 @@ console.log('creating button', label);
 		return changed;
 	},
 	inputInt : function(label, v, v_min, v_max, format, flags) {
-		this.create(label, 'span').innerText = label;
+		this.create(label, 'span', span => {
+			span.innerText = label;
+			span.style.paddingRight = '20px';
+		});
 		// TODO use id stack instead of label, or something, idk
 		const input = this.create(label+'_value', 'input', input => {
 			input.value = v[0];

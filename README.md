@@ -16,6 +16,12 @@ The `ffi/OpenGLES3.lua` file is an interface layer between GLES and WebGL.
 
 The `main.js` and `ffi/sdl.lua` files handle the canvas object and the Lua wrapping thread to allow for my internal SDL busy-loops to become interval loops in browser.
 
+### Why?
+
+Because the FFI code is emulated, the whole thing goes slow af.  Why would I make such an abomination?  Because the LuaJIT native version is fast af, and always runs at least twice or more as fast as a browser+JS+WebGL-equivalent app.
+Too bad the modern standard browser platform sucks so much, and is so slow.  
+I'm only making this for compatability's sake, not as a primary deployment option.
+
 ### Lua/JS 
 
 I'm going through different Lua/JS libraries to see which works best.
