@@ -284,21 +284,45 @@ await Promise.all([
 // imgui binding code.
 // i wanted to do this in lua but wasmoon disagrees.
 const imgui = {
-	newFrame : function() {
-		if (!this.div) {
-			// TODO make sure this.div is attached too? or trust it's not tampered with ...
-			this.div = document.createElement('div');
-			this.div.style.position = 'absolute';
-			this.div.style.left = '0px';
-			this.div.style.top = '0px';
-			document.body.appendChild(this.div);
+	init : function() {
+		// TODO make sure this.div is attached too? or trust it's not tampered with ...
+		this.div = document.createElement('div');
+		this.div.style.position = 'absolute';
+		this.div.style.left = '0px';
+		this.div.style.top = '0px';
+		this.div.style.backgroundColor = '#000000';
+		this.div.style.opacity = .8;
+		this.div.style.border = '1px solid #5f5f5f';
+		this.div.style.padding = '3px';
+		this.div.style.borderRadius = '7px';
+
+		this.editButton = document.createElement('button');
+		this.editButton.innerText = '.';
+		this.editButton.style.display = 'block';
+		this.editButton.addEventListener('click', e => {
+			editmode = !editmode;
+			resize();	// refresh size
+		});
+		imgui.div.appendChild(this.editButton);
+
+
+		document.body.appendChild(this.div);
+	},
+	clear : function() {
+		for (let i = this.div.children.length-1; i >= 0; --i) {
+			const ch = this.div.children[i];
+			if (ch != this.editButton) {
+				this.div.removeChild(ch);
+			}
 		}
+	},
+	newFrame : function() {
 	},
 	create : function(idsuffix, tag, createCB) {
 		const id = 'imgui_'+idsuffix; // ... plus id stack
 		let dom = document.getElementById(id);
 		if (dom) {
-			// TODO and make sure the dom tag is correct 
+			// TODO and make sure the dom tag is correct
 			return dom;
 		}
 		dom = document.createElement(tag);
@@ -308,16 +332,16 @@ const imgui = {
 		if (createCB) createCB(dom);
 		return dom;
 	},
-	
+
 	text : function(fmt) {
 		this.create(fmt, 'div', text => {
 			text.innerText = fmt;
 		});
 	},
-	
+
 	button : function(label, size) {
 		const button = this.create(label, 'button', button => {
-console.log('creating button', label);			
+console.log('creating button', label);
 			button.innerText = label;
 			button.style.display = 'block';
 			button.addEventListener('click', e => {
@@ -408,14 +432,7 @@ const setEditorFilePath = path => {
 };
 
 {	// add an edit button
-	imgui.newFrame();	// make the imgui div
-	const b = document.createElement('button');
-	b.innerText = '.';
-	b.addEventListener('click', e => {
-		editmode = !editmode;
-		resize();	// refresh size
-	});
-	imgui.div.appendChild(b);
+	imgui.init();	// make the imgui div
 
 	fsDiv = document.createElement('div');
 	fsDiv.style.position = 'absolute';
@@ -438,19 +455,19 @@ const setEditorFilePath = path => {
 		if (stat.mode & 0x4000) {
 			const chdiv = document.createElement('div');
 			chdiv.style.marginLeft = '16px';
-			chdiv.style.display = path == '/' ? 'block' 
+			chdiv.style.display = path == '/' ? 'block'
 				: (rundir+'/').substr(0, (path+'/').length) == (path+'/') ? 'block' : 'none';
 			filediv.appendChild(chdiv);
 			name = name.substr(0,1) == '/' ? name : '/' + name;
 			try {
-//console.log('readdir', path);						
+//console.log('readdir', path);
 				if (path != '/dev' && path != '/proc') {	//giving exceptions from accessing them
 					const fs = FS.readdir(path);
 					fs.sort();
 					fs.forEach(f => {
 						if (f != '.' && f != '..') {
 							let chpath = path.substr(-1) == '/' ? path + f : path + '/' + f;
-//console.log('got file', chpath);						
+//console.log('got file', chpath);
 							chdiv.appendChild(makeFileDiv(chpath, f));
 						}
 					});
@@ -492,7 +509,7 @@ const setEditorFilePath = path => {
 
 	const titleBar = document.createElement('div');
 	taDiv.appendChild(titleBar);
-	
+
 
 	const run = document.createElement('button');
 	run.innerText = 'run';
@@ -502,9 +519,9 @@ const setEditorFilePath = path => {
 		const parts = editorPath.split('/');
 		runfile = parts.pop();
 		rundir = parts.join('/');
-		runargs = [];	//TODO somewhere ... 
+		runargs = [];	//TODO somewhere ...
 		doRun();
-console.log('running', rundir, runfile);	
+console.log('running', rundir, runfile);
 	});
 	titleBar.appendChild(run);
 
@@ -520,6 +537,8 @@ console.log('running', rundir, runfile);
 
 	// TODO line numbers?
 	editorTextArea = document.createElement('textarea');
+	editorTextArea.style.backgroundColor = '#000000';
+	editorTextArea.style.color = '#ffffff';
 	editorTextArea.style.width = '100%';
 	editorTextArea.style.height = '100%';
 	editorTextArea.style.tabSize = 4;
@@ -557,7 +576,7 @@ const resize = e => {
 		taDiv.style.top = '0px';
 		taDiv.style.width = (taFrac * w) + 'px';
 		taDiv.style.height = (h - 32) + 'px';
-	
+
 		if (canvas) {
 			canvas.style.left = ((fsFrac + taFrac) * w) + 'px';
 			canvas.style.top = '0px';
@@ -599,7 +618,7 @@ lua.global.set('js', {
 
 	createCanvas : () => {
 		if (canvas) document.body.removeChild(canvas);
-	
+
 		canvas = document.createElement('canvas');
 		canvas.style.position = 'absolute';
 		canvas.style.userSelect = 'none';
@@ -607,11 +626,11 @@ lua.global.set('js', {
 		window.canvas = canvas;			// global?  do I really need it? debugging?
 
 		resize();	// set our initial size
-		
+
 		return canvas;
 	},
 
-	// these functions should have been easy to do in lua ... 
+	// these functions should have been easy to do in lua ...
 	// ... but wasmoon has some kind of lua-syntax within some internally run code for wrappers to js objects ... bleh
 	jsglInit : (gl_) => {
 		if (gl) {
@@ -641,6 +660,7 @@ lua.global.set('js', {
 });
 
 const doRun = () => {
+	imgui.clear();
 	// ofc you can't push extra args into the call, i guess you only can via global assignments?
 	FS.chdir(rundir);
 	lua.doString(`
