@@ -336,7 +336,7 @@ const imgui = {
 				ch.taggedThisFrame = false;
 			}
 		}
-		this.lastTouchedDom = undefined;
+		this.lastTouchedDom = this.editButton;
 	},
 	render : function() {
 		//remove old dom elements that didn't get tagged
@@ -360,7 +360,6 @@ const imgui = {
 			return dom;
 		}
 		dom = document.createElement(tag);
-		this.lastTouchedDom = dom;
 		dom.id = id;
 		if (!this.div) throw "imgui.create called before imgui.newFrame...";
 		if (this.lastTouchedDom && this.lastTouchedDom.nextSibling) {
@@ -370,6 +369,7 @@ const imgui = {
 		}
 		if (createCB) createCB(dom);
 		dom.taggedThisFrame = true;
+		this.lastTouchedDom = dom;
 		return dom;
 	},
 
