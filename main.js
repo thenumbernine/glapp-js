@@ -8,21 +8,21 @@ const runargs = ((args) => {
 --rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS README
---rundir='line-integral-convolution'; runfile='run.lua';	-- WORKS README
---rundir='rule110'; runfile='rule110.lua';					-- WORKS README but imgui
---rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README but imgui
---rundir='n-points'; runfile='run.lua';						-- WORKS README but imgui
---rundir='geographic-charts'; runfile='test.lua';			-- WORKS README but indexed geometry could help it
---rundir='prime-spiral'; runfile='run.lua';					-- WORKS README but needs tracking shift for key events for it to work ...
-TODO lambda-cdm
---rundir='n-points'; runfile='run_orbit.lua';				-- todo ... or not, it's kinda dumb i guess
---rundir='seashell'; runfile='run.lua';						-- very slow (didn't finish)
---rundir='SphericalHarmonicGraph'; runfile='run.lua';		-- very slow (didn't finish)
 --rundir='glapp/tests'; runfile='test.lua';					-- fails, glmatrixmode
 --rundir='glapp/tests'; runfile='minimal.lua';
 --rundir='glapp/tests'; runfile='pointtest.lua';
 --rundir='glapp/tests'; runfile='info.lua';
 --rundir='sphere-grid'; runfile='run.lua';
+--rundir='line-integral-convolution'; runfile='run.lua';	-- WORKS README
+--rundir='rule110'; runfile='rule110.lua';					-- WORKS README but imgui
+--rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README but imgui
+--rundir='n-points'; runfile='run.lua';						-- WORKS README but imgui
+--rundir='n-points'; runfile='run_orbit.lua';				-- todo ... or not, it's kinda dumb i guess
+--rundir='geographic-charts'; runfile='test.lua';			-- WORKS README but indexed geometry could help it
+--rundir='prime-spiral'; runfile='run.lua';					-- WORKS README but needs tracking shift for key events for it to work ...
+--rundir='lambda-cdm'; runfile='run.lua';					-- WORKS README but imgui
+--rundir='seashell'; runfile='run.lua';						-- very slow (didn't finish)
+--rundir='SphericalHarmonicGraph'; runfile='run.lua';		-- very slow (didn't finish)
 --rundir='metric'; runfile='run.lua';
 --rundir='sand-attack'; runfile='run.lua'; runargs=['skipCustomFont', 'gl=OpenGLES3'];
 TODO mesh viewer
@@ -277,7 +277,9 @@ lua.global.set('js', {
 		return img;
 	},
 
-	fixYourShitWASMOON : (gl) => {
+	// these functions should have been easy to do in lua ... 
+	// ... but wasmoon has some kind of lua-syntax within some internally run code for wrappers to js objects ... bleh
+	jsglInitExts : (gl) => {
 		// these calls didn't work from within Lua, but they work fine here.
 		gl.getExtension('OES_element_index_uint');
 		gl.getExtension('OES_standard_derivatives');
@@ -285,6 +287,12 @@ lua.global.set('js', {
 		gl.getExtension('OES_texture_float_linear');
 		gl.getExtension('EXT_color_buffer_float');	//needed for webgl2 framebuffer+rgba32f
 	},
+	// ok why does getElementById need to be a promise but createElement cannot be?
+	//createElement : tag => new Promise((resolve, reject) => resolve(document.createElement(tag))),
+	createElement : tag => document.createElement(tag),
+	// if it's not a promise then wasmoon bitches that it's missing a "then" field
+	// but if it is a promise, then i get the promise back, and not the object itself
+	getElementById : id => new Promise((resolve, reject) => resolve(document.getElementById(id))),
 });
 
 // ofc you can't push extra args into the call, i guess you only can via global assignments?
