@@ -1574,6 +1574,20 @@ function CData:add(index)
 	)
 end
 
+function CData.__unm(a)
+	local m = debug.getmetatable(a)
+	local p = m and m.isCData
+	if p then
+		local h = p and m.type and m.type.mt and m.type.mt.__unm
+		if h then
+			return h(a)
+		end
+	end
+
+	error("don't know how to unm "..tostring(m.type))
+end
+
+
 function CData.__add(a,b)
 	local ma = debug.getmetatable(a)
 	local mb = debug.getmetatable(b)
