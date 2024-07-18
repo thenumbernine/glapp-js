@@ -1378,10 +1378,8 @@ function sdl.SDL_GL_CreateContext(sdlWindow)
 	jsgl.getExtension'EXT_color_buffer_float'	--needed for webgl2 framebuffer+rgba32f
 	--]]
 	-- [[ or I can just call them from JS and it works
-	js.jsglInitExts(jsgl)
+	js.jsglInit(jsgl)
 	--]]
-
-js.global.gl = jsgl	-- debugging
 
 	coroutine.yield(sdl.mainthread)
 

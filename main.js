@@ -552,6 +552,7 @@ const resize = e => {
 resize();	//initialize fs and codetextarea
 window.addEventListener('resize', resize);
 
+let gl;
 lua.global.set('js', {
 	global : window,	//for fengari compat
 	// welp looks like wasmoon wraps only some builtin classes (ArrayBuffer) into lambdas to treat them all ONLY AS CTORS so i can't access properties of them, because retarded
@@ -586,7 +587,14 @@ lua.global.set('js', {
 
 	// these functions should have been easy to do in lua ... 
 	// ... but wasmoon has some kind of lua-syntax within some internally run code for wrappers to js objects ... bleh
-	jsglInitExts : (gl) => {
+	jsglInit : (gl_) => {
+		if (gl) {
+			const WEBGL_lose_context = gl.getExtension('WEBGL_lose_context');
+			if (WEBGL_lose_context) WEBGL_lose_context.loseContext();
+		}
+		gl = gl_;
+		window.gl = gl;
+
 		// these calls didn't work from within Lua, but they work fine here.
 		gl.getExtension('OES_element_index_uint');
 		gl.getExtension('OES_standard_derivatives');
