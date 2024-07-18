@@ -34,7 +34,7 @@ if (rundir) {
 --rundir='prime-spiral'; runfile='run.lua';					-- WORKS README but needs tracking shift for key events for it to work ...
 --rundir='lambda-cdm'; runfile='run.lua';					-- WORKS README but imgui
 --rundir='seashell'; runfile='run.lua';						-- very slow (didn't finish)
---rundir='SphericalHarmonicGraph'; runfile='run.lua';		-- very slow (didn't finish)
+--rundir='SphericalHarmonicGraphs'; runfile='run.lua';		-- very slow (didn't finish)
 --rundir='metric'; runfile='run.lua';
 --rundir='sand-attack'; runfile='run.lua'; runargs=["skipCustomFont","config=nil"]		-- dir() is failing ... hmm
 --rundir='surface-from-connection'; runfile='run.lua';		-- needs to be glsl-remade
@@ -281,7 +281,7 @@ await Promise.all([
 	addLuaDir('fibonacci-modulo', ['run.lua', 'fibonacci.lua']),
 	addLuaDir('lambda-cdm', ['bisect.lua', 'run.lua']),
 	addLuaDir('surface-from-connection', ['run.lua']),
-	addLuaDir('SphericalHarmonicGraph', ['associatedlegendre.lua', 'factorial.lua', 'plot_associatedlegendre.lua', 'run.lua', 'sphericalharmonics.lua']),
+	addLuaDir('SphericalHarmonicGraphs', ['associatedlegendre.lua', 'factorial.lua', 'plot_associatedlegendre.lua', 'run.lua', 'sphericalharmonics.lua']),
 	addLuaDir('sand-attack', ['app.lua', 'player.lua', 'run.lua', 'serialize.lua', 'splash.demo']), // isn't in the repo: 'config.lua'
 	addLuaDir('sand-attack/font', ['Billow twirl Demo.ttf', 'Billow twirl Demo.url']),
 	addLuaDir('sand-attack/menu', ['config.lua', 'highscore.lua', 'main.lua', 'menu.lua', 'newgame.lua', 'playerkeys.lua', 'playing.lua', 'splashscreen.lua']),
