@@ -6,6 +6,8 @@ let runargs = ((args) => {
 })(urlparams.get('args'));
 let editmode = urlparams.get('edit');
 if (!runfile && !rundir) editmode = true;
+if (rundir.substr(0, 1) != '/') rundir = '/' + rundir;
+if (rundir.substr(-1) == '/') rundir = rundir.substr(0, rundir.length-1);
 /* progress so far
 --rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS README
@@ -388,7 +390,7 @@ const setEditorFilePath = path => {
 {	// add an edit button
 	imgui.newFrame();	// make the imgui div
 	const b = document.createElement('button');
-	b.innerText = '[.]';
+	b.innerText = '.';
 	b.addEventListener('click', e => {
 		editmode = !editmode;
 		resize();	// refresh size
@@ -414,13 +416,16 @@ const setEditorFilePath = path => {
 		const stat = FS.lstat(path);
 		if (stat.mode & 0x4000) {
 			const chdiv = document.createElement('div');
-			chdiv.style.display = path == '/' ? 'block' : 'none';
+			chdiv.style.display = path == '/' ? 'block' 
+				: (rundir+'/').substr(0, (path+'/').length) == (path+'/') ? 'block' : 'none';
 			filediv.appendChild(chdiv);
 			name = name.substr(0,1) == '/' ? name : '/' + name;
 			try {
 //console.log('readdir', path);						
 				if (path != '/dev' && path != '/proc') {	//giving exceptions from accessing them
-					FS.readdir(path).forEach(f => {
+					const fs = FS.readdir(path);
+					fs.sort();
+					fs.forEach(f => {
 						if (f != '.' && f != '..') {
 							let chpath = path.substr(-1) == '/' ? path + f : path + '/' + f;
 //console.log('got file', chpath);						
@@ -504,7 +509,7 @@ console.log('running', rundir, runfile);
 }
 window.imgui = imgui;
 
-setEditorFilePath('/'+rundir+'/'+runfile);
+setEditorFilePath(rundir+'/'+runfile);
 
 let canvas;
 const resize = e => {
@@ -515,7 +520,7 @@ const resize = e => {
 		fsDiv.style.left = '0px';
 		fsDiv.style.top = '0px';
 		fsDiv.style.width = (fsFrac * w) + 'px';
-		fsDiv.style.height = (.95 * h) + 'px';
+		fsDiv.style.height = (h - 5) + 'px';
 		fsDiv.style.overflow = 'scroll';
 		// TODO resize bar / save ratio
 
@@ -523,7 +528,7 @@ const resize = e => {
 		taDiv.style.left = (fsFrac * w) + 'px';
 		taDiv.style.top = '0px';
 		taDiv.style.width = (taFrac * w) + 'px';
-		taDiv.style.height = (.95 * h) + 'px';
+		taDiv.style.height = (h - 5) + 'px';
 	
 		if (canvas) {
 			canvas.style.left = ((fsFrac + taFrac) * w) + 'px';
