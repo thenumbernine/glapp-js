@@ -1224,12 +1224,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 
 	if not canvas then
 --DEBUG:print('...creating canvas')
-		-- [[ strangely this call works, which is the only document:... member call on document that seems to work ...
 		canvas = document:createElement'canvas'
-		--]]
-		--[[ but to work around the internal wasmoon errors elsewhere I exposed a js global function to do this ... does it work here too?
-		canvas = js.createElement'canvas'
-		--]]
 		window.canvas = canvas			-- global?  do I really need it?
 		document.body:prepend(canvas)
 	end
@@ -1399,14 +1394,15 @@ function sdl.SDL_GL_CreateContext(sdlWindow)
 	-- TypeError: Cannot read properties of null (reading 'then')
 	-- wtf "then" ?  wasmoon...
 	--[[
-	jsgl:getExtension'OES_element_index_uint'
-	jsgl:getExtension'OES_standard_derivatives'
-	jsgl:getExtension'OES_texture_float'	--needed for webgl framebuffer+rgba32f
-	jsgl:getExtension'OES_texture_float_linear'
-	jsgl:getExtension'EXT_color_buffer_float'	--needed for webgl2 framebuffer+rgba32f
+	jsgl.getExtension'OES_element_index_uint'
+	jsgl.getExtension'OES_standard_derivatives'
+	jsgl.getExtension'OES_texture_float'	--needed for webgl framebuffer+rgba32f
+	jsgl.getExtension'OES_texture_float_linear'
+	jsgl.getExtension'EXT_color_buffer_float'	--needed for webgl2 framebuffer+rgba32f
 	--]]
-	-- or I can just call them from JS and it works
+	-- [[ or I can just call them from JS and it works
 	js.jsglInitExts(jsgl)
+	--]]
 
 js.global.gl = jsgl	-- debugging
 

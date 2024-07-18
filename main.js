@@ -85,7 +85,14 @@ print(js.global)
 await import('./wasmoon.min.js');	// defines the global 'wasmoon', returns nothing, and that isn't documented in any corner of all of the internet
 const LuaFactory = wasmoon.LuaFactory;
 const factory = new LuaFactory();
-const lua = await factory.createEngine();
+const lua = await factory.createEngine({
+	// looks like this is true by default, and if it's false then i get the same error within js instead of within lua ...
+	// was this what was screwing up my ability to allocate ArrayBuffer from within the Lua code? gah...
+	// disabling this does lose me my Lua call stack upon getting that same error...
+	//enableProxy:false,//true,
+	//insertObjects:true,
+	//traceAllocations:true,
+});
 window.lua = lua;
 
 // i hate javascript
@@ -259,6 +266,54 @@ await Promise.all([
 	addLuaDir('lambda-cdm', ['bisect.lua', 'run.lua']),
 ]).catch(e => { throw e; });
 
+// imgui binding code.
+// i wanted to do this in lua but wasmoon disagrees.
+const imgui = {
+	newFrame : function() {
+		if (!this.div) {
+			// TODO make sure this.div is attached too? or trust it's not tampered with ...
+			this.div = document.createElement('div');
+			document.body.appendChild(this.div);
+		}
+	},
+	create : function(idsuffix, tag, createCB) {
+		const id = 'imgui_'+idsuffix; // ... plus id stack
+		let dom = document.getElementById(id);
+		if (dom) {
+			// TODO and make sure the dom tag is correct 
+			return dom;
+		}
+		dom = document.createElement(tag);
+		dom.id = id;
+		if (!this.div) throw "imgui.create called before imgui.newFrame...";
+		this.div.appendChild(dom);
+		if (createCB) createCB(dom);
+		return dom;
+	},
+	text : function(fmt) {
+		this.create(fmt, 'div').innerText = fmt;
+	},
+	sliderFloat : function(label, v, v_min, v_max, format, flags) {
+		//'v' is an object???!?!
+		this.create(label, 'span').innerText = label;
+		// TODO use id stack instead of label, or something, idk
+		const input = this.create(label+'_value', 'input', input => {
+			input.value = v[0];
+		});
+		// TODO upon creation set this, then monitor its changes and return' true' if found
+		let changed = false;
+		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
+		const iv = parseFloat(input.value)
+		if (v[0] !== iv) {
+			v[0] = iv;
+			changed = true;
+		}
+		this.create(label+'_bf', 'br');
+		return changed;
+	},
+};
+window.imgui = imgui;
+
 lua.global.set('js', {
 	global : window,	//for fengari compat
 	// welp looks like wasmoon wraps only some builtin classes (ArrayBuffer) into lambdas to treat them all ONLY AS CTORS so i can't access properties of them, because retarded
@@ -287,12 +342,14 @@ lua.global.set('js', {
 		gl.getExtension('OES_texture_float_linear');
 		gl.getExtension('EXT_color_buffer_float');	//needed for webgl2 framebuffer+rgba32f
 	},
-	// ok why does getElementById need to be a promise but createElement cannot be?
-	//createElement : tag => new Promise((resolve, reject) => resolve(document.createElement(tag))),
-	createElement : tag => document.createElement(tag),
-	// if it's not a promise then wasmoon bitches that it's missing a "then" field
-	// but if it is a promise, then i get the promise back, and not the object itself
-	getElementById : id => new Promise((resolve, reject) => resolve(document.getElementById(id))),
+
+	// using js proxy in wasmoon is complete trash ... makes me really appreciate how flawless it was in fengari
+	// member object calls sometimes work and sometimes dont
+	// the more i push code back into js the smoother things seem to go, but never 100%
+	// so here's me pushing a lot of the cimgui stuff into js ...
+	imguiNewFrame : () => imgui.newFrame(),
+	imguiText : (...args) => imgui.text(...args),
+	imguiSliderFloat : (...args) => imgui.sliderFloat(...args),
 });
 
 // ofc you can't push extra args into the call, i guess you only can via global assignments?

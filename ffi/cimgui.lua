@@ -21,48 +21,21 @@ local ig = setmetatable({}, {
 	__index = ffi.C,
 })
 
-local imguiDiv
-local idsThisFrame = {}
-
 -- these NewFrame functions are called in this order
 function ig.ImGui_ImplOpenGL3_NewFrame() end
 function ig.ImGui_ImplSDL2_NewFrame() end
 function ig.igNewFrame() 
-	-- TODO make sure imguiDiv is attached too? or trust it's not tampered with ...
-	if not imguiDiv then
-		local document = js.global.document
-		--imguiDiv = document:createElement'div'	-- stupid wasmoon error
-		imguiDiv = js.createElement'div'
-		document.body.appendChild(imguiDiv)
-	end
-	
-	for k in pairs(idsThisFrame) do
-		idsThisFrame[k] = nil
-	end
+	js.imguiNewFrame()
 end
 
-local function makeOrCreate(idsuffix, tag)
-	local id = 'imgui_'..idsuffix -- ... plus id stack
-	local document = js.global.document
-	local dom = document:getElementById(id)	-- stupid wasmoon error
-	--local dom = js.getElementById(id)
-	if dom then 
-		-- TODO and make sure the dom tag is correct 
-		return dom
-	end
-	--dom = document:createElement'span'	-- stupid wasmoon error
-	dom = js.createElement'span'
-	imguiDiv:appendChild(dom)
-	return dom
+function ig.igText(...)
+	return js.imguiText(...)
 end
 
-function ig.igText(fmt, ...)
-	assert(select('#', ...) == 0, "haven't got formatted-text yet")
-	-- TODO does imgui use fmt or the post-formatted-string as the id?
-	makeOrCreate(fmt).innerText = fmt
-end
-
-function ig.igSliderFloat()
+function ig.igSliderFloat(label, v, ...)
+	-- 'v' is cdata, it is where things get written upon succes ...
+	local p = ffi.dataToArray('Float32Array', v, 1)
+	return js.imguiSliderFloat(label, p, ...)
 end
 
 
