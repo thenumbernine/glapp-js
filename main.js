@@ -379,7 +379,17 @@ const editorSave = () => {
 	editorSaveButton.setAttribute('disabled', 'disabled');
 };
 
+const fileInfoForPath = {};
+let openedFileInfo;
 const setEditorFilePath = path => {
+	if (openedFileInfo) {
+		openedFileInfo.title.style.backgroundColor = '#000000';	//reset
+	}
+	openedFileInfo = fileInfoForPath[path];
+	if (openedFileInfo) {
+		openedFileInfo.title.style.backgroundColor = '#003f7f';							//select
+	}
+
 	if (editorPath) {
 		editorSave();
 	}
@@ -404,14 +414,16 @@ const setEditorFilePath = path => {
 	fsDiv.style.display = 'none';
 	fsDiv.style.zIndex = -1;	//under imgui div
 	fsDiv.style.paddingTop = '20px';
-	fsDiv.style.backgroundColor = '#ffffff';
-	fsDiv.style.color = '#000000';
+	fsDiv.style.backgroundColor = '#000000';
+	fsDiv.style.color = '#ffffff';
 	document.body.appendChild(fsDiv);
 
 	const makeFileDiv = (path, name) => {
 		//FS.chdir(path);
 		const filediv = document.createElement('div');
-		filediv.style.border = '1px solid black';
+		filediv.style.border = '1px solid #5f5f5f';
+		filediv.style.borderRadius = '7px';
+		filediv.style.padding = '3px';
 		const title = document.createElement('div');
 		filediv.appendChild(title);
 		const stat = FS.lstat(path);
@@ -453,6 +465,10 @@ const setEditorFilePath = path => {
 			});
 		}
 		title.innerText = name;
+		fileInfoForPath[path] = {
+			div : filediv,
+			title : title,
+		};
 		return filediv;
 	};
 	FS.chdir('/');
