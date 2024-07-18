@@ -44,9 +44,11 @@ I'm going through different Lua/JS libraries to see which works best.
 
 - Wasmoon is Emscripten-compiled and so you do get Emscripten's filesystem for free, however everything Wasmoon itself brings to the table makes things more difficult.
 	- The Wasmoon wrapping filesystem calls are all in TEXT, not BINARY, so I have to side-step them.
+	- Overriding Emscripten's print and printErr is straightforward without wasmoon ... but is a pain to do with it (haven't figured out how yet)
 	- The Wasmoon interop functions are full of holes.
 		- Lua calls to JS code will detect different objects every time for the same Lua object (or for the same original JS object even),
 		- There's strange cases where my own classes and objects will be passed through fine, but builtin functions like `ArrayBuffer` when passed through will get extra crap wrapped around them.
 		- Randomly within Lua, some `jsobj:memberFuncCall()`'s will work and some will not.  I can't figure out what the difference is and I don't plan to waste my time finding out.
+
 - Other contenders?
 	- https://github.com/Doridian/LuaJS
