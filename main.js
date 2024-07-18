@@ -293,8 +293,19 @@ const imgui = {
 	text : function(fmt) {
 		this.create(fmt, 'div').innerText = fmt;
 	},
-	sliderFloat : function(label, v, v_min, v_max, format, flags) {
-		//'v' is an object???!?!
+	button : function(label, size) {
+		const button = this.create(label, 'button', button => {
+console.log('creating button', label);			
+			button.innerText = label;
+			button.addEventListener('click', e => {
+				button.imguiClicked = true;
+			});
+		});
+		const clicked = button.imguiClicked;
+		button.imguiClicked = false;
+		return clicked;
+	},
+	inputFloat : function(label, v, v_min, v_max, format, flags) {
 		this.create(label, 'span').innerText = label;
 		// TODO use id stack instead of label, or something, idk
 		const input = this.create(label+'_value', 'input', input => {
@@ -311,6 +322,24 @@ const imgui = {
 		this.create(label+'_bf', 'br');
 		return changed;
 	},
+	inputInt : function(label, v, v_min, v_max, format, flags) {
+		this.create(label, 'span').innerText = label;
+		// TODO use id stack instead of label, or something, idk
+		const input = this.create(label+'_value', 'input', input => {
+			input.value = v[0];
+		});
+		// TODO upon creation set this, then monitor its changes and return' true' if found
+		let changed = false;
+		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
+		const iv = parseInt(input.value)
+		if (v[0] !== iv) {
+			v[0] = iv;
+			changed = true;
+		}
+		this.create(label+'_bf', 'br');
+		return changed;
+	},
+
 };
 window.imgui = imgui;
 
@@ -349,7 +378,9 @@ lua.global.set('js', {
 	// so here's me pushing a lot of the cimgui stuff into js ...
 	imguiNewFrame : () => imgui.newFrame(),
 	imguiText : (...args) => imgui.text(...args),
-	imguiSliderFloat : (...args) => imgui.sliderFloat(...args),
+	imguiButton : (...args) => imgui.button(...args),
+	imguiInputFloat : (...args) => imgui.inputFloat(...args),
+	imguiInputInt : (...args) => imgui.inputInt(...args),
 });
 
 // ofc you can't push extra args into the call, i guess you only can via global assignments?

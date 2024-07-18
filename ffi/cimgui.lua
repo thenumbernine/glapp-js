@@ -35,13 +35,25 @@ end
 function ig.igSliderFloat(label, v, ...)
 	-- 'v' is cdata, it is where things get written upon succes ...
 	local p = ffi.dataToArray('Float32Array', v, 1)
-	return js.imguiSliderFloat(label, p, ...)
+	return js.imguiInputFloat(label, p, ...)
 end
 
+function ig.igInputFloat(...)
+	-- 'v' is cdata, it is where things get written upon succes ...
+	local p = ffi.dataToArray('Float32Array', v, 1)
+	return js.imguiInputFloat(label, p, ...)
+end
 
-function ig.igInputInt() end
-function ig.igInputFloat() end
-function ig.igButton() end
+function ig.igInputInt(...)
+	-- 'v' is cdata, it is where things get written upon succes ...
+	local p = ffi.dataToArray('Int32Array', v, 1)
+	return js.imguiInputInt(label, p, ...)
+end
+
+function ig.igButton(...)
+	return js.imguiButton(...)
+end
+
 function ig.igSameLine() end
 
 function ig.igRender() end
