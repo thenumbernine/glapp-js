@@ -410,6 +410,7 @@ console.log('creating button', label);
 // resize uses this too
 let fsDiv;
 let taDiv;
+let titleBarDiv;
 let outDiv;
 let outTextArea;
 // store as pixel <=> smoother scrolling when resizing divider, store as fraction <=> smoother when resizing window ... shrug
@@ -530,9 +531,11 @@ const setEditorFilePath = path => {
 	taDiv.style.zIndex = -1;	//under imgui div
 	document.body.appendChild(taDiv);
 
-	const titleBar = document.createElement('div');
-	taDiv.appendChild(titleBar);
-
+	titleBarDiv = document.createElement('div');
+	titleBarDiv.style.height = '1em';
+	titleBarDiv.style.position = 'absolute';
+	titleBarDiv.style.display = 'none';
+	document.body.appendChild(titleBarDiv);
 
 	const run = document.createElement('button');
 	run.innerText = 'run';
@@ -546,17 +549,17 @@ const setEditorFilePath = path => {
 		doRun();
 console.log('running', rundir, runfile);
 	});
-	titleBar.appendChild(run);
+	titleBarDiv.appendChild(run);
 
 	// TODO grey out upon textarea change?
 	editorSaveButton = document.createElement('button');
 	editorSaveButton.innerText = 'save';
 	editorSaveButton.setAttribute('disabled', 'disabled');
 	editorSaveButton.addEventListener('click', e => editorSave);
-	titleBar.appendChild(editorSaveButton);
+	titleBarDiv.appendChild(editorSaveButton);
 
 	editorFileNameSpan = document.createElement('span');
-	titleBar.appendChild(editorFileNameSpan);
+	titleBarDiv.appendChild(editorFileNameSpan);
 
 	// TODO line numbers?
 	/*
@@ -618,16 +621,23 @@ const resize = e => {
 		fsDiv.style.left = '0px';
 		fsDiv.style.top = '0px';
 		fsDiv.style.width = (fsFrac * w) + 'px';
-		fsDiv.style.height = (h - 32) + 'px';
+		fsDiv.style.height = (h - 20) + 'px';
 		fsDiv.style.overflow = 'scroll';
 		// TODO resize bar / save ratio
 
+		titleBarDiv.style.display = 'block';
+		titleBarDiv.style.display = 'block';
+		titleBarDiv.style.left = (fsFrac * w) + 'px';
+		titleBarDiv.style.top = '0px';
+		titleBarDiv.style.width = (taFrac * w) + 'px';
+		titleBarDiv.style.height = '20px';
+
 		taDiv.style.display = 'block';
 		taDiv.style.left = (fsFrac * w) + 'px';
-		taDiv.style.top = '0px';
+		taDiv.style.top = '20px';
 		taDiv.style.width = (taFrac * w) + 'px';
-		taDiv.style.height = (h - 32) + 'px';
-
+		taDiv.style.height = (h - 20) + 'px';
+		
 		if (canvas) {
 			canvas.style.left = ((fsFrac + taFrac) * w) + 'px';
 			canvas.style.top = '0px';
@@ -643,6 +653,7 @@ const resize = e => {
 	} else {		// fullscreen
 		fsDiv.style.display = 'none';
 		taDiv.style.display = 'none';
+		titleBarDiv.style.display = 'none';
 		outDiv.style.display = 'none';
 		if (canvas) {
 			canvas.style.left = '0px';
