@@ -2,14 +2,14 @@
 
 ### LuaJIT + OpenGL + SDL in Browser
 
--	[[interactive editor]](https://thenumbernine.github.io/glapp-js/index.html?dir=glapp/tests&file=test_tex.lua&edit=true)
-[![](pic.png)](https://thenumbernine.github.io/glapp-js/index.html?dir=glapp/tests&file=test_tex.lua&edit=true)
+-	[[interactive editor]](https://thenumbernine.github.io/glapp/?dir=glapp/tests&file=test_tex.lua&edit=true)
+[![](pic.png)](https://thenumbernine.github.io/glapp/?dir=glapp/tests&file=test_tex.lua&edit=true)
 
 
--	[[launch]](https://thenumbernine.github.io/glapp-js/index.html?dir=glapp/tests&file=test_es.lua)
+-	[[launch]](https://thenumbernine.github.io/glapp/?dir=glapp/tests&file=test_es.lua)
 	[[source]](https://thenumbernine.github.io/lua/glapp/tests/test_es.lua)
 	polygon demo
--	[[launch]](https://thenumbernine.github.io/glapp-js/index.html?dir=glapp/tests&file=test_tex.lua)
+-	[[launch]](https://thenumbernine.github.io/glapp/?dir=glapp/tests&file=test_tex.lua)
 	[[source]](https://thenumbernine.github.io/lua/glapp/tests/test_tex.lua)
 	texture demo
 
