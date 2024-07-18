@@ -281,6 +281,7 @@ await Promise.all([
 	addLuaDir('fibonacci-modulo', ['run.lua', 'fibonacci.lua']),
 	addLuaDir('lambda-cdm', ['bisect.lua', 'run.lua']),
 	addLuaDir('surface-from-connection', ['run.lua']),
+	addLuaDir('SphericalHarmonicGraph', ['associatedlegendre.lua', 'factorial.lua', 'plot_associatedlegendre.lua', 'run.lua', 'sphericalharmonics.lua']),
 	addLuaDir('sand-attack', ['app.lua', 'player.lua', 'run.lua', 'serialize.lua', 'splash.demo']), // isn't in the repo: 'config.lua'
 	addLuaDir('sand-attack/font', ['Billow twirl Demo.ttf', 'Billow twirl Demo.url']),
 	addLuaDir('sand-attack/menu', ['config.lua', 'highscore.lua', 'main.lua', 'menu.lua', 'newgame.lua', 'playerkeys.lua', 'playing.lua', 'splashscreen.lua']),
