@@ -2,6 +2,7 @@
 
 ### LuaJIT + OpenGL + SDL in Browser
 
+-	[[interactive editor]](https://thenumbernine.github.io/glapp-js/index.html?dir=glapp/tests&file=test_tex.lua&edit=true)
 -	[[launch]](https://thenumbernine.github.io/glapp-js/index.html?dir=glapp/tests&file=test_es.lua)
 	[[source]](https://thenumbernine.github.io/lua/glapp/tests/test_es.lua)
 	polygon demo
