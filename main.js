@@ -9,8 +9,8 @@ let runargs = ((args) => {
 
 let editmode = urlparams.get('edit');
 if (!runfile || !rundir) {
-	runfile = undefined;
-	rundir = undefined;
+	rundir = 'glapp/tests';
+	runfile = 'test_tex.lua';
 	editmode = true;
 }
 if (rundir) {
