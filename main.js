@@ -609,7 +609,7 @@ class Split {
 		}
 	}
 
-	//called by parent and on root's resize
+	//called by refreshOffset after dragMouse and after ctor
 	setBounds(...bounds) {
 		this.bounds = [...bounds];
 		this.refreshDom();
@@ -617,6 +617,18 @@ class Split {
 		this.onDrag(this, childBounds);
 		if (this.L) this.L.setBounds(...childBounds.L);
 		if (this.R) this.R.setBounds(...childBounds.R);
+	}
+
+	//called upon resize
+	resizeBounds(...bounds) {
+		const f = this.offset / (this.dir == 'horz' ? this.bounds[3] : this.bounds[2]);
+		this.bounds = [...bounds];
+		this.offset = parseInt(f * (this.dir == 'horz' ? this.bounds[3] : this.bounds[2]));
+		this.refreshDom();
+		const childBounds = this.getChildBounds();
+		this.onDrag(this, childBounds);
+		if (this.L) this.L.resizeBounds(...childBounds.L);
+		if (this.R) this.R.resizeBounds(...childBounds.R);
 	}
 
 	refreshDom() {
@@ -1194,7 +1206,7 @@ const rootSplit = new Split({
 });
 window.rootSplit = rootSplit;
 const resize = e => {
-	rootSplit.setBounds(0, 0, window.innerWidth, window.innerHeight);
+	rootSplit.resizeBounds(0, 0, window.innerWidth, window.innerHeight);
 };
 window.addEventListener('resize', resize);
 refreshEditMode();	// will trigger resize()
