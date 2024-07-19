@@ -17,6 +17,7 @@ if (rundir) {
 	if (rundir.substr(0, 1) != '/') rundir = '/' + rundir;
 	if (rundir.substr(-1) == '/') rundir = rundir.substr(0, rundir.length-1);
 }
+
 /* progress so far
 --rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS README
@@ -63,6 +64,90 @@ TODO inspiration engine
 TODO ... solarsystem graph ... takes GBs of data ...
 --rundir='sphere-grid'; runfile='run.lua';
 */
+
+const merge = (mergedst, ...mergesrcs) => {
+	mergesrcs.forEach(mergesrc => {
+		for (let k in mergesrc) {
+			mergedst[k] = mergesrc[k];
+		}
+	});
+	return mergedst;
+};
+
+//TODO put this in util.js
+const Dom = args => {
+	const tagName = args.tagName;
+	if (!tagName) throw "can't make a dom without a tagName";
+	const dom = document.createElement(tagName);
+	const reservedFields = {
+		// the following are same name but dif setter
+		tagName : 1,
+		style : 1,
+		attrs : 1,
+		children : 1,
+		// the following are my names
+		events : 1,
+		appendTo : 1,
+		prependTo : 1,
+	};
+	const reserved = {};
+	if (args) {
+		for (let k in args) {
+			if (k in reservedFields) {
+				reserved[k] = args[k];
+			} else {
+				dom[k] = args[k];
+			}
+		}
+	}
+	if (reserved.style !== undefined) {
+		if (typeof(reserved.style) == 'object') {
+			merge(dom.style, reserved.style);
+		} else {
+			dom.style = reserved.style;
+		}
+	}
+	if (reserved.attrs !== undefined) {
+		for (let k in reserved.attrs) {
+			dom.setAttribute(k, reserved.attrs[k]);
+		}
+	}
+	if (reserved.events !== undefined) {
+		for (let k in reserved.events) {
+			dom.addEventListener(k, reserved.events[k]);
+		}
+	}
+
+	//add last for load event's sake
+	if (reserved.appendTo !== undefined) {
+		reserved.appendTo.append(dom);
+	}
+	if (reserved.prependTo !== undefined) {
+		reserved.prependTo.prepend(dom);
+	}
+	if (reserved.children !== undefined) {
+		reserved.children.forEach(child => {
+			dom.append(child);
+		});
+	}
+
+	return dom;
+}
+
+const DomTag = tagName => {
+	return args => Dom(merge({tagName:tagName}, args));
+};
+
+const Canvas = DomTag('canvas');
+const Img = DomTag('img');
+const A = DomTag('a');
+const Br = DomTag('br');
+const Div = DomTag('div');
+const Input = DomTag('input');
+const Button = DomTag('button');
+const Span = DomTag('span');
+const TextArea = DomTag('textarea');
+
 
 async function require(path) {
 	let _module = window.module;
@@ -126,18 +211,24 @@ const preloadImage = async (fn, ext) => {
 if (fileBlob.constructor != Uint8Array) throw 'expected Uint8Array';
 		// TODO detect mime image type from filename
 		const blobUrl = URL.createObjectURL(new Blob([new Uint8Array(fileBlob)], {'type':'image/'+ext}));
-		const img = new Image();
-		document.body.prepend(img);
-		img.style.display = 'none';
-		img.src = blobUrl;
+		const img = Img({
+			src : blobUrl,
+			style : {
+				display : 'none',
+			},
+			prependTo : document.body,
+		});
 		await img.decode();
 		const width = img.width;
 		const height = img.height;
-		const canvas = document.createElement('canvas');
-		canvas.style.display = 'none';
-		document.body.prepend(canvas);
-		canvas.width = width;
-		canvas.height = height;
+		const canvas = Canvas({
+			width : width,
+			height : height,
+			style : {
+				display : 'none',
+			},
+			prependTo : document.body,
+		});
 		const ctx = canvas.getContext('2d');
 		ctx.drawImage(img, 0, 0);
 		const imgData = new Uint8Array(ctx.getImageData(0, 0, width, height).data.buffer);
@@ -294,37 +385,45 @@ await Promise.all([
 // why is this here when it's not down there in FS.readdir'/' ?
 //console.log('glapp', FS.stat('/glapp'));
 
-const editButton = document.createElement('button');
-editButton.innerText = '+';
-editButton.style.position = 'absolute';
-editButton.style.top = '0px';
-editButton.style.right = '0px';
-editButton.style.height = '14px';
-editButton.style.width = '14px';
-editButton.style.background = 'Transparent';
-editButton.style.outline = 'none';
-editButton.style.color = '#ffffff';
-editButton.addEventListener('click', e => {
-	editmode = !editmode;
-	resize();	// refresh size
+const editButton = Button({
+	innerText : '+',
+	style : {
+		position : 'absolute',
+		top : '0px',
+		right : '0px',
+		height : '14px',
+		width : '14px',
+		background : 'Transparent',
+		outline : 'none',
+		color : '#ffffff',
+	},
+	events : {
+		click : e => {
+			editmode = !editmode;
+			resize();	// refresh size
+		},
+	},
+	appendTo : document.body,
 });
-document.body.appendChild(editButton);
 
 // imgui binding code.
 // i wanted to do this in lua but wasmoon disagrees.
 const imgui = {
 	init : function() {
 		// TODO make sure this.div is attached too? or trust it's not tampered with ...
-		this.div = document.createElement('div');
-		this.div.style.position = 'absolute';
-		this.div.style.left = '0px';
-		this.div.style.top = '0px';
-		this.div.style.backgroundColor = '#000000';
-		this.div.style.opacity = .8;
-		this.div.style.border = '1px solid #5f5f5f';
-		this.div.style.padding = '3px';
-		this.div.style.borderRadius = '7px';
-		document.body.appendChild(this.div);
+		this.div = Div({
+			style : {
+				position : 'absolute',
+				left : '0px',
+				top : '0px',
+				backgroundColor : '#000000',
+				opacity : .8,
+				border : '1px solid #5f5f5f',
+				padding : '3px',
+				borderRadius : '7px',
+			},
+			appendTo : document.body,
+		});
 	},
 	clear : function() {
 		for (let i = this.div.children.length-1; i >= 0; --i) {
@@ -349,7 +448,7 @@ const imgui = {
 			}
 		}
 	},
-	create : function(idsuffix, tag, createCB) {
+	create : function(idsuffix, createCB) {
 		// TODO maybe I should be using order of creation instead of text names?
 		const id = 'imgui_'+idsuffix; // ... plus id stack
 		let dom = document.getElementById(id);
@@ -359,7 +458,7 @@ const imgui = {
 			this.lastTouchedDom = dom;
 			return dom;
 		}
-		dom = document.createElement(tag);
+		dom = createDB();
 		dom.id = id;
 		if (!this.div) throw "imgui.create called before imgui.newFrame...";
 		if (this.lastTouchedDom && this.lastTouchedDom.nextSibling) {
@@ -367,39 +466,45 @@ const imgui = {
 		} else {
 			this.div.appendChild(dom);
 		}
-		if (createCB) createCB(dom);
 		dom.taggedThisFrame = true;
 		this.lastTouchedDom = dom;
 		return dom;
 	},
 
 	text : function(fmt) {
-		this.create(fmt, 'div', text => {
-			text.innerText = fmt;
-		});
+		this.create(fmt, () => Div({innerText : fmt}));
 	},
 
 	button : function(label, size) {
-		const button = this.create(label, 'button', button => {
-			button.innerText = label;
-			button.style.display = 'block';
-			button.addEventListener('click', e => {
-				button.imguiClicked = true;
+		const button = this.create(label, () => {
+			const button = Button({
+				innerText : label,
+				style : {
+					display : 'block',
+				},
+				events : {
+					click :  e => {
+						button.imguiClicked = true;
+					},
+				},
 			});
+			return button;
 		});
 		const clicked = button.imguiClicked;
 		button.imguiClicked = false;
 		return clicked;
 	},
 	inputFloat : function(label, v, v_min, v_max, format, flags) {
-		this.create(label, 'span', span => {
-			span.innerText = label;
-			span.style.paddingRight = '20px';
-		});
+		this.create(label, () => Span({
+			innerText : label,
+			style : {
+				paddingRight : '20px',
+			},
+		}));
 		// TODO use id stack instead of label, or something, idk
-		const input = this.create(label+'_value', 'input', input => {
-			input.value = v[0];
-		});
+		const input = this.create(label+'_value', () => Input({
+			value : v[0],
+		}));
 		// TODO upon creation set this, then monitor its changes and return' true' if found
 		let changed = false;
 		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
@@ -408,18 +513,20 @@ const imgui = {
 			v[0] = iv;
 			changed = true;
 		}
-		this.create(label+'_bf', 'br');
+		this.create(label+'_bf', Br);
 		return changed;
 	},
 	inputInt : function(label, v, v_min, v_max, format, flags) {
-		this.create(label, 'span', span => {
-			span.innerText = label;
-			span.style.paddingRight = '20px';
-		});
+		this.create(label, () => Span({
+			innerText : label,
+			style : {
+				paddingRight : '20px',
+			}
+		}));
 		// TODO use id stack instead of label, or something, idk
-		const input = this.create(label+'_value', 'input', input => {
-			input.value = v[0];
-		});
+		const input = this.create(label+'_value', () => Input({
+			value : v[0],
+		}));
 		// TODO upon creation set this, then monitor its changes and return' true' if found
 		let changed = false;
 		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
@@ -428,7 +535,7 @@ const imgui = {
 			v[0] = iv;
 			changed = true;
 		}
-		this.create(label+'_bf', 'br');
+		this.create(label+'_bf', Br);
 		return changed;
 	},
 
@@ -445,21 +552,19 @@ let fsFrac = .25;
 let taFrac = .5;
 let outFrac = .5;
 
-//let editorTextArea;
 let aceEditor;
 let editorPath;
 let editorFileNameSpan;
 let editorSaveButton;
 const editorSave = () => {
+console.log('save', editorPath);
 	FS.writeFile(editorPath, new TextEncoder().encode(
-		//editorTextArea.value
 		aceEditor.getValue()
 	), {encoding:'binary'});
 	editorSaveButton.setAttribute('disabled', 'disabled');
 };
 const editorLoad = () => {
 	const fileStr = new TextDecoder().decode(FS.readFile(editorPath, {encoding:'binary'}));
-	//editorTextArea.value = fileStr;
 	aceEditor.setValue(fileStr);
 	aceEditor.clearSelection();
 };
@@ -487,29 +592,42 @@ const setEditorFilePath = path => {
 {	// add an edit button
 	imgui.init();	// make the imgui div
 
-	fsDiv = document.createElement('div');
-	fsDiv.style.position = 'absolute';
-	fsDiv.style.display = 'none';
-	fsDiv.style.zIndex = -1;	//under imgui div
-	fsDiv.style.backgroundColor = '#000000';
-	fsDiv.style.color = '#ffffff';
-	document.body.appendChild(fsDiv);
+	fsDiv = Div({
+		style : {
+			position : 'absolute',
+			display : 'none',
+			zIndex : -1,	//under imgui div
+			backgroundColor : '#000000',
+			color : '#ffffff',
+		},
+		appendTo : document.body,
+	});
 
 	const makeFileDiv = (path, name) => {
 		//FS.chdir(path);
-		const filediv = document.createElement('div');
-		filediv.style.border = '1px solid #5f5f5f';
-		filediv.style.borderRadius = '7px';
-		filediv.style.padding = '3px';
-		const title = document.createElement('div');
-		filediv.appendChild(title);
+		const filediv = Div({
+			style : {
+				border : '1px solid #5f5f5f',
+				borderRadius : '7px',
+				padding : '3px',
+			},
+		});
+		const title = Div({
+			appendTo : filediv,
+		});
 		const stat = FS.lstat(path);
 		if (stat.mode & 0x4000) {
-			const chdiv = document.createElement('div');
-			chdiv.style.marginLeft = '16px';
-			chdiv.style.display = path == '/' ? 'block'
-				: (rundir+'/').substr(0, (path+'/').length) == (path+'/') ? 'block' : 'none';
-			filediv.appendChild(chdiv);
+			const chdiv = Div({
+				style : {
+					marginLeft : '16px',
+					display : path == '/'
+						? 'block'
+						: (rundir+'/').substr(0, (path+'/').length) == (path+'/') 
+							? 'block' 
+							: 'none',
+				},
+				appendTo : filediv,
+			});
 			name = name.substr(0,1) == '/' ? name : '/' + name;
 			try {
 //console.log('readdir', path);
@@ -552,125 +670,134 @@ const setEditorFilePath = path => {
 	fsDiv.appendChild(makeFileDiv('/', '/'));
 	FS.chdir('/');
 
-	taDiv = document.createElement('div');
-	taDiv.id = 'taDiv';
-	taDiv.style.position = 'absolute';
-	taDiv.style.display = 'none';
-	//taDiv.style.overflow = 'hidden';
-	taDiv.style.zIndex = -1;	//under imgui div
-	document.body.appendChild(taDiv);
-
-	titleBarDiv = document.createElement('div');
-	titleBarDiv.style.height = '1em';
-	titleBarDiv.style.position = 'absolute';
-	titleBarDiv.style.display = 'none';
-	titleBarDiv.style.border = '1px solid #5f5f5f';
-	titleBarDiv.style.borderRadius = '7px';
-	titleBarDiv.style.padding = '1px';
-	titleBarDiv.style.backgroundColor = '#000000';
-	document.body.appendChild(titleBarDiv);
-
-
-	const runButton = document.createElement('a');
-	runButton.href = '#';
-	runButton.style.border = '1px solid #5f5f5f';
-	runButton.style.borderRadius = '7px';
-	runButton.style.padding = '3px';
-	runButton.addEventListener('click', e => {
-		editorSave();
-		// run it
-		const parts = editorPath.split('/');
-		runfile = parts.pop();
-		rundir = parts.join('/');
-		runargs = [];	//TODO somewhere ...
-		doRun();
+	taDiv = Div({
+		id : 'taDiv',
+		style : {
+			position : 'absolute',
+			display : 'none',
+			//overflow : 'hidden',
+			zIndex : -1,	//under imgui div
+		},
+		appendTo : document.body,
 	});
-	titleBarDiv.appendChild(runButton);
 
-	const runImg = new Image();
-	runImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQwFATaXXwAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAACRklEQVRYw8WXzWsTURTFfzMdMBWLXai4cOUi0hakdVLIUtpVCvkHFNx0PSAoFsUKGhAEC8ZZu3GRjd0VGgQV3Qk6tAgGHKEgfmEiWKmYFmqfmxt5bVN985HxbGfenPPOvHfvuRaG8ALrIDAFTABjQB4YkMdrwFtgCXgM1H1XrZp81zIgzgMzwBkgZ6h3HagBt3xXhbEEeIHVD1SA80Af8bAJVIFrvqt+GgvwAus4sAAMkw4aQNl31co/BXiBVQAWgcOkixZQ8l0V7ClAdv68B+S6iKLuhKWR7wdepGj7335HwXdVG8DWHtzIgBzhqGxzQK5aI8Fpj4pfwLDvqrDjwIwp+dWh91wf+cLJA1eSCOgTTiwvsAaBz6ZF5u6pLQAUiqD5jAefLtDeWoojYh04agOlCBVOuz4WhSOnuTz0MK4bOWDKBiaTeDm47xDT+Qrnjj2h3x6LunzSBkaTnqgEboza0tVSQQw38rbWUlNBx42LJxZMXh+w+c+wJUykBoXiZfMpt9+UTV5fc4AQcNMgX934yvy7O7z6cdN0SegAy0kFJChKy45kuOkMd63jkQPUpSzmMtq1XorrtqTXmumqZvsj3zZa3Atnuf9hIi45QM131Xe9Hb8GnIxu3yYw8qcdS3SuZnj9q524rheiWQklvUZDuNgmQDJaWYJjr9CSeN7eJUBErEg+aPWIvLRzNtjVCyS3F+VQpml7cedM0FWA5sQ4MCcBMslpnwPGu01FUYbTS8DZTIfTPcbzkkS4buN5KH0l0nj+GwVB22gu8TRJAAAAAElFTkSuQmCC';
-	runImg.height = 14;
-	runButton.appendChild(runImg);
+	titleBarDiv = Div({
+		style : {
+			height : '1em',
+			position : 'absolute',
+			display : 'none',
+			border : '1px solid #5f5f5f',
+			borderRadius : '7px',
+			padding : '1px',
+			backgroundColor : '#000000',
+		},
+		appendTo : document.body,
+		children : [
+			A({
+				href : '#',
+				style : {
+					border : '1px solid #5f5f5f',
+					borderRadius : '7px',
+					padding : '3px',
+				},
+				events : {
+					click : e => {
+						editorSave();
+						// run it
+						const parts = editorPath.split('/');
+						runfile = parts.pop();
+						rundir = parts.join('/');
+						runargs = [];	//TODO somewhere ...
+						doRun();
+					},
+				},
+				children : [
+					Img({
+						src : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQwFATaXXwAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAACRklEQVRYw8WXzWsTURTFfzMdMBWLXai4cOUi0hakdVLIUtpVCvkHFNx0PSAoFsUKGhAEC8ZZu3GRjd0VGgQV3Qk6tAgGHKEgfmEiWKmYFmqfmxt5bVN985HxbGfenPPOvHfvuRaG8ALrIDAFTABjQB4YkMdrwFtgCXgM1H1XrZp81zIgzgMzwBkgZ6h3HagBt3xXhbEEeIHVD1SA80Af8bAJVIFrvqt+GgvwAus4sAAMkw4aQNl31co/BXiBVQAWgcOkixZQ8l0V7ClAdv68B+S6iKLuhKWR7wdepGj7335HwXdVG8DWHtzIgBzhqGxzQK5aI8Fpj4pfwLDvqrDjwIwp+dWh91wf+cLJA1eSCOgTTiwvsAaBz6ZF5u6pLQAUiqD5jAefLtDeWoojYh04agOlCBVOuz4WhSOnuTz0MK4bOWDKBiaTeDm47xDT+Qrnjj2h3x6LunzSBkaTnqgEboza0tVSQQw38rbWUlNBx42LJxZMXh+w+c+wJUykBoXiZfMpt9+UTV5fc4AQcNMgX934yvy7O7z6cdN0SegAy0kFJChKy45kuOkMd63jkQPUpSzmMtq1XorrtqTXmumqZvsj3zZa3Atnuf9hIi45QM131Xe9Hb8GnIxu3yYw8qcdS3SuZnj9q524rheiWQklvUZDuNgmQDJaWYJjr9CSeN7eJUBErEg+aPWIvLRzNtjVCyS3F+VQpml7cedM0FWA5sQ4MCcBMslpnwPGu01FUYbTS8DZTIfTPcbzkkS4buN5KH0l0nj+GwVB22gu8TRJAAAAAElFTkSuQmCC',
+						height : 14,
+					}),
+				],
+			}),
+		
+			editorSaveButton = A({
+				href : '#',
+				style : {
+					border : '1px solid #5f5f5f',
+					borderRadius : '7px',
+					padding : '3px',
+				},
+				attrs : {
+					disabled : 'disabled',		// bleh, only works with buttons ... why is js behavior so unevenly applied?
+				},
+				events : {
+					click : e => { editorSave(); },
+				},
+				children : [
+					Img({
+						src : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQxBXdxTM8AAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAB5UlEQVRYw+2XPU9UQRiFn3ddE9aG0KF0WBHDR03cBBMLQ0VDgYmdriUVDQUk/gBMSCz0DxD+AIWJ8WOBihCjhZ0fBUpJISwhsIfmHXO9XHZW7u6NxZ5mPt6ZOWfOfWduBgBJVUl1SU11D28lVUjDyU9UDC6IMEl14C7QAF4CB4n4LHAH+Am84nI8BW4Cv3yNdN83YNL73wHTZtYIDgTbn2e4s+6xnRbkSNpJj0v2Sar47i84UQLM5xzQJfhup333AFPAhqRKiYJwmYjCBKREbAcR5Q6t/Qi4ARy1I0LS65CUMQFNL69FFv3SInzWam5MwA8vJyTNA5ttOjIBjHl9l8gRCljOiA1LOsxx8RxLGs1YdzkMKEWs/Qo8AL5fIS/2gRkz+5znE2BmdUnDwHgsF1K588nMzmIDy20eHwEfu3E0y5H8GASGcnLsm9nePwmQ1AesAk86sUtJa8BjMztq14GVTpE75rx8GBUgqT9Bvg0sAr+vSFwBngH3gDlJC+nPkeXA7UT/CzN7n9P+JaDuzUHgLwFZ94Al6qcdsL/RKljo37AnoCegJ+C/FSCvDxTIG7hUBrb8aVaTFO7vP08zSSM5yW4l6jVJDaDm7U2TVAXeANcLdv8EuJ98IX/o8vM8oOlcVYBzQKxhLYk+dM8AAAAASUVORK5CYII=',
+						height : 14,
+					}),
+				],
+			}),	
 
+			A({
+				href : '#',
+				style : {
+					border : '1px solid #5f5f5f',
+					borderRadius : '7px',
+					padding : '3px',
+				},
+				events : {
+					click : e => { editorLoad(); },
+				},
+				children : [
+					Img({
+						src : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQyJWcyP8QAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAB+UlEQVRYw8WXT0hUURTGv2tiOA0ECmXhIoKQBEEEcdHCTeBOaCmtAikH3LUUWwRCIG1duHHhwl2LRKQQXAgRWePGRX8wEHUmhFaDimL82lxDXvdeZ95943yrx3vnfN85755z7r1SBIA+NRLAZ2AGaG1kAACbQHcjAwA4BJ5dprgBvvA/3gDX6yF4BRgG5oBvhLENPMhSfNSS1oI/wAvAxAh3AmvE4R3Qkka8B9iNFP+RalYAd4BypPg8cC2N+FVg4wLyX8ACsO/4VgFGYtZ9IiC8AzwGmhxzAGAduBsj3mYzcGENaAsMolepii1B+Nwj/h3IeyZhGRjKqt8/eAIY9NhPAR1Zibd6xD/Wc6Q3nXu+77FZrGcAzeeeb3psfkb81W5JBcenOWNMMRmA71BxGJHgPUnjjverkorJJSh5SGKK7JbnfclVA7se48GIAHy+e74123N0wQHQnmL9261vEiVfF0jSWwdXTtJ0iuynra+q0PgXdX9gHxirIfuxAM/ARc7LAefXQC7gm7M2PrxP+hgHSZekjUBb7kualbRii8lIui3poaSnkm54/I4k9RljvlbzC5+QPUZrreLJDMVfph2lBeA4QvgEGI/dJXsdJ59qUMz08movJUvAaUD01HbRo2p5TYpA8pL67UZzNiF/S9qS9MkYU6mF7y+NXuL7i6ZMtwAAAABJRU5ErkJggg==',
+						height : 14,
+					}),
+				],
+			}),
 
-	// TODO grey out upon textarea change?
-	editorSaveButton = document.createElement('a');
-	editorSaveButton.href = '#';
-	editorSaveButton.style.border = '1px solid #5f5f5f';
-	editorSaveButton.style.borderRadius = '7px';
-	editorSaveButton.style.padding = '3px';
-	editorSaveButton.setAttribute('disabled', 'disabled');
-	editorSaveButton.addEventListener('click', e => editorSave);
-	titleBarDiv.appendChild(editorSaveButton);
-	
-	const saveImg = new Image();
-	saveImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQxBXdxTM8AAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAB5UlEQVRYw+2XPU9UQRiFn3ddE9aG0KF0WBHDR03cBBMLQ0VDgYmdriUVDQUk/gBMSCz0DxD+AIWJ8WOBihCjhZ0fBUpJISwhsIfmHXO9XHZW7u6NxZ5mPt6ZOWfOfWduBgBJVUl1SU11D28lVUjDyU9UDC6IMEl14C7QAF4CB4n4LHAH+Am84nI8BW4Cv3yNdN83YNL73wHTZtYIDgTbn2e4s+6xnRbkSNpJj0v2Sar47i84UQLM5xzQJfhup333AFPAhqRKiYJwmYjCBKREbAcR5Q6t/Qi4ARy1I0LS65CUMQFNL69FFv3SInzWam5MwA8vJyTNA5ttOjIBjHl9l8gRCljOiA1LOsxx8RxLGs1YdzkMKEWs/Qo8AL5fIS/2gRkz+5znE2BmdUnDwHgsF1K588nMzmIDy20eHwEfu3E0y5H8GASGcnLsm9nePwmQ1AesAk86sUtJa8BjMztq14GVTpE75rx8GBUgqT9Bvg0sAr+vSFwBngH3gDlJC+nPkeXA7UT/CzN7n9P+JaDuzUHgLwFZ94Al6qcdsL/RKljo37AnoCegJ+C/FSCvDxTIG7hUBrb8aVaTFO7vP08zSSM5yW4l6jVJDaDm7U2TVAXeANcLdv8EuJ98IX/o8vM8oOlcVYBzQKxhLYk+dM8AAAAASUVORK5CYII=';
-	saveImg.height = 14;
-	editorSaveButton.appendChild(saveImg);
+			editorFileNameSpan = Span({
+				style : {
+					paddingLeft : '5px',
+				},
+			}),
 
-
-	const editorLoadButton = document.createElement('a');
-	editorLoadButton.href = '#';
-	editorLoadButton.style.border = '1px solid #5f5f5f';
-	editorLoadButton.style.borderRadius = '7px';
-	editorLoadButton.style.padding = '3px';
-	editorLoadButton.addEventListener('click', e => { editorLoad(); });
-	titleBarDiv.appendChild(editorLoadButton);
-
-	const loadImg = new Image();
-	loadImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQyJWcyP8QAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAB+UlEQVRYw8WXT0hUURTGv2tiOA0ECmXhIoKQBEEEcdHCTeBOaCmtAikH3LUUWwRCIG1duHHhwl2LRKQQXAgRWePGRX8wEHUmhFaDimL82lxDXvdeZ95943yrx3vnfN85755z7r1SBIA+NRLAZ2AGaG1kAACbQHcjAwA4BJ5dprgBvvA/3gDX6yF4BRgG5oBvhLENPMhSfNSS1oI/wAvAxAh3AmvE4R3Qkka8B9iNFP+RalYAd4BypPg8cC2N+FVg4wLyX8ACsO/4VgFGYtZ9IiC8AzwGmhxzAGAduBsj3mYzcGENaAsMolepii1B+Nwj/h3IeyZhGRjKqt8/eAIY9NhPAR1Zibd6xD/Wc6Q3nXu+77FZrGcAzeeeb3psfkb81W5JBcenOWNMMRmA71BxGJHgPUnjjverkorJJSh5SGKK7JbnfclVA7se48GIAHy+e74123N0wQHQnmL9261vEiVfF0jSWwdXTtJ0iuynra+q0PgXdX9gHxirIfuxAM/ARc7LAefXQC7gm7M2PrxP+hgHSZekjUBb7kualbRii8lIui3poaSnkm54/I4k9RljvlbzC5+QPUZrreLJDMVfph2lBeA4QvgEGI/dJXsdJ59qUMz08movJUvAaUD01HbRo2p5TYpA8pL67UZzNiF/S9qS9MkYU6mF7y+NXuL7i6ZMtwAAAABJRU5ErkJggg==';
-	loadImg.height = 14;
-	editorLoadButton.appendChild(loadImg);
-
-
-	editorFileNameSpan = document.createElement('span');
-	editorFileNameSpan.style.paddingLeft = '5px';
-	titleBarDiv.appendChild(editorFileNameSpan);
-
-	// TODO line numbers?
-	/*
-	editorTextArea = document.createElement('textarea');
-	editorTextArea.style.backgroundColor = '#000000';
-	editorTextArea.style.color = '#ffffff';
-	editorTextArea.style.width = '100%';
-	editorTextArea.style.height = '100%';
-	editorTextArea.style.tabSize = 4;
-	editorTextArea.style.MozTabSize = 4;
-	editorTextArea.style.OTabSize = 4;
-	editorTextArea.style.whiteSpace = 'pre';
-	editorTextArea.style.overflowWrap = 'normal';
-	editorTextArea.style.overflow = 'scroll';
-	editorTextArea.addEventListener('input', e => {
-		editorSaveButton.removeAttribute('disabled');
+		],
 	});
-	taDiv.appendChild(editorTextArea);
-	*/	
-    /* ace editor: https://github.com/ajaxorg/ace */
+
+	outDiv = Div({
+		style : {
+			position : 'absolute',
+			display : 'none',
+			zIndex : -1,	//under imgui div
+		},
+		appendTo : document.body,
+		children : [
+			outTextArea = TextArea({
+				readOnly : true,
+				style : {
+					backgroundColor : '#000000',
+					color : '#ffffff',
+					width : '100%',
+					height : '100%',
+					tabSize : 4,
+					MozTabSize : 4,
+					OTabSize : 4,
+					whiteSpace : 'pre',
+					overflowWrap : 'normal',
+					overflow : 'auto',
+				},
+			}),
+		],
+	});
+
+    // ace editor: https://github.com/ajaxorg/ace
 	aceEditor = ace.edit("taDiv");
 	aceEditor.setTheme("ace/theme/tomorrow_night_bright");
 	const LuaMode = ace.require("ace/mode/lua").Mode;
 	aceEditor.session.setMode(new LuaMode());
-	/* */
-
-	outDiv = document.createElement('div');
-	outDiv.style.position = 'absolute';
-	outDiv.style.display = 'none';
-	outDiv.style.zIndex = -1;	//under imgui div
-	document.body.appendChild(outDiv);
-
-	outTextArea = document.createElement('textarea');
-	outTextArea.readOnly = true;
-	outTextArea.style.backgroundColor = '#000000';
-	outTextArea.style.color = '#ffffff';
-	outTextArea.style.width = '100%';
-	outTextArea.style.height = '100%';
-	outTextArea.style.tabSize = 4;
-	outTextArea.style.MozTabSize = 4;
-	outTextArea.style.OTabSize = 4;
-	outTextArea.style.whiteSpace = 'pre';
-	outTextArea.style.overflowWrap = 'normal';
-	outTextArea.style.overflow = 'auto';
-	outDiv.appendChild(outTextArea);
 }
 window.imgui = imgui;
 if (rundir && runfile) {
@@ -753,15 +880,15 @@ lua.global.set('js', {
 
 	createCanvas : () => {
 		if (canvas) document.body.removeChild(canvas);
-
-		canvas = document.createElement('canvas');
-		canvas.style.position = 'absolute';
-		canvas.style.userSelect = 'none';
-		document.body.prepend(canvas);
+		canvas = Canvas({
+			style : {
+				position : 'absolute',
+				userSelect : 'none',
+			},
+			prependTo : document.body,
+		});
 		window.canvas = canvas;			// global?  do I really need it? debugging?
-
 		resize();	// set our initial size
-
 		return canvas;
 	},
 
