@@ -274,29 +274,25 @@ const mountFile = (filePath, luaPath) => {
 		// contents of wasmoon factory.ts BUT WITH BINARY ENCODING FDJLFUICLJFSDFLKJDS:LJFD
 
 		const fileSep = luaPath.lastIndexOf('/');
-        const file = luaPath.substring(fileSep + 1);
-        const body = luaPath.substring(0, luaPath.length - file.length - 1);
+		const file = luaPath.substring(fileSep + 1);
+		const body = luaPath.substring(0, luaPath.length - file.length - 1);
 
-        if (body.length > 0) {
-            const parts = body.split('/').reverse();
-            let parent = '';
+		if (body.length > 0) {
+			const parts = body.split('/').reverse();
+			let parent = '';
 
-            while (parts.length) {
-                const part = parts.pop();
-                if (!part) {
-                    continue;
-                }
+			while (parts.length) {
+				const part = parts.pop();
+				if (!part) continue;
 
-                const current = `${parent}/${part}`;
-                try {
-                    FS.mkdir(current);
-                } catch (err) {
-                    // ignore EEXIST
-                }
+				const current = `${parent}/${part}`;
+				try {
+					FS.mkdir(current);
+				} catch (err) {} // ignore EEXIST
 
-                parent = current;
-            }
-        }
+				parent = current;
+			}
+		}
 
 		FS.writeFile(luaPath, fileContent, {encoding:'binary'});
 
@@ -315,7 +311,7 @@ const mountFile = (filePath, luaPath) => {
 }
 
 // TODO autogen this remotely ... like i did in lua.vm-util.js.lua
-// or TODO autogen this from lua rockspec file
+// or TODO autogen this from lua rockspec files?  and allow a GET param to a rockspec?  and in each repo provide rockspec dependencies?
 const addFromToDir = (fromPath, toPath, files) =>
 	Promise.all(files.map(f => mountFile(fromPath+'/'+f, toPath+'/'+f)));
 
@@ -573,15 +569,22 @@ const fileInfoForPath = {};
 let openedFileInfo;
 const setEditorFilePath = path => {
 	if (openedFileInfo) {
-		openedFileInfo.title.style.backgroundColor = '#000000';	//reset
+		openedFileInfo.titleDiv.style.backgroundColor = '#000000';	//reset
 	}
 	openedFileInfo = fileInfoForPath[path];
 	if (openedFileInfo) {
-		openedFileInfo.title.style.backgroundColor = '#003f7f';							//select
+		openedFileInfo.titleDiv.style.backgroundColor = '#003f7f';							//select
+		
+		// here reveal folder and all children
+		let fileInfo = openedFileInfo;
+		while (fileInfo) {
+			if (fileInfo.childrenDiv) fileInfo.childrenDiv.style.display = 'block';
+			fileInfo = fileInfo.parentFileInfo;
+		}
 	}
 
 	if (editorPath) {
-		editorSave();
+		editorSave();		// auto-save before changing files?
 	}
 
 	editorPath = path;
@@ -603,31 +606,43 @@ const setEditorFilePath = path => {
 		appendTo : document.body,
 	});
 
-	const makeFileDiv = (path, name) => {
+	const makeFileDiv = (path, name, parentFileInfo) => {
 		//FS.chdir(path);
-		const filediv = Div({
+		
+		const fileDiv = Div({
 			style : {
 				border : '1px solid #5f5f5f',
 				borderRadius : '7px',
 				padding : '3px',
 			},
+			appendTo : parentFileInfo ? parentFileInfo.childrenDiv : fsDiv,
 		});
-		const title = Div({
-			appendTo : filediv,
+
+		const titleDiv = Div({
+			appendTo : fileDiv,
 		});
+	
+		const fileInfo = {
+			path : path,
+			name : name,
+			parentFileInfo : parentFileInfo,
+			fileDiv : fileDiv,
+			titleDiv : titleDiv,
+		};
+		fileInfoForPath[path] = fileInfo;
+		
 		const stat = FS.lstat(path);
-		if (stat.mode & 0x4000) {
-			const chdiv = Div({
+		const isDir = stat.mode & 0x4000;
+		if (isDir) {
+			// if it's a dir then this holds all the children and turns display:none/block upon clikc
+			const childrenDiv = Div({
 				style : {
 					marginLeft : '16px',
-					display : path == '/'
-						? 'block'
-						: (rundir+'/').substr(0, (path+'/').length) == (path+'/') 
-							? 'block' 
-							: 'none',
+					display : path == '/' ? 'block' : 'none',
 				},
-				appendTo : filediv,
+				appendTo : fileDiv,
 			});
+			fileInfo.childrenDiv = childrenDiv;
 			name = name.substr(0,1) == '/' ? name : '/' + name;
 			try {
 //console.log('readdir', path);
@@ -638,36 +653,62 @@ const setEditorFilePath = path => {
 						if (f != '.' && f != '..') {
 							let chpath = path.substr(-1) == '/' ? path + f : path + '/' + f;
 //console.log('got file', chpath);
-							chdiv.appendChild(makeFileDiv(chpath, f));
+							makeFileDiv(chpath, f, fileInfo);
 						}
 					});
 				}
 			} catch (e) {
 				console.log('for path '+path+' thought it was a dir '+stat.mode.toString(16)+' but it wasnt: '+e);
 			}
-			title.style.cursor = 'pointer';
-			title.addEventListener('click', e => {
-				if (chdiv.style.display == 'none') {
-					chdiv.style.display = 'block';
+			titleDiv.style.cursor = 'pointer';
+			titleDiv.addEventListener('click', e => {
+				if (childrenDiv.style.display == 'none') {
+					childrenDiv.style.display = 'block';
 				} else {
-					chdiv.style.display = 'none';
+					childrenDiv.style.display = 'none';
 				}
 			});
 		} else {
-			title.style.cursor = 'pointer';
-			title.addEventListener('click', e => {
+			titleDiv.style.cursor = 'pointer';
+			titleDiv.addEventListener('click', e => {
 				setEditorFilePath(path);
 			});
 		}
-		title.innerText = name;
-		fileInfoForPath[path] = {
-			div : filediv,
-			title : title,
-		};
-		return filediv;
+		titleDiv.innerText = name;	//update name if it's a dir
+
+		if (isDir) {
+			A({
+				innerText : '+',
+				style : {
+					color : '#ffffff',
+					cssFloat : 'right',
+					//textAlign : 'right',	// for children?
+					right : '0px',
+					backgroundColor : '#000000',
+					border : '1px solid #5f5f5f',
+					borderRadius : '7px',
+					paddingLeft : '3px',
+					paddingRight : '3px',
+				},
+				events : {
+					click : e => {
+						e.stopPropagation();	//stop fallthru to title click
+						const newname = prompt('File Name:', '');
+						if (newname) {
+							const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
+							FS.writeFile(newpath, '', {encoding:'binary'});
+							makeFileDiv(newpath, newname, fileInfo);
+							// TODO sort children?
+							setEditorFilePath(newpath);			//auto-open?
+						}
+					},
+				},
+				appendTo : titleDiv,
+			});
+		}
 	};
 	FS.chdir('/');
-	fsDiv.appendChild(makeFileDiv('/', '/'));
+	makeFileDiv('/', '/', undefined);
 	FS.chdir('/');
 
 	taDiv = Div({
@@ -702,8 +743,7 @@ const setEditorFilePath = path => {
 				},
 				events : {
 					click : e => {
-						editorSave();
-						// run it
+						editorSave();			// auto-save before run?
 						const parts = editorPath.split('/');
 						runfile = parts.pop();
 						rundir = parts.join('/');
@@ -793,7 +833,7 @@ const setEditorFilePath = path => {
 		],
 	});
 
-    // ace editor: https://github.com/ajaxorg/ace
+	// ace editor: https://github.com/ajaxorg/ace
 	aceEditor = ace.edit("taDiv");
 	aceEditor.setTheme("ace/theme/tomorrow_night_bright");
 	const LuaMode = ace.require("ace/mode/lua").Mode;

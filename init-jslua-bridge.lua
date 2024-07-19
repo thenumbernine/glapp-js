@@ -266,23 +266,12 @@ end
 sdl.mainthread = coroutine.create(function()
 	run(rundir, runfile)
 end)
-local res, err = coroutine.resume(sdl.mainthread)
-if not res then
-	print('coroutine.resume failed')
-	print(err)
-	print(debug.traceback(sdl.mainthread))
-end
 
--- set up main loop
--- TOOD use requestAnimationFrame instead
 local interval
 local window = js.global
-interval = window:setInterval(function()
-	-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
-	--[[
-	coroutine.assertresume(sdl.mainthread)
-	--]]
-	-- [[
+local function tryToResume()
+	--coroutine.assertresume(sdl.mainthread)
+	if coroutine.status(sdl.mainthread) == 'dead' then return false, 'dead' end
 	local res, err = coroutine.resume(sdl.mainthread)
 	if not res then
 		print('coroutine.resume failed')
@@ -290,6 +279,14 @@ interval = window:setInterval(function()
 		print(debug.traceback(sdl.mainthread))
 		window:clearInterval(interval)
 	end
-	--]]
+end
+
+tryToResume()
+
+-- set up main loop
+-- TOOD use requestAnimationFrame instead
+interval = window:setInterval(function()
+	-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
+	tryToResume()
 end, 10)
 --]=]
