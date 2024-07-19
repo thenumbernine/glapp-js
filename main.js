@@ -1069,7 +1069,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 					click : e => {
 						const newUrlParams = new URLSearchParams();
 						newUrlParams.set('file', runfile);
-						newUrlParams.set('path', rundir);
+						newUrlParams.set('dir', rundir);
 						newUrlParams.set('args', runargs);
 						const url = location.origin + location.pathname + '?' + newUrlParams.toString();
 						history.replaceState({
@@ -1243,7 +1243,7 @@ const doRun = async () => {
 	{
 		const newParams = new URLSearchParams();
 		newParams.set('file', runfile);
-		newParams.set('path', rundir);
+		newParams.set('dir', rundir);
 		if (runargs) newParams.set('args', runargs);
 		const url = location.origin + location.pathname + '?' + newParams.toString();
 		history.pushState({
@@ -1378,7 +1378,7 @@ if (runfile && rundir) {
 	// push initial state ...
 	const newParams = new URLSearchParams();
 	newParams.set('file', runfile);
-	newParams.set('path', rundir);
+	newParams.set('dir', rundir);
 	newParams.set('args', runargs);
 	const url = location.origin + location.pathname + '?' + newParams.toString();
 	history.pushState({
