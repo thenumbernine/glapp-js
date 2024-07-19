@@ -1340,10 +1340,11 @@ const doRun = async () => {
 	// ofc you can't push extra args into the call, i guess you only can via global assignments?
 	FS.chdir(rundir);
 	// TODO HERE reset the Lua state altogether
-	const args = [];
+	let args = [];
 	try {
 		args = JSON.parse(runargs) || [];
 	} catch (e) {
+		console.log(e);
 	}
 	lua.doString(`
 print = function(...)
