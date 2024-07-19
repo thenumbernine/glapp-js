@@ -795,7 +795,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 		};
 		fileDiv.fileInfo = fileInfo;
 		fileInfoForPath[path] = fileInfo;
-		
+
 		if (pathIsDir) {
 			// if it's a dir then this holds all the children and turns display:none/block upon clikc
 			const childrenDiv = Div({
@@ -1063,7 +1063,16 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 							runfile : runfile,
 							rundir : rundir,
 						}, document.title, url);
+
 						navigator.clipboard.writeText(url);
+
+						if (navigator.share) {
+							navigator.share({
+								title : document.title,
+								text : 'GLApp',
+								url : url,
+							})
+						}
 					},
 				},
 				children : [
