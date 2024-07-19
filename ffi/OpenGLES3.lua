@@ -841,7 +841,30 @@ function gl.glDisable(...) return jsgl:disable(...) end
 function gl.glBlendFunc(...) return jsgl:blendFunc(...) end
 function gl.glLineWidth(...) return jsgl:lineWidth(...) end
 
-local getParamInfo = {
+local function makeGetter(infos, getter)
+	return function(data, ...)
+		local v = getter(...)
+		local info = infos[pname]
+		if info then
+			assert(not info.string, "can't get a string value")
+			if info.array then
+				-- TODO weird GL_VIEWPORT is getting 0 0 0 1042. ..
+				for i=0,info.array-1 do
+					data[i] = v[i]
+				end
+				return
+			elseif info.res then
+				if v == js.null then return 0 end
+				local id = findObj(v, info.res)
+				if not id then error("somehow webgl returned a resource that I didn't have") end
+				v = id
+			end
+		end
+		data[0] = v
+	end
+end
+
+local getParameterInfo = {
 	[gl.GL_ALIASED_LINE_WIDTH_RANGE] = {array=2},
 	[gl.GL_ALIASED_POINT_SIZE_RANGE] = {array=2},
 	[gl.GL_ARRAY_BUFFER_BINDING] = {res='createBuffer'},
@@ -878,25 +901,11 @@ local getParamInfo = {
 	[gl.GL_VERTEX_ARRAY_BINDING] = {res='createVertexArray'}
 }
 
+local getParameterGetter = makeGetter(getParameterInfo, function(pname)
+	return jsgl:getParameter(pname)
+end)
 function gl.glGetIntegerv(pname, data)
-	local v = jsgl:getParameter(pname)
-	local info = getParamInfo[pname]
-	if info then
-		assert(not info.string, "can't get a string value")
-		if info.array then
-			-- TODO weird GL_VIEWPORT is getting 0 0 0 1042. ..
-			for i=0,info.array-1 do
-				data[i] = v[i]
-			end
-			return
-		elseif info.res then
-			if v == js.null then return 0 end
-			local id = findObj(v, info.res)
-			if not id then error("somehow webgl returned a resource that I didn't have") end
-			v = id
-		end
-	end
-	data[0] = v
+	return getParameterGetter(data, pname)	-- data first
 end
 gl.glGetFloatv = gl.glGetIntegerv
 
@@ -1050,6 +1059,19 @@ for n=1,4 do
 		end
 	end
 end
+
+local getVertexAttribInfo = {
+	[gl.GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING] = {res='createBuffer'},
+	[gl.GL_CURRENT_VERTEX_ATTRIB] = {array=4},
+}
+
+local getVertexAttribGetter = makeGetter(getVertexAttribInfo, function(index, pname)
+	return jsgl:getVertexAttrib(index, pname)
+end)
+function gl.glGetVertexAttribfv(index, pname, data)
+	return getVertexAttribGetter(data, index, pname)
+end
+gl.glGetVertexAttribiv = gl.glGetVertexAttribfv
 
 function gl.glGetActiveAttrib(program, index, bufSize, length, size, type, name)
 	local uinfo = jsgl:getActiveAttrib(getObj(program), index)
