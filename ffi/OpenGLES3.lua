@@ -841,9 +841,12 @@ function gl.glDisable(...) return jsgl:disable(...) end
 function gl.glBlendFunc(...) return jsgl:blendFunc(...) end
 function gl.glLineWidth(...) return jsgl:lineWidth(...) end
 
+-- returns a function for a getter for the infos
+-- function returned accepts (data, pname) first
+-- its wrapped getter accepts (pname) first
 local function makeGetter(infos, getter)
-	return function(data, ...)
-		local v = getter(...)
+	return function(data, pname, ...)
+		local v = getter(pname, ...)
 		local info = infos[pname]
 		if info then
 			assert(not info.string, "can't get a string value")
@@ -1065,11 +1068,11 @@ local getVertexAttribInfo = {
 	[gl.GL_CURRENT_VERTEX_ATTRIB] = {array=4},
 }
 
-local getVertexAttribGetter = makeGetter(getVertexAttribInfo, function(index, pname)
+local getVertexAttribGetter = makeGetter(getVertexAttribInfo, function(pname, index)
 	return jsgl:getVertexAttrib(index, pname)
 end)
 function gl.glGetVertexAttribfv(index, pname, data)
-	return getVertexAttribGetter(data, index, pname)
+	return getVertexAttribGetter(data, pname, index)
 end
 gl.glGetVertexAttribiv = gl.glGetVertexAttribfv
 
