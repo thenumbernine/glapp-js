@@ -550,7 +550,6 @@ const editorRun = () => {
 	doRun();
 };
 const editorSave = () => {
-console.log('save', editorPath);
 	FS.writeFile(editorPath, new TextEncoder().encode(
 		aceEditor.getValue()
 	), {encoding:'binary'});
@@ -643,14 +642,12 @@ const setEditorFilePath = path => {
 			fileInfo.childrenDiv = childrenDiv;
 			name = name.substr(0,1) == '/' ? name : '/' + name;
 			try {
-//console.log('readdir', path);
 				if (path != '/dev' && path != '/proc') {	//giving exceptions from accessing them
 					const fs = FS.readdir(path);
 					fs.sort();
 					fs.forEach(f => {
 						if (f != '.' && f != '..') {
 							let chpath = path.substr(-1) == '/' ? path + f : path + '/' + f;
-//console.log('got file', chpath);
 							makeFileDiv(chpath, f, fileInfo);
 						}
 					});
