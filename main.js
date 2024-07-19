@@ -299,6 +299,8 @@ editButton.innerText = '+';
 editButton.style.position = 'absolute';
 editButton.style.top = '0px';
 editButton.style.right = '0px';
+editButton.style.height = '14px';
+editButton.style.width = '14px';
 editButton.style.background = 'Transparent';
 editButton.style.outline = 'none';
 editButton.style.color = '#ffffff';
@@ -562,11 +564,19 @@ const setEditorFilePath = path => {
 	titleBarDiv.style.height = '1em';
 	titleBarDiv.style.position = 'absolute';
 	titleBarDiv.style.display = 'none';
+	titleBarDiv.style.border = '1px solid #5f5f5f';
+	titleBarDiv.style.borderRadius = '7px';
+	titleBarDiv.style.padding = '1px';
+	titleBarDiv.style.backgroundColor = '#000000';
 	document.body.appendChild(titleBarDiv);
 
-	const run = document.createElement('button');
-	run.innerText = 'run';
-	run.addEventListener('click', e => {
+
+	const runButton = document.createElement('a');
+	runButton.href = '#';
+	runButton.style.border = '1px solid #5f5f5f';
+	runButton.style.borderRadius = '7px';
+	runButton.style.padding = '3px';
+	runButton.addEventListener('click', e => {
 		editorSave();
 		// run it
 		const parts = editorPath.split('/');
@@ -575,21 +585,46 @@ const setEditorFilePath = path => {
 		runargs = [];	//TODO somewhere ...
 		doRun();
 	});
-	titleBarDiv.appendChild(run);
+	titleBarDiv.appendChild(runButton);
+
+	const runImg = new Image();
+	runImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQwFATaXXwAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAACRklEQVRYw8WXzWsTURTFfzMdMBWLXai4cOUi0hakdVLIUtpVCvkHFNx0PSAoFsUKGhAEC8ZZu3GRjd0VGgQV3Qk6tAgGHKEgfmEiWKmYFmqfmxt5bVN985HxbGfenPPOvHfvuRaG8ALrIDAFTABjQB4YkMdrwFtgCXgM1H1XrZp81zIgzgMzwBkgZ6h3HagBt3xXhbEEeIHVD1SA80Af8bAJVIFrvqt+GgvwAus4sAAMkw4aQNl31co/BXiBVQAWgcOkixZQ8l0V7ClAdv68B+S6iKLuhKWR7wdepGj7335HwXdVG8DWHtzIgBzhqGxzQK5aI8Fpj4pfwLDvqrDjwIwp+dWh91wf+cLJA1eSCOgTTiwvsAaBz6ZF5u6pLQAUiqD5jAefLtDeWoojYh04agOlCBVOuz4WhSOnuTz0MK4bOWDKBiaTeDm47xDT+Qrnjj2h3x6LunzSBkaTnqgEboza0tVSQQw38rbWUlNBx42LJxZMXh+w+c+wJUykBoXiZfMpt9+UTV5fc4AQcNMgX934yvy7O7z6cdN0SegAy0kFJChKy45kuOkMd63jkQPUpSzmMtq1XorrtqTXmumqZvsj3zZa3Atnuf9hIi45QM131Xe9Hb8GnIxu3yYw8qcdS3SuZnj9q524rheiWQklvUZDuNgmQDJaWYJjr9CSeN7eJUBErEg+aPWIvLRzNtjVCyS3F+VQpml7cedM0FWA5sQ4MCcBMslpnwPGu01FUYbTS8DZTIfTPcbzkkS4buN5KH0l0nj+GwVB22gu8TRJAAAAAElFTkSuQmCC';
+	runImg.height = 14;
+	runButton.appendChild(runImg);
+
 
 	// TODO grey out upon textarea change?
-	editorSaveButton = document.createElement('button');
-	editorSaveButton.innerText = 'save';
+	editorSaveButton = document.createElement('a');
+	editorSaveButton.href = '#';
+	editorSaveButton.style.border = '1px solid #5f5f5f';
+	editorSaveButton.style.borderRadius = '7px';
+	editorSaveButton.style.padding = '3px';
 	editorSaveButton.setAttribute('disabled', 'disabled');
 	editorSaveButton.addEventListener('click', e => editorSave);
 	titleBarDiv.appendChild(editorSaveButton);
+	
+	const saveImg = new Image();
+	saveImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQxBXdxTM8AAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAB5UlEQVRYw+2XPU9UQRiFn3ddE9aG0KF0WBHDR03cBBMLQ0VDgYmdriUVDQUk/gBMSCz0DxD+AIWJ8WOBihCjhZ0fBUpJISwhsIfmHXO9XHZW7u6NxZ5mPt6ZOWfOfWduBgBJVUl1SU11D28lVUjDyU9UDC6IMEl14C7QAF4CB4n4LHAH+Am84nI8BW4Cv3yNdN83YNL73wHTZtYIDgTbn2e4s+6xnRbkSNpJj0v2Sar47i84UQLM5xzQJfhup333AFPAhqRKiYJwmYjCBKREbAcR5Q6t/Qi4ARy1I0LS65CUMQFNL69FFv3SInzWam5MwA8vJyTNA5ttOjIBjHl9l8gRCljOiA1LOsxx8RxLGs1YdzkMKEWs/Qo8AL5fIS/2gRkz+5znE2BmdUnDwHgsF1K588nMzmIDy20eHwEfu3E0y5H8GASGcnLsm9nePwmQ1AesAk86sUtJa8BjMztq14GVTpE75rx8GBUgqT9Bvg0sAr+vSFwBngH3gDlJC+nPkeXA7UT/CzN7n9P+JaDuzUHgLwFZ94Al6qcdsL/RKljo37AnoCegJ+C/FSCvDxTIG7hUBrb8aVaTFO7vP08zSSM5yW4l6jVJDaDm7U2TVAXeANcLdv8EuJ98IX/o8vM8oOlcVYBzQKxhLYk+dM8AAAAASUVORK5CYII=';
+	saveImg.height = 14;
+	editorSaveButton.appendChild(saveImg);
 
-	const editorLoadButton = document.createElement('button');
-	editorLoadButton.innerText = 'load';
+
+	const editorLoadButton = document.createElement('a');
+	editorLoadButton.href = '#';
+	editorLoadButton.style.border = '1px solid #5f5f5f';
+	editorLoadButton.style.borderRadius = '7px';
+	editorLoadButton.style.padding = '3px';
 	editorLoadButton.addEventListener('click', e => { editorLoad(); });
 	titleBarDiv.appendChild(editorLoadButton);
 
+	const loadImg = new Image();
+	loadImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQyJWcyP8QAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAB+UlEQVRYw8WXT0hUURTGv2tiOA0ECmXhIoKQBEEEcdHCTeBOaCmtAikH3LUUWwRCIG1duHHhwl2LRKQQXAgRWePGRX8wEHUmhFaDimL82lxDXvdeZ95943yrx3vnfN85755z7r1SBIA+NRLAZ2AGaG1kAACbQHcjAwA4BJ5dprgBvvA/3gDX6yF4BRgG5oBvhLENPMhSfNSS1oI/wAvAxAh3AmvE4R3Qkka8B9iNFP+RalYAd4BypPg8cC2N+FVg4wLyX8ACsO/4VgFGYtZ9IiC8AzwGmhxzAGAduBsj3mYzcGENaAsMolepii1B+Nwj/h3IeyZhGRjKqt8/eAIY9NhPAR1Zibd6xD/Wc6Q3nXu+77FZrGcAzeeeb3psfkb81W5JBcenOWNMMRmA71BxGJHgPUnjjverkorJJSh5SGKK7JbnfclVA7se48GIAHy+e74123N0wQHQnmL9261vEiVfF0jSWwdXTtJ0iuynra+q0PgXdX9gHxirIfuxAM/ARc7LAefXQC7gm7M2PrxP+hgHSZekjUBb7kualbRii8lIui3poaSnkm54/I4k9RljvlbzC5+QPUZrreLJDMVfph2lBeA4QvgEGI/dJXsdJ59qUMz08movJUvAaUD01HbRo2p5TYpA8pL67UZzNiF/S9qS9MkYU6mF7y+NXuL7i6ZMtwAAAABJRU5ErkJggg==';
+	loadImg.height = 14;
+	editorLoadButton.appendChild(loadImg);
+
+
 	editorFileNameSpan = document.createElement('span');
+	editorFileNameSpan.style.paddingLeft = '5px';
 	titleBarDiv.appendChild(editorFileNameSpan);
 
 	// TODO line numbers?
@@ -660,14 +695,14 @@ const resize = e => {
 		titleBarDiv.style.display = 'block';
 		titleBarDiv.style.left = (fsFrac * w) + 'px';
 		titleBarDiv.style.top = '0px';
-		titleBarDiv.style.width = (taFrac * w) + 'px';
+		titleBarDiv.style.width = (taFrac * w - 2) + 'px';	// minus 1px padding x2
 		titleBarDiv.style.height = '20px';
 
 		taDiv.style.display = 'block';
 		taDiv.style.left = (fsFrac * w) + 'px';
-		taDiv.style.top = '20px';
+		taDiv.style.top = '24px';
 		taDiv.style.width = (taFrac * w) + 'px';
-		taDiv.style.height = (h - 20) + 'px';
+		taDiv.style.height = (h - 24) + 'px';
 		
 		if (canvas) {
 			canvas.style.left = ((fsFrac + taFrac) * w) + 'px';
