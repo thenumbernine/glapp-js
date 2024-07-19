@@ -983,6 +983,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 		},
 		appendTo : document.body,
 		children : [
+			//run
 			A({
 				href : '#',
 				style : {
@@ -1003,6 +1004,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 				],
 			}),
 
+			//save
 			editorSaveButton = A({
 				href : '#',
 				style : {
@@ -1024,6 +1026,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 				],
 			}),
 
+			// reload
 			A({
 				href : '#',
 				style : {
@@ -1037,6 +1040,35 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 				children : [
 					Img({
 						src : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSkUqDu0g4pChOlkRFXHUKhShQqgVWnUwufQLmhiSFBdHwbXg4Mdi1cHFWVcHV0EQ/ABxdnBSdJES/5cUWsR4cNyPd/ced+8AoVFlmhUaAzTdNjOppJjLr4jhV4QRRQijiMjMMmYlKQ3f8XWPAF/vEjzL/9yfo1ctWAwIiMQzzDBt4nXiqU3b4LxPHGNlWSU+Jx4x6YLEj1xXPH7jXHJZ4JkxM5uZI44Ri6UOVjqYlU2NeJI4rmo65Qs5j1XOW5y1ao217slfGCnoy0tcpzmIFBawCAkiFNRQQRU2ErTqpFjI0H7Sxz/g+iVyKeSqgJFjHhvQILt+8D/43a1VnBj3kiJJoOvFcT6GgPAu0Kw7zvex4zRPgOAzcKW3/RsNYPqT9Hpbix8BfdvAxXVbU/aAyx2g/8mQTdmVgjSFYhF4P6NvygPRW6Bn1euttY/TByBLXaVvgINDYLhE2Ws+7+7u7O3fM63+fgBQSXKZtanoYgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwQyJWcyP8QAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAB+UlEQVRYw8WXT0hUURTGv2tiOA0ECmXhIoKQBEEEcdHCTeBOaCmtAikH3LUUWwRCIG1duHHhwl2LRKQQXAgRWePGRX8wEHUmhFaDimL82lxDXvdeZ95943yrx3vnfN85755z7r1SBIA+NRLAZ2AGaG1kAACbQHcjAwA4BJ5dprgBvvA/3gDX6yF4BRgG5oBvhLENPMhSfNSS1oI/wAvAxAh3AmvE4R3Qkka8B9iNFP+RalYAd4BypPg8cC2N+FVg4wLyX8ACsO/4VgFGYtZ9IiC8AzwGmhxzAGAduBsj3mYzcGENaAsMolepii1B+Nwj/h3IeyZhGRjKqt8/eAIY9NhPAR1Zibd6xD/Wc6Q3nXu+77FZrGcAzeeeb3psfkb81W5JBcenOWNMMRmA71BxGJHgPUnjjverkorJJSh5SGKK7JbnfclVA7se48GIAHy+e74123N0wQHQnmL9261vEiVfF0jSWwdXTtJ0iuynra+q0PgXdX9gHxirIfuxAM/ARc7LAefXQC7gm7M2PrxP+hgHSZekjUBb7kualbRii8lIui3poaSnkm54/I4k9RljvlbzC5+QPUZrreLJDMVfph2lBeA4QvgEGI/dJXsdJ59qUMz08movJUvAaUD01HbRo2p5TYpA8pL67UZzNiF/S9qS9MkYU6mF7y+NXuL7i6ZMtwAAAABJRU5ErkJggg==',
+						height : 14,
+					}),
+				],
+			}),
+
+			//share / rewrite url
+			A({
+				href : '#',
+				style : {
+					border : '1px solid #5f5f5f',
+					borderRadius : '7px',
+					padding : '3px',
+				},
+				events : {
+					click : e => {
+						const newUrlParams = new URLSearchParams();
+						newUrlParams.set('file', runfile);
+						newUrlParams.set('path', rundir);
+						const url = location.origin + location.pathname + '?' + newUrlParams.toString();
+						history.replaceState({
+							runfile : runfile,
+							rundir : rundir,
+						}, document.title, url);
+						navigator.clipboard.writeText(url);
+					},
+				},
+				children : [
+					Img({
+						src : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV/TSqVUHNpBxCFDdbIgWsRRq1CECqFWaNXB5NIvaNKSpLg4Cq4FBz8Wqw4uzro6uAqC4AeIs4OToouU+L+k0CLGg+N+vLv3uHsHCK0q08zABKDplpFJJcVcflUMviKICEJIICAzsz4nSWl4jq97+Ph6F+dZ3uf+HANqwWSATySeZXXDIt4gnt606pz3iaOsLKvE58TjBl2Q+JHristvnEsOCzwzamQz88RRYrHUw0oPs7KhESeIY6qmU76Qc1nlvMVZqzZY5578heGCvrLMdZojSGERS5AgQkEDFVRhIU6rToqJDO0nPfzDjl8il0KuChg5FlCDBtnxg//B727N4tSkmxROAn0vtv0xCgR3gXbTtr+Pbbt9AvifgSu966+1gJlP0ptdLXYEDG4DF9ddTdkDLneAoae6bMiO5KcpFIvA+xl9Ux6I3AKhNbe3zj5OH4AsdZW+AQ4OgbESZa97vLu/t7d/z3T6+wFaYXKdgHsyPwAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwo1B/eNxe0AAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAADAUlEQVRYw81XPUwUQRSeO3KJgViAhbHDaAXG4kqJnQ2NVEaiiVpamAsWGq0oDFEbLbAT7DQEzEFIKDhOExGN5AINajbcBvnZHLe3t7u3fzN7szvzbHbNcZ4Rwy74mknmTfb75u2b772HUAy2trbWqev6c9d1t33fB9d1TULIzPr6+gUUt4mieIZS+gMCM00TPM8DAADOObUs63qc+AnXdQsAABjjRVEUexBCKJfLnTAM4xFjDBhjtFKp9MaCXi6X+wEA6vV6cWFhoaPZb9v2YwAA27Zfx0LAsqynAACO4zxo5V9eXj4NAOB5XjHcS0ZJgDF2HCGEOOd6K//ExIQcnOuMJQKmad4JItAyxNVqtR8AgBDyJXLwjY2NboxxLkh+uru7e6XJf6perxcBAKrVaiYy4Hw+n9J1/aHneQQAgFJqAQAwxgBjPKvr+rDjOC9839eC2y9NTk6mIgEvlUoXCSHfQ0DTNF8GInTb930TGoxzDhjjN+VyueOvHx4aGkptbW2lVVXtW11d7W72C4LQZVnWOGMMglt9lSRpj8oVCoUuRVFuGIYxrGnaXUEQzu3rVoqi3KOUVpqYf5IkKR0k0i1KaRUAwPd9W9O0+2NjY9GE1DCMVyGo4zjfNE1bCslwzm1CyOeQmOM4s4IgdEeWTJqmDQRJZO/s7FwK97PZ7LFarTYaAlNKtxVFGYj8GWGM3wMA1Gq1m6384e1VVb0aJW6jEqY552hubi77h7NvEUKovb39fFwEjtYwxu+O4hc0JuHlMAklSfqVhNPT04eThMEzHD+yZ/hfCFFomUwmtbm5mVZVtW9lZeVAUmya5r9JcYTFyGouRoSQN7Isd0RKYp/leLSxHE9NTaUij0ZjQ8I5p6VS6XAakoO2ZJEqIee8J1gXW/lHRkY+IIRQIpE4GwuBZDJpBWvLrndwcPAkQgi1tbXpsQ8m+Xy+1WDyBADAsqx4BpOm0eyjKIq9CCE0Pz+/ZzSTZbk3LgL7GU6vxV5ZAzF61jCeG4SQmWKx+Nt4/hMEvsjczhecQwAAAABJRU5ErkJggg==',
 						height : 14,
 					}),
 				],
@@ -1174,6 +1206,18 @@ const closeCanvas = () => {
 
 let lua;
 const doRun = async () => {
+	//TODO maybe, if our run file is dif from the last run file then window.history.pushState() ?
+	{
+		const newParams = new URLSearchParams();
+		newParams.set('file', runfile);
+		newParams.set('path', rundir);
+		const url = location.origin + location.pathname + '?' + newParams.toString();
+		history.pushState({
+			runfile : runfile,
+			rundir : rundir,
+		}, document.title, url);
+	}
+
 	closeCanvas();
 	//if (lua) lua.close();	//tf why are all these essential functions hidden?
 
@@ -1287,7 +1331,19 @@ end, function(err)
 end)
 `);
 };
+
 if (runfile && rundir) {
+
+	// push initial state ...
+	const newParams = new URLSearchParams();
+	newParams.set('file', runfile);
+	newParams.set('path', rundir);
+	const url = location.origin + location.pathname + '?' + newParams.toString();
+	history.pushState({
+		runfile : runfile,
+		rundir : rundir,
+	}, document.title, url);
+
 	await doRun();
 }
 /* */
