@@ -381,7 +381,9 @@ A({
 		width : '14px',
 		background : 'Transparent',
 		outline : 'none',
+		textDecoration : 'none',
 		color : '#ffffff',
+		cursor : 'pointer',	//not by default for anchorss?
 	},
 	events : {
 		click : e => {
@@ -444,7 +446,7 @@ const imgui = {
 			this.lastTouchedDom = dom;
 			return dom;
 		}
-		dom = createDB();
+		dom = createCB();
 		dom.id = id;
 		if (!this.div) throw "imgui.create called before imgui.newFrame...";
 		if (this.lastTouchedDom && this.lastTouchedDom.nextSibling) {
