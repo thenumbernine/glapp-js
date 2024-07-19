@@ -895,7 +895,7 @@ local function makeGetter(infos, getter)
 			if info.array then
 				-- TODO weird GL_VIEWPORT is getting 0 0 0 1042. ..
 				for i=0,info.array-1 do
-					data[i] = v[i]
+					data[i] = v[i+1]	-- GAAHHHH I THINK WASMOON IS OFFSETTING INDEXES BY 1 TO BE COOL LIKE LUA.  PLEASE PLEASE STOP WASMOON, JUST DO YOUR JOB AND FORWARD JS INTEROP, DONT ADD SHIT TO IT.
 				end
 				return
 			elseif info.res then
