@@ -294,6 +294,20 @@ await Promise.all([
 // why is this here when it's not down there in FS.readdir'/' ?
 //console.log('glapp', FS.stat('/glapp'));
 
+const editButton = document.createElement('button');
+editButton.innerText = '+';
+editButton.style.position = 'absolute';
+editButton.style.top = '0px';
+editButton.style.right = '0px';
+editButton.style.background = 'Transparent';
+editButton.style.outline = 'none';
+editButton.style.color = '#ffffff';
+editButton.addEventListener('click', e => {
+	editmode = !editmode;
+	resize();	// refresh size
+});
+document.body.appendChild(editButton);
+
 // imgui binding code.
 // i wanted to do this in lua but wasmoon disagrees.
 const imgui = {
@@ -308,45 +322,28 @@ const imgui = {
 		this.div.style.border = '1px solid #5f5f5f';
 		this.div.style.padding = '3px';
 		this.div.style.borderRadius = '7px';
-
-		this.editButton = document.createElement('button');
-		this.editButton.innerText = '.';
-		this.editButton.style.display = 'block';
-		this.editButton.addEventListener('click', e => {
-			editmode = !editmode;
-			resize();	// refresh size
-		});
-		imgui.div.appendChild(this.editButton);
-
-
 		document.body.appendChild(this.div);
 	},
 	clear : function() {
 		for (let i = this.div.children.length-1; i >= 0; --i) {
 			const ch = this.div.children[i];
-			if (ch != this.editButton) {
-				this.div.removeChild(ch);
-			}
+			this.div.removeChild(ch);
 		}
 	},
 	newFrame : function() {
 		//clear all taggedThisFrame
 		for (let i = this.div.children.length-1; i >= 0; --i) {
 			const ch = this.div.children[i];
-			if (ch != this.editButton) {
-				ch.taggedThisFrame = false;
-			}
+			ch.taggedThisFrame = false;
 		}
-		this.lastTouchedDom = this.editButton;
+		this.lastTouchedDom = null;
 	},
 	render : function() {
 		//remove old dom elements that didn't get tagged
 		for (let i = this.div.children.length-1; i >= 0; --i) {
 			const ch = this.div.children[i];
-			if (ch != this.editButton) {
-				if (!ch.taggedThisFrame) {
-					this.div.removeChild(ch);
-				}
+			if (!ch.taggedThisFrame) {
+				this.div.removeChild(ch);
 			}
 		}
 	},
@@ -458,6 +455,12 @@ const editorSave = () => {
 	), {encoding:'binary'});
 	editorSaveButton.setAttribute('disabled', 'disabled');
 };
+const editorLoad = () => {
+	const fileStr = new TextDecoder().decode(FS.readFile(editorPath, {encoding:'binary'}));
+	//editorTextArea.value = fileStr;
+	aceEditor.setValue(fileStr);
+	aceEditor.clearSelection();
+};
 
 const fileInfoForPath = {};
 let openedFileInfo;
@@ -476,10 +479,7 @@ const setEditorFilePath = path => {
 
 	editorPath = path;
 	editorFileNameSpan.innerText = editorPath;
-	const fileStr = new TextDecoder().decode(FS.readFile(path, {encoding:'binary'}));
-	//editorTextArea.value = fileStr;
-	aceEditor.setValue(fileStr);
-	aceEditor.clearSelection();
+	editorLoad();
 };
 
 {	// add an edit button
@@ -489,7 +489,6 @@ const setEditorFilePath = path => {
 	fsDiv.style.position = 'absolute';
 	fsDiv.style.display = 'none';
 	fsDiv.style.zIndex = -1;	//under imgui div
-	fsDiv.style.paddingTop = '20px';
 	fsDiv.style.backgroundColor = '#000000';
 	fsDiv.style.color = '#ffffff';
 	document.body.appendChild(fsDiv);
@@ -575,7 +574,6 @@ const setEditorFilePath = path => {
 		rundir = parts.join('/');
 		runargs = [];	//TODO somewhere ...
 		doRun();
-console.log('running', rundir, runfile);
 	});
 	titleBarDiv.appendChild(run);
 
@@ -585,6 +583,11 @@ console.log('running', rundir, runfile);
 	editorSaveButton.setAttribute('disabled', 'disabled');
 	editorSaveButton.addEventListener('click', e => editorSave);
 	titleBarDiv.appendChild(editorSaveButton);
+
+	const editorLoadButton = document.createElement('button');
+	editorLoadButton.innerText = 'load';
+	editorLoadButton.addEventListener('click', e => { editorLoad(); });
+	titleBarDiv.appendChild(editorLoadButton);
 
 	editorFileNameSpan = document.createElement('span');
 	titleBarDiv.appendChild(editorFileNameSpan);
@@ -631,7 +634,7 @@ console.log('running', rundir, runfile);
 	outTextArea.style.OTabSize = 4;
 	outTextArea.style.whiteSpace = 'pre';
 	outTextArea.style.overflowWrap = 'normal';
-	outTextArea.style.overflow = 'scroll';
+	outTextArea.style.overflow = 'auto';
 	outDiv.appendChild(outTextArea);
 }
 window.imgui = imgui;
@@ -649,8 +652,8 @@ const resize = e => {
 		fsDiv.style.left = '0px';
 		fsDiv.style.top = '0px';
 		fsDiv.style.width = (fsFrac * w) + 'px';
-		fsDiv.style.height = (h - 20) + 'px';
-		fsDiv.style.overflow = 'scroll';
+		fsDiv.style.height = h + 'px';
+		fsDiv.style.overflow = 'auto';
 		// TODO resize bar / save ratio
 
 		titleBarDiv.style.display = 'block';
