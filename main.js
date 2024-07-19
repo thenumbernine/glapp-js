@@ -7,7 +7,7 @@ let runargs = ((args) => {
 	return args ? JSON.parse(args) : [];	// assume it's a JS array
 })(urlparams.get('args'));
 
-let editmode = urlparams.get('edit');
+let editmode = !!urlparams.get('edit');
 if (!runfile || !rundir) {
 	rundir = 'glapp/tests';
 	runfile = 'test_tex.lua';
@@ -370,6 +370,23 @@ await Promise.all([
 // why is this here when it's not down there in FS.readdir'/' ?
 //console.log('glapp', FS.stat('/glapp'));
 
+const refreshEditMode = () => {
+	if (editmode) {
+		fsDiv.style.display = 'block';
+		titleBarDiv.style.display = 'block';
+		taDiv.style.display = 'block';
+		outDiv.style.display = 'block';
+		rootSplit.setVisible(true);
+	} else {
+		fsDiv.style.display = 'none';
+		taDiv.style.display = 'none';
+		titleBarDiv.style.display = 'none';
+		outDiv.style.display = 'none';
+		rootSplit.setVisible(false);
+	}
+	resize();
+};
+
 // edit button
 A({
 	innerText : '+',
@@ -388,7 +405,7 @@ A({
 	events : {
 		click : e => {
 			editmode = !editmode;
-			resize();	// refresh size
+			refreshEditMode();	// refresh size
 		},
 	},
 	appendTo : document.body,
@@ -526,8 +543,144 @@ const imgui = {
 		this.create(label+'_bf', Br);
 		return changed;
 	},
-
 };
+
+let splitDragging;
+class Split {
+	static size = 2;
+
+	constructor(args) {
+		const thiz = this;
+		this.dir = args.dir;
+		this.onDrag = args.onDrag;
+		this.divider = Div({
+			style : {
+				position : 'absolute',
+				backgroundColor : '#ffffff',
+				cursor : this.dir == 'horz' ? 'ns-resize' : 'ew-resize',
+				zIndex : 1,
+				userSelect : 'none',
+			},
+			events : {
+				mousedown : e => {
+					splitDragging = thiz;
+				},
+			},
+			appendTo : document.body,
+		});
+
+		this.bounds = args.bounds || [0,0,1,1];
+		this.offset = args.offset;
+		this.L = args.L;
+		this.R = args.R;
+
+		this.refreshOffset();
+	}
+
+	setVisible(x) {
+		this.divider.style.display = x ? 'block' : 'none';
+		if (this.L) this.L.setVisible(x);
+		if (this.R) this.R.setVisible(x);
+	}
+
+	dragMouse(x,y) {
+		const [rectX, rectY, rectW, rectH] = this.bounds;
+		if (this.dir == 'horz') {
+			this.offset = y - rectY;
+		} else if (this.dir == 'vert') {
+			this.offset = x - rectX;
+		} else {
+			throw 'idk '+this.dir;
+		}
+		this.refreshOffset();
+	}
+
+	refreshOffset() {
+		const childBounds = this.getChildBounds();
+		this.refreshDom();
+		this.onDrag(this, childBounds);
+		if (this.L) {
+			this.L.setBounds(...childBounds.L);
+			this.L.refreshOffset();
+		}
+		if (this.R) {
+			this.R.setBounds(...childBounds.R);
+			this.R.refreshOffset();
+		}
+	}
+
+	//called by parent and on root's resize
+	setBounds(...bounds) {
+		this.bounds = [...bounds];
+		this.refreshDom();
+		const childBounds = this.getChildBounds();
+		this.onDrag(this, childBounds);
+		if (this.L) this.L.setBounds(...childBounds.L);
+		if (this.R) this.R.setBounds(...childBounds.R);
+	}
+
+	refreshDom() {
+		const [rectX, rectY, rectW, rectH] = this.bounds;
+		if (this.dir == 'horz') {
+			this.divider.style.left = rectX+'px';
+			this.divider.style.top = (rectY + this.offset)+'px';
+			this.divider.style.width = rectW+'px';
+			this.divider.style.height = Split.size+'px';
+		} else if (this.dir == 'vert') {
+			this.divider.style.left = (rectX + this.offset)+'px';
+			this.divider.style.top = rectY+'px';
+			this.divider.style.width = Split.size+'px';
+			this.divider.style.height = rectH+'px';
+		} else {
+			throw 'idk '+this.dir;
+		}
+	}
+
+	getChildBounds() {
+		const [rectX, rectY, rectW, rectH] = this.bounds;
+		if (this.dir == 'horz') {
+			return {
+				L : [
+					rectX,
+					rectY,
+					rectW,
+					this.offset-1,
+				],
+				R : [
+					rectX,
+					rectY + this.offset+1,
+					rectW,
+					rectH - this.offset - 1,
+				],
+			};
+		} else if (this.dir == 'vert') {
+			return {
+				L : [
+					rectX,
+					rectY,
+					this.offset-1,
+					rectH,
+				],
+				R : [
+					rectX + this.offset+1,
+					rectY,
+					rectW - this.offset-1,
+					rectH,
+				],
+			};
+		}
+	}
+}
+window.addEventListener('mousemove', e => {
+	if (splitDragging) {
+		splitDragging.dragMouse(e.pageX, e.pageY);
+	}
+});
+window.addEventListener('mouseup', e => {
+	if (splitDragging) {
+		splitDragging = undefined;
+	}
+});
 
 // resize uses this too
 let fsDiv;
@@ -536,9 +689,6 @@ let titleBarDiv;
 let outDiv;
 let outTextArea;
 // store as pixel <=> smoother scrolling when resizing divider, store as fraction <=> smoother when resizing window ... shrug
-let fsFrac = .25;
-let taFrac = .5;
-let outFrac = .5;
 
 let aceEditor;
 let editorPath;
@@ -604,6 +754,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 			zIndex : -1,	//under imgui div
 			backgroundColor : '#000000',
 			color : '#ffffff',
+			overflow : 'auto',
 		},
 		appendTo : document.body,
 	});
@@ -939,58 +1090,73 @@ if (rundir && runfile) {
 
 document.body.style.overflow = 'hidden';	//slowly sorting this out ...
 let canvas;
+
+const rootSplit = new Split({
+	bounds : [0, 0, window.innerWidth, window.innerHeight],
+	dir : 'vert',
+	offset : window.innerWidth / 4,
+	onDrag : (split, childBounds) => {
+		const L = childBounds.L;
+//console.log('setting fsDiv to', L);
+		fsDiv.style.left = L[0]+'px';
+		fsDiv.style.top = L[1]+'px';
+		fsDiv.style.width = L[2]+'px';
+		fsDiv.style.height = L[3]+'px';
+	},
+	R : new Split({
+		dir : 'vert',
+		offset : window.innerWidth / 2,
+		onDrag : (split, childBounds) => {
+			const L = childBounds.L;
+//console.log('setting taDiv to', L);
+			titleBarDiv.style.left = L[0] + 'px';
+			titleBarDiv.style.top = L[1] + 'px';
+			titleBarDiv.style.width = (L[2] - 2) + 'px';	// minus 1px padding x2
+			titleBarDiv.style.height = '20px';
+
+			taDiv.style.left = L[0] + 'px';
+			taDiv.style.top = (L[1] + 24) + 'px';
+			taDiv.style.width = L[2] + 'px';
+			taDiv.style.height = (L[3] - 24) + 'px';
+
+			const R = childBounds.R;
+
+
+		},
+		R : new Split({
+			dir : 'horz',
+			offset : window.innerHeight / 2,
+			onDrag : (split, childBounds) => {
+				const U = childBounds.L;
+				if (canvas) {
+					if (editmode) {
+						canvas.style.left = U[0] + 'px';
+						canvas.style.top = U[1] + 'px';
+						canvas.width = U[2];
+						canvas.height = U[3];
+					} else {
+						canvas.style.left = '0px';
+						canvas.style.top = '0px';
+						canvas.width = window.innerWidth;
+						canvas.height = window.innerHeight;
+					}
+				}
+
+				const D = childBounds.R;
+				outDiv.style.left = D[0] + 'px';
+				outDiv.style.top = D[1] + 'px';
+				outDiv.style.width = D[2] + 'px';
+				outDiv.style.height = D[3] + 'px';
+			},
+		}),
+	}),
+});
+window.rootSplit = rootSplit;
 const resize = e => {
-	const w = window.innerWidth;
-	const h = window.innerHeight;
-	if (editmode) {
-		fsDiv.style.display = 'block';
-		fsDiv.style.left = '0px';
-		fsDiv.style.top = '0px';
-		fsDiv.style.width = (fsFrac * w) + 'px';
-		fsDiv.style.height = h + 'px';
-		fsDiv.style.overflow = 'auto';
-		// TODO resize bar / save ratio
-
-		titleBarDiv.style.display = 'block';
-		titleBarDiv.style.display = 'block';
-		titleBarDiv.style.left = (fsFrac * w) + 'px';
-		titleBarDiv.style.top = '0px';
-		titleBarDiv.style.width = (taFrac * w - 2) + 'px';	// minus 1px padding x2
-		titleBarDiv.style.height = '20px';
-
-		taDiv.style.display = 'block';
-		taDiv.style.left = (fsFrac * w) + 'px';
-		taDiv.style.top = '24px';
-		taDiv.style.width = (taFrac * w) + 'px';
-		taDiv.style.height = (h - 24) + 'px';
-
-		if (canvas) {
-			canvas.style.left = ((fsFrac + taFrac) * w) + 'px';
-			canvas.style.top = '0px';
-			canvas.width = ((1 - fsFrac - taFrac) * w);
-			canvas.height = (outFrac * h);
-		}
-
-		outDiv.style.display = 'block';
-		outDiv.style.left = ((fsFrac + taFrac) * w) + 'px';
-		outDiv.style.width = ((1 - fsFrac - taFrac) * w) + 'px';
-		outDiv.style.top = (outFrac * h) + 'px';
-		outDiv.style.height = ((1 - outFrac) * h) + 'px';
-	} else {		// fullscreen
-		fsDiv.style.display = 'none';
-		taDiv.style.display = 'none';
-		titleBarDiv.style.display = 'none';
-		outDiv.style.display = 'none';
-		if (canvas) {
-			canvas.style.left = '0px';
-			canvas.style.top = '0px';
-			canvas.width = w;
-			canvas.height = h;
-		}
-	}
+	rootSplit.setBounds(0, 0, window.innerWidth, window.innerHeight);
 };
-resize();	//initialize fs and codetextarea
 window.addEventListener('resize', resize);
+refreshEditMode();	// will trigger resize()
 
 let gl;
 const closeGL = () => {
