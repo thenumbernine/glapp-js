@@ -183,19 +183,8 @@ print(js.global)
 await import('./wasmoon.min.js');	// defines the global 'wasmoon', returns nothing, and that isn't documented in any corner of all of the internet
 const factory = new wasmoon.LuaFactory();
 window.factory = factory;
-const lua = await factory.createEngine({
-	// looks like this is true by default, and if it's false then i get the same error within js instead of within lua ...
-	// was this what was screwing up my ability to allocate ArrayBuffer from within the Lua code? gah...
-	// disabling this does lose me my Lua call stack upon getting that same error...
-	//enableProxy:false,//true,
-	//insertObjects:true,
-	//traceAllocations:true,
-});
-window.lua = lua;
-
-// i hate javascript
-// can I get FS without getting lua?  would be nice to reset the Lua state without destroying the filesystem ...
-const FS = lua.cmodule.module.FS;
+// smh why do you have to go through 'getLuaModule' BEFORE EVEN CREATING A LUA OBJECT to get to the Emscripten filesystem object ...
+const FS = (await factory.getLuaModule()).module.FS;
 window.FS = FS;
 
 // ok so wasmoon and javascript combined their tardpowers to make image loading at runtime impossible
@@ -433,7 +422,7 @@ const imgui = {
 			const ch = this.div.children[i];
 			ch.taggedThisFrame = false;
 		}
-		this.lastTouchedDom = null;
+		this.lastTouchedDom = undefined;
 	},
 	render : function() {
 		//remove old dom elements that didn't get tagged
@@ -552,6 +541,14 @@ let aceEditor;
 let editorPath;
 let editorFileNameSpan;
 let editorSaveButton;
+const editorRun = () => {
+	editorSave();			// auto-save before run?
+	const parts = editorPath.split('/');
+	runfile = parts.pop();
+	rundir = parts.join('/');
+	runargs = [];	//TODO somewhere ...
+	doRun();
+};
 const editorSave = () => {
 console.log('save', editorPath);
 	FS.writeFile(editorPath, new TextEncoder().encode(
@@ -563,6 +560,7 @@ const editorLoad = () => {
 	const fileStr = new TextDecoder().decode(FS.readFile(editorPath, {encoding:'binary'}));
 	aceEditor.setValue(fileStr);
 	aceEditor.clearSelection();
+	aceEditor.focus();
 };
 
 const fileInfoForPath = {};
@@ -751,14 +749,14 @@ const setEditorFilePath = path => {
 			zIndex : -1,	//under imgui div
 		},
 		events : {
-			keydown : e => {
+			keydown : async (e) => {
 				//what's a good hotkey for run?
 				// ctrl-r ? nah that's "reload"
 				// shift-f5?  can browser trap f-keys?
 				// shift-enter?
 				if (e.shiftKey && e.key == 'Enter') {
-					doRun();
 					e.preventDefault();
+					editorRun();
 				}
 			},
 		},
@@ -785,13 +783,8 @@ const setEditorFilePath = path => {
 					padding : '3px',
 				},
 				events : {
-					click : e => {
-						editorSave();			// auto-save before run?
-						const parts = editorPath.split('/');
-						runfile = parts.pop();
-						rundir = parts.join('/');
-						runargs = [];	//TODO somewhere ...
-						doRun();
+					click : async (e) => {
+						editorRun();
 					},
 				},
 				children : [
@@ -943,80 +936,105 @@ resize();	//initialize fs and codetextarea
 window.addEventListener('resize', resize);
 
 let gl;
-lua.global.set('js', {
-	global : window,	//for fengari compat
-	// welp looks like wasmoon wraps only some builtin classes (ArrayBuffer) into lambdas to treat them all ONLY AS CTORS so i can't access properties of them, because retarded
-	// so I cannot pass them through lua back to js for any kind of operations
-	// so all JS operations now have to be abstracted into a new api
-	// but we're still passing this back to JS ... wasmoon will probably require its own whole different ffi.lua implementation ... trashy.
-	newnamed : (cl, ...args) => new window[cl](...args),
-	dateNow : () => Date.now(),
-	loadImage : fn => {
-		if (fn.substr(0,1) != '/') {
-			fn = FS.cwd() + '/' + fn;
-			if (fn.substr(0,1) == '/') fn = fn.substr(1);
-		}
-		const img = imageCache[fn];
-		if (!img) throw "you need to decode up front file "+fn;
-		return img;
-	},
+const closeGL = () => {
+	if (gl) {
+		const WEBGL_lose_context = gl.getExtension('WEBGL_lose_context');
+		if (WEBGL_lose_context) WEBGL_lose_context.loseContext();
+	}
+	gl = undefined;		
+};
+const closeCanvas = () => {
+	closeGL();
+	if (canvas) document.body.removeChild(canvas);
+	canvas = undefined;
+};
 
-	createCanvas : () => {
-		if (canvas) document.body.removeChild(canvas);
-		canvas = Canvas({
-			style : {
-				position : 'absolute',
-				userSelect : 'none',
-			},
-			prependTo : document.body,
-		});
-		window.canvas = canvas;			// global?  do I really need it? debugging?
-		resize();	// set our initial size
-		return canvas;
-	},
+let lua;
+const doRun = async () => {
+	closeCanvas();
+	//if (lua) lua.close();	//tf why are all these essential functions hidden?
+	
+	// if i make a new lua state then will it preserve the filesystem?
+	lua = await factory.createEngine({
+		// looks like this is true by default, and if it's false then i get the same error within js instead of within lua ...
+		// was this what was screwing up my ability to allocate ArrayBuffer from within the Lua code? gah...
+		// disabling this does lose me my Lua call stack upon getting that same error...
+		//enableProxy:false,//true,
+		//insertObjects:true,
+		//traceAllocations:true,
+	});
+	window.lua = lua;
 
-	// these functions should have been easy to do in lua ...
-	// ... but wasmoon has some kind of lua-syntax within some internally run code for wrappers to js objects ... bleh
-	jsglInit : (gl_) => {
-		if (gl) {
-			const WEBGL_lose_context = gl.getExtension('WEBGL_lose_context');
-			if (WEBGL_lose_context) WEBGL_lose_context.loseContext();
-		}
-		gl = gl_;
-		window.gl = gl;
+	lua.global.set('js', {
+		global : window,	//for fengari compat
+		// welp looks like wasmoon wraps only some builtin classes (ArrayBuffer) into lambdas to treat them all ONLY AS CTORS so i can't access properties of them, because retarded
+		// so I cannot pass them through lua back to js for any kind of operations
+		// so all JS operations now have to be abstracted into a new api
+		// but we're still passing this back to JS ... wasmoon will probably require its own whole different ffi.lua implementation ... trashy.
+		newnamed : (cl, ...args) => new window[cl](...args),
+		dateNow : () => Date.now(),
+		loadImage : fn => {
+			if (fn.substr(0,1) != '/') {
+				fn = FS.cwd() + '/' + fn;
+				if (fn.substr(0,1) == '/') fn = fn.substr(1);
+			}
+			const img = imageCache[fn];
+			if (!img) throw "you need to decode up front file "+fn;
+			return img;
+		},
 
-		// these calls didn't work from within Lua, but they work fine here.
-		gl.getExtension('OES_element_index_uint');
-		gl.getExtension('OES_standard_derivatives');
-		gl.getExtension('OES_texture_float');	//needed for webgl framebuffer+rgba32f
-		gl.getExtension('OES_texture_float_linear');
-		gl.getExtension('EXT_color_buffer_float');	//needed for webgl2 framebuffer+rgba32f
-	},
+		createCanvas : () => {
+			closeCanvas();
+			canvas = Canvas({
+				style : {
+					position : 'absolute',
+					userSelect : 'none',
+				},
+				prependTo : document.body,
+			});
+			window.canvas = canvas;			// global?  do I really need it? debugging?
+			resize();	// set our initial size
+			return canvas;
+		},
 
-	// using js proxy in wasmoon is complete trash ... makes me really appreciate how flawless it was in fengari
-	// member object calls sometimes work and sometimes dont
-	// the more i push code back into js the smoother things seem to go, but never 100%
-	// so here's me pushing a lot of the cimgui stuff into js ...
-	imguiNewFrame : () => imgui.newFrame(),
-	imguiRender : () => imgui.render(),
-	imguiText : (...args) => imgui.text(...args),
-	imguiButton : (...args) => imgui.button(...args),
-	imguiInputFloat : (...args) => imgui.inputFloat(...args),
-	imguiInputInt : (...args) => imgui.inputInt(...args),
+		// these functions should have been easy to do in lua ...
+		// ... but wasmoon has some kind of lua-syntax within some internally run code for wrappers to js objects ... bleh
+		jsglInit : (gl_) => {
+			closeGL();
+			gl = gl_;
+			window.gl = gl;
 
-	// https://devcodef1.com/news/1119293/stdout-stderr-in-webassembly
-	// if only it was this easy
-	// why am I even using wasmoon?
-	// https://github.com/ceifa/wasmoon/issues/21
-	// wait does this say to just overwrite _G.print?  like you can't do that in a single line of "print=function..."
-	// no, I want to override all output, including the stack traces that Lua prints when an error happens ... smh everyone ...
-	redirectPrint : (s) => {
-		outTextArea.value += s + '\n';
-		console.log('> '+s);	//log here too?
-	},
-});
+			// these calls didn't work from within Lua, but they work fine here.
+			gl.getExtension('OES_element_index_uint');
+			gl.getExtension('OES_standard_derivatives');
+			gl.getExtension('OES_texture_float');	//needed for webgl framebuffer+rgba32f
+			gl.getExtension('OES_texture_float_linear');
+			gl.getExtension('EXT_color_buffer_float');	//needed for webgl2 framebuffer+rgba32f
+		},
 
-const doRun = () => {
+		// using js proxy in wasmoon is complete trash ... makes me really appreciate how flawless it was in fengari
+		// member object calls sometimes work and sometimes dont
+		// the more i push code back into js the smoother things seem to go, but never 100%
+		// so here's me pushing a lot of the cimgui stuff into js ...
+		imguiNewFrame : () => imgui.newFrame(),
+		imguiRender : () => imgui.render(),
+		imguiText : (...args) => imgui.text(...args),
+		imguiButton : (...args) => imgui.button(...args),
+		imguiInputFloat : (...args) => imgui.inputFloat(...args),
+		imguiInputInt : (...args) => imgui.inputInt(...args),
+
+		// https://devcodef1.com/news/1119293/stdout-stderr-in-webassembly
+		// if only it was this easy
+		// why am I even using wasmoon?
+		// https://github.com/ceifa/wasmoon/issues/21
+		// wait does this say to just overwrite _G.print?  like you can't do that in a single line of "print=function..."
+		// no, I want to override all output, including the stack traces that Lua prints when an error happens ... smh everyone ...
+		redirectPrint : s => {
+			outTextArea.value += s + '\n';
+			console.log('> '+s);	//log here too?
+		},
+	});
+
 	imgui.clear();
 	outTextArea.value = '';
 
@@ -1047,7 +1065,7 @@ end)
 `);
 };
 if (runfile && rundir) {
-	doRun();
+	await doRun();
 }
 /* */
 
