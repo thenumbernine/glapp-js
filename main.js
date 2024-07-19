@@ -26,7 +26,7 @@ if (rundir) {
 --rundir='glapp/tests'; runfile='minimal.lua';
 --rundir='glapp/tests'; runfile='pointtest.lua';
 --rundir='glapp/tests'; runfile='info.lua';
---rundir='line-integral-convolution'; runfile='run.lua';	-- welp this was working for a good long while until I started adding imgui stuff ... now it's not working anymore ... 
+--rundir='line-integral-convolution'; runfile='run.lua';	-- welp this was working for a good long while until I started adding imgui stuff ... now it's not working anymore ...
 --rundir='rule110'; runfile='rule110.lua';					-- WORKS README but imgui
 --rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README but imgui
 --rundir='n-points'; runfile='run.lua';						-- WORKS README but imgui
@@ -574,7 +574,7 @@ const setEditorFilePath = path => {
 	openedFileInfo = fileInfoForPath[path];
 	if (openedFileInfo) {
 		openedFileInfo.titleDiv.style.backgroundColor = '#003f7f';							//select
-		
+
 		// here reveal folder and all children
 		let fileInfo = openedFileInfo;
 		while (fileInfo) {
@@ -608,7 +608,7 @@ const setEditorFilePath = path => {
 
 	const makeFileDiv = (path, name, parentFileInfo) => {
 		//FS.chdir(path);
-		
+
 		const fileDiv = Div({
 			style : {
 				border : '1px solid #5f5f5f',
@@ -621,7 +621,7 @@ const setEditorFilePath = path => {
 		const titleDiv = Div({
 			appendTo : fileDiv,
 		});
-	
+
 		const fileInfo = {
 			path : path,
 			name : name,
@@ -630,7 +630,7 @@ const setEditorFilePath = path => {
 			titleDiv : titleDiv,
 		};
 		fileInfoForPath[path] = fileInfo;
-		
+
 		const stat = FS.lstat(path);
 		const isDir = stat.mode & 0x4000;
 		if (isDir) {
@@ -676,11 +676,42 @@ const setEditorFilePath = path => {
 		}
 		titleDiv.innerText = name;	//update name if it's a dir
 
+		//delete button
+		A({
+			innerText : 'x',
+			style : {
+				color : '#ff3f3f',
+				cssFloat : 'right',
+				//textAlign : 'right',	// for children?
+				right : '0px',
+				backgroundColor : '#000000',
+				border : '1px solid #5f5f5f',
+				borderRadius : '7px',
+				paddingLeft : '3px',
+				paddingRight : '3px',
+			},
+			events : {
+				click : e => {
+					e.stopPropagation();	//stop fallthru to title click
+					FS.unlink(path);
+
+					// remove from children ...
+					parentFileInfo?.childrenDiv.removeChild(fileInfo.fileDiv);
+
+					if (editorPath == path) {
+						 // ... ??? what to set the editor path to if we delete the current file?
+					}
+				},
+			},
+			appendTo : titleDiv,
+		});
+
+		//new-file button
 		if (isDir) {
 			A({
 				innerText : '+',
 				style : {
-					color : '#ffffff',
+					color : '#3fff3f',
 					cssFloat : 'right',
 					//textAlign : 'right',	// for children?
 					right : '0px',
@@ -718,6 +749,18 @@ const setEditorFilePath = path => {
 			display : 'none',
 			//overflow : 'hidden',
 			zIndex : -1,	//under imgui div
+		},
+		events : {
+			keydown : e => {
+				//what's a good hotkey for run?
+				// ctrl-r ? nah that's "reload"
+				// shift-f5?  can browser trap f-keys?
+				// shift-enter?
+				if (e.shiftKey && e.key == 'Enter') {
+					doRun();
+					e.preventDefault();
+				}
+			},
 		},
 		appendTo : document.body,
 	});
@@ -758,7 +801,7 @@ const setEditorFilePath = path => {
 					}),
 				],
 			}),
-		
+
 			editorSaveButton = A({
 				href : '#',
 				style : {
@@ -778,7 +821,7 @@ const setEditorFilePath = path => {
 						height : 14,
 					}),
 				],
-			}),	
+			}),
 
 			A({
 				href : '#',
@@ -870,7 +913,7 @@ const resize = e => {
 		taDiv.style.top = '24px';
 		taDiv.style.width = (taFrac * w) + 'px';
 		taDiv.style.height = (h - 24) + 'px';
-		
+
 		if (canvas) {
 			canvas.style.left = ((fsFrac + taFrac) * w) + 'px';
 			canvas.style.top = '0px';
@@ -979,27 +1022,29 @@ const doRun = () => {
 
 	// ofc you can't push extra args into the call, i guess you only can via global assignments?
 	FS.chdir(rundir);
+	// TODO HERE reset the Lua state altogether
 	lua.doString(`
-	print = function(...)
-		local s = ''
-		local sep = ''
-		for i=1,select('#', ...) do
-			s = s .. sep .. tostring((select(i, ...)))
-			sep = '\t'
-		end
-		js.redirectPrint(s)
+print = function(...)
+	local s = ''
+	local sep = ''
+	for i=1,select('#', ...) do
+		s = s .. sep .. tostring((select(i, ...)))
+		sep = '\t'
 	end
-	xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
-		assert(loadfile'/init-jslua-bridge.lua')(
-			`+[rundir, runfile]
-				.concat(runargs).map(arg => '"'+arg+'"')
-				.join(', ')
-			+`
-		)
-	end, function(err)
-		print(err)
-		print(debug.traceback())
-	end)`);
+	js.redirectPrint(s)
+end
+xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
+	assert(loadfile'/init-jslua-bridge.lua')(
+		`+[rundir, runfile]
+			.concat(runargs).map(arg => '"'+arg+'"')
+			.join(', ')
+		+`
+	)
+end, function(err)
+	print(err)
+	print(debug.traceback())
+end)
+`);
 };
 if (runfile && rundir) {
 	doRun();
