@@ -1275,7 +1275,7 @@ const doRun = async () => {
 
 		// these functions should have been easy to do in lua ...
 		// ... but wasmoon has some kind of lua-syntax within some internally run code for wrappers to js objects ... bleh
-		jsglInit : (gl_) => {
+		webglInit : (gl_) => {
 			closeGL();
 			gl = gl_;
 			window.gl = gl;

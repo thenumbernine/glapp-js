@@ -1582,7 +1582,7 @@ end
 function sdl.SDL_DestroyWindow(sdlWindow) return 0 end
 function sdl.SDL_SetWindowSize(sdlWindow, width, height) end
 
-local jsgl
+local webgl
 -- oof, this returns on-stack a SDL_GLContext ... how to handle that ...
 function sdl.SDL_GL_CreateContext(sdlWindow)
 	local contextName
@@ -1594,35 +1594,35 @@ function sdl.SDL_GL_CreateContext(sdlWindow)
 	for i,name in ipairs(webGLNames) do
 		xpcall(function()
 --DEBUG:print('trying to init gl context of type', name)
-			jsgl = canvas:getContext(name)
+			webgl = canvas:getContext(name)
 			contextName = name
 		end, function(err)
 			print('canvas:getContext('..name..') failed with exception '..err)
 		end)
-		if jsgl then
+		if webgl then
 --DEBUG:print('...got gl')
 			break
 		end
 	end
-	if not jsgl then
+	if not webgl then
 		error "Couldn't initialize WebGL =("
 	end
 
 	-- behind the scenes hack
-	require 'gl'.setJSGL(jsgl)
+	require 'gl'.setWebGLContext(webgl)
 
 	-- get exts we want to use
 	-- TypeError: Cannot read properties of null (reading 'then')
 	-- wtf "then" ?  wasmoon...
 	--[[
-	jsgl.getExtension'OES_element_index_uint'
-	jsgl.getExtension'OES_standard_derivatives'
-	jsgl.getExtension'OES_texture_float'	--needed for webgl framebuffer+rgba32f
-	jsgl.getExtension'OES_texture_float_linear'
-	jsgl.getExtension'EXT_color_buffer_float'	--needed for webgl2 framebuffer+rgba32f
+	webgl.getExtension'OES_element_index_uint'
+	webgl.getExtension'OES_standard_derivatives'
+	webgl.getExtension'OES_texture_float'	--needed for webgl framebuffer+rgba32f
+	webgl.getExtension'OES_texture_float_linear'
+	webgl.getExtension'EXT_color_buffer_float'	--needed for webgl2 framebuffer+rgba32f
 	--]]
 	-- [[ or I can just call them from JS and it works
-	js.jsglInit(jsgl)
+	js.webglInit(webgl)
 	--]]
 
 	coroutine.yield(sdl.mainthread)
@@ -1653,9 +1653,9 @@ function sdl.SDL_GL_SwapWindow(window)
 	-- and a new frame loop starts ...
 
 	-- jump through webgl bs
-	jsgl:colorMask(false, false, false, true)
-	jsgl:clear(jsgl.COLOR_BUFFER_BIT)
-	jsgl:colorMask(true, true, true, true)
+	webgl:colorMask(false, false, false, true)
+	webgl:clear(webgl.COLOR_BUFFER_BIT)
+	webgl:colorMask(true, true, true, true)
 
 	-- test for resize events based on canvas size
 	if canvas then

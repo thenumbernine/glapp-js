@@ -696,26 +696,26 @@ local function jsbool(b)
 	return not not b	-- not not b
 end
 
-local jsgl
-function gl.setJSGL(jsgl_)
-	jsgl = jsgl_
+local webgl
+function gl.setWebGLContext(webgl_)
+	webgl = webgl_
 end
 
 function gl.glGetString(name)
 	-- TODO initialize upon any dereference?
 	if name == gl.GL_VENDOR then
-		return ffi.stringBuffer(jsgl:getParameter(jsgl.VENDOR))
+		return ffi.stringBuffer(webgl:getParameter(webgl.VENDOR))
 	elseif name == gl.GL_RENDERER then
-		return ffi.stringBuffer(jsgl:getParameter(jsgl.RENDERER))
+		return ffi.stringBuffer(webgl:getParameter(webgl.RENDERER))
 	elseif name == gl.GL_VERSION then
-		return ffi.stringBuffer(jsgl:getParameter(jsgl.VERSION))
+		return ffi.stringBuffer(webgl:getParameter(webgl.VERSION))
 	elseif name == gl.GL_MAJOR_VERSION then
 		return ffi.stringBuffer''
 	elseif name == gl.GL_MINOR_VERSION then
 		return ffi.stringBuffer''
 	elseif name == gl.GL_SHADING_LANGUAGE_VERSION then
 		-- TODO tempted to send something else since this string has so much extra crap in it
-		local version = jsgl:getParameter(jsgl.SHADING_LANGUAGE_VERSION)
+		local version = webgl:getParameter(webgl.SHADING_LANGUAGE_VERSION)
 		-- ugh webgl why do you have to add your crap to this?
 		local rest = version:match'^WebGL GLSL ES ([0-9%.]*)'
 		if rest then
@@ -739,7 +739,7 @@ function gl.glGetString(name)
 		return ffi.stringBuffer(version)
 	elseif name == gl.GL_EXTENSIONS then
 		local s = {}
-		local ext = jsgl:getSupportedExtensions()	-- js array
+		local ext = webgl:getSupportedExtensions()	-- js array
 		for i=0,ext.length-1 do
 			-- TODO convert any extension names here
 			table.insert(s, ext[i])
@@ -762,7 +762,7 @@ function gl.glGetError()
 		glerror = 0
 		return res
 	end
-	return jsgl:getError()
+	return webgl:getError()
 end
 
 local function setError(err)
@@ -799,7 +799,7 @@ function ResMap:makeCreate(webglfuncname)
 		assert(self[id] == nil)
 		self[id] = {
 			type = webglfuncname,
-			obj = jsgl[webglfuncname](jsgl, ...)
+			obj = webgl[webglfuncname](webgl, ...)
 		}
 		return id	--ffi.cast('GLuint', id)	-- luajit ffi will auto convert reads of int to luanumber ...
 	end
@@ -826,20 +826,62 @@ end
 local function findObj(obj, objtype)
 	for id,v in pairs(res) do
 		if v.obj == obj then
-			if objtype then assert(v.type == objtype) end
-			return id
+			if type(objtype) == 'string' then
+				assert(v.type == objtype)
+			elseif type(objtype) == 'table' then
+				assert(objtype[v.type])
+			end
+			return id, v
 		end
 	end
 end
 
-function gl.glViewport(...) return jsgl:viewport(...) end
-function gl.glClearColor(...) return jsgl:clearColor(...) end
-function gl.glClear(...) return jsgl:clear(...) end
-function gl.glDrawArrays(...) return jsgl:drawArrays(...) end
-function gl.glEnable(...) return jsgl:enable(...) end
-function gl.glDisable(...) return jsgl:disable(...) end
-function gl.glBlendFunc(...) return jsgl:blendFunc(...) end
-function gl.glLineWidth(...) return jsgl:lineWidth(...) end
+function gl.glBlendColor(...) return webgl:blendColor(...) end
+function gl.glBlendEquation(...) return webgl:blendEquation(...) end
+function gl.glBlendEquationSeparate(...) return webgl:blendEquationSeparate(...) end
+function gl.glBlendFunc(...) return webgl:blendFunc(...) end
+function gl.glBlendFuncSeparate(...) return webgl:blendFuncSeparate(...) end
+function gl.glClear(...) return webgl:clear(...) end
+function gl.glClearColor(...) return webgl:clearColor(...) end
+function gl.glClearDepthf(...) return webgl:clearDepth(...) end
+function gl.glClearStencil(...) return webgl:clearStencil(...) end
+function gl.glColorMask(...) return webgl:colorMask(...) end
+function gl.glCullFace(...) return webgl:cullFace(...) end
+function gl.glDepthFunc(...) return webgl:depthFunc(...) end
+function gl.glDepthMask(...) return webgl:depthMask(...) end
+function gl.glDepthRangef(...) return webgl:depthRange(...) end
+function gl.glDisable(...) return webgl:disable(...) end
+function gl.glDrawArrays(...) return webgl:drawArrays(...) end
+
+function gl.glDrawElements(mode, count, type, indices)
+	indices = tonumber(ffi.cast('intptr_t', ffi.cast('void*', indices)))
+	return webgl:drawElements(mode, count, type, indices)
+end
+
+function gl.glEnable(...) return webgl:enable(...) end
+function gl.glFinish(...) return webgl:finish(...) end
+function gl.glFlush(...) return webgl:flush(...) end
+function gl.glFrontFace(...) return webgl:frontFace(...) end
+function gl.glHint(...) return webgl:hint(...) end
+function gl.glIsEnabled(...) return webgl:isEnabled(...) end
+function gl.glLineWidth(...) return webgl:lineWidth(...) end
+function gl.glPixelStorei(...) return webgl:pixelStorei(...) end
+function gl.glPolygonOffset(...) return webgl:polygonOffset(...) end
+
+function gl.glReadPixels(x, y, width, height, format, type, pixels)
+	-- TODO when treat pixels as an offset vs when to treat it as a pointer?
+	return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pointer)))
+end
+
+function gl.glSampleCoverage(...) return webgl:sampleCoverage(...) end
+function gl.glScissor(...) return webgl:scissor(...) end
+function gl.glStencilFunc(...) return webgl:stencilFunc(...) end
+function gl.glStencilFuncSeparate(...) return webgl:stencilFuncSeparate(...) end
+function gl.glStencilMask(...) return webgl:stencilMask(...) end
+function gl.glStencilMaskSeparate(...) return webgl:stencilMaskSeparate(...) end
+function gl.glStencilOp(...) return webgl:stencilOp(...) end
+function gl.glStencilOpSeparate(...) return webgl:stencilOpSeparate(...) end
+function gl.glViewport(...) return webgl:viewport(...) end
 
 -- returns a function for a getter for the infos
 -- function returned accepts (data, pname) first
@@ -905,51 +947,58 @@ local getParameterInfo = {
 }
 
 local getParameterGetter = makeGetter(getParameterInfo, function(pname)
-	return jsgl:getParameter(pname)
+	return webgl:getParameter(pname)
 end)
-function gl.glGetIntegerv(pname, data)
+function gl.glGetFloatv(pname, data)
 	return getParameterGetter(data, pname)	-- data first
 end
-gl.glGetFloatv = gl.glGetIntegerv
+gl.glGetIntegerv = gl.glGetFloatv
+gl.glGetBooleanv = gl.glGetFloatv
 
-function gl.glDrawBuffers(n, bufs)
-	local ar = js.global:Array()
-	for i=0,n do
-		ar[i] = bufs[i]
-	end
-	return jsgl:drawBuffers(ar)
-end
-
-function gl.glDrawElements(mode, count, type, indices)
-	indices = tonumber(ffi.cast('intptr_t', ffi.cast('void*', indices)))
-	return jsgl:drawElements(mode, count, type, indices)
-end
-
--- I added this to circumvent webgl drawElements errors but it is even more touchy
-function gl.glDrawRangeElements(mode, indexStart, indexEnd, count, type, indices)
-	indices = tonumber(ffi.cast('intptr_t', ffi.cast('void*', indices)))
---print('glDrawRangeElements', mode, indexStart, indexEnd, count, type, indices)
-	return jsgl:drawRangeElements(mode, indexStart, indexEnd, count, type, indices)
-end
 
 gl.glCreateProgram = res:makeCreate'createProgram'
 
+function gl.glDeleteProgram(program)
+	return webgl:deleteProgram((findObj(program, 'createProgram')))
+end
+
+function gl.glIsProgram(buffer)
+	local entry = select(2, findObj(buffer))
+	if not entry then return gl.GL_FALSE end
+	if entry.type ~= 'createProgram' then return gl.GL_FALSE end	-- my own check ... why use webgl's?
+	return webgl:isProgram(entry.id)
+end
+
 function gl.glAttachShader(program, shader)
-	jsgl:attachShader(getObj(program), getObj(shader))
+	webgl:attachShader(getObj(program), getObj(shader))
 end
 
 function gl.glDetachShader(program, shader)
 -- TODO track attached shaders and delete from res[] if they fully detach?
-	jsgl:detachShader(getObj(program), getObj(shader))
+	return webgl:detachShader(getObj(program), getObj(shader))
+end
+
+function gl.glGetAttachedShaders(program, maxCount, count, shaders)
+	local jsshaders = webgl:getAttachedShaders(getObj(program))
+	if count then count[0] = jsshaders.length end
+	if shaders then
+		for i=0,math.min(maxCount, jsshaders.length)-1 do
+			-- TODO is wasmoon gonna f with me and reindex the array access?  i miss fengari...
+			shaders[i] = findObj(jsshaders[i], 'createShader')
+		end
+	end
 end
 
 function gl.glLinkProgram(program)
-	jsgl:linkProgram(getObj(program))
+	return webgl:linkProgram(getObj(program))
 end
 
 function gl.glUseProgram(program)
---print('glUseProgram', program, getObj(program))
-	jsgl:useProgram(getObj(program))
+	return webgl:useProgram(getObj(program))
+end
+
+function gl.glValidateProgram(program)
+	return webgl:validateProgram(getObj(program))
 end
 
 function gl.glGetProgramiv(programID, pname, params)
@@ -957,31 +1006,31 @@ function gl.glGetProgramiv(programID, pname, params)
 	if pname == gl.GL_ACTIVE_ATOMIC_COUNTER_BUFFERS then
 		setError(gl.GL_INVALID_ENUM)
 	elseif pname == gl.GL_INFO_LOG_LENGTH then
-		params[0] = #jsgl:getProgramInfoLog(programObj)
+		params[0] = #webgl:getProgramInfoLog(programObj)
 	elseif pname == gl.GL_ACTIVE_UNIFORM_MAX_LENGTH then
 		-- https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGetActiveUniform.xhtml
 		-- "The size of the character buffer required to store the longest uniform variable name in program can be obtained by calling glGetProgram with the value GL_ACTIVE_UNIFORM_MAX_LENGTH"
 		-- I guess webgl doesn't have antything like this ...
 		local maxlen = 0
-		for i=0,jsgl:getProgramParameter(programObj, gl.GL_ACTIVE_UNIFORMS)-1 do
-			local uinfo = jsgl:getActiveUniform(programObj, i)
+		for i=0,webgl:getProgramParameter(programObj, gl.GL_ACTIVE_UNIFORMS)-1 do
+			local uinfo = webgl:getActiveUniform(programObj, i)
 			maxlen = math.max(maxlen, #uinfo.name)
 		end
 		params[0] = maxlen
 	elseif pname == gl.GL_ACTIVE_ATTRIBUTE_MAX_LENGTH then
 		local maxlen = 0
-		for i=0,jsgl:getProgramParameter(programObj, gl.GL_ACTIVE_ATTRIBUTES)-1 do
-			local uinfo = jsgl:getActiveAttrib(programObj, i)
+		for i=0,webgl:getProgramParameter(programObj, gl.GL_ACTIVE_ATTRIBUTES)-1 do
+			local uinfo = webgl:getActiveAttrib(programObj, i)
 			maxlen = math.max(maxlen, #uinfo.name)
 		end
 		params[0] = maxlen
 	else
-		params[0] = jsgl:getProgramParameter(programObj, pname)
+		params[0] = webgl:getProgramParameter(programObj, pname)
 	end
 end
 
 function gl.glGetProgramInfoLog(program, bufSize, length, infoLog)
-	local log = jsgl:getProgramInfoLog(getObj(program))
+	local log = webgl:getProgramInfoLog(getObj(program))
 	if not log then return  end
 
 	if length ~= ffi.null then
@@ -993,7 +1042,7 @@ function gl.glGetProgramInfoLog(program, bufSize, length, infoLog)
 end
 
 function gl.glGetActiveUniform(program, index, bufSize, length, size, type, name)
-	local uinfo = jsgl:getActiveUniform(getObj(program), index)
+	local uinfo = webgl:getActiveUniform(getObj(program), index)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
@@ -1008,8 +1057,10 @@ function gl.glGetActiveUniform(program, index, bufSize, length, size, type, name
 	end
 end
 
+-- TODO glGetUniformiv/glGetUniformfv
+
 function gl.glGetUniformLocation(program, name)
-	return jsgl:getUniformLocation(getObj(program), ffi.string(name)) or nil
+	return webgl:getUniformLocation(getObj(program), ffi.string(name)) or nil
 end
 
 for n=1,4 do
@@ -1017,7 +1068,7 @@ for n=1,4 do
 		do
 			local glname = 'glUniform'..n..t
 			local webglname = 'uniform'..n..t
-			gl[glname] = function(...) return jsgl[webglname](jsgl, ...) end
+			gl[glname] = function(...) return webgl[webglname](webgl, ...) end
 		end
 
 		-- TODO 'location' is coming from lua,
@@ -1032,7 +1083,7 @@ for n=1,4 do
 			gl[glname] = function(location, count, value)
 				--assert(count == 1, "TODO")
 				value = ffi.dataToArray(jsarrayctor, value, len * count)
-				return jsgl[webglname](jsgl, location, value)
+				return webgl[webglname](webgl, location, value)
 			end
 		end
 	end
@@ -1044,21 +1095,21 @@ for n=1,4 do
 		gl[glname] = function(location, count, transpose, value)
 			--assert(count == 1, "TODO")
 			value = ffi.dataToArray('Float32Array', value, len * count)
-			return jsgl[webglname](jsgl, location, jsbool(transpose), value)
+			return webgl[webglname](webgl, location, jsbool(transpose), value)
 		end
 	end
 
 	do
 		local glname = 'glVertexAttrib'..n..'f'
 		local webglname = 'vertexAttrib'..n..'f'
-		gl[glname] = function(...) return jsgl[webglname](jsgl, ...) end
+		gl[glname] = function(...) return webgl[webglname](webgl, ...) end
 	end
 	do
 		local glname = 'glVertexAttrib'..n..'fv'
 		local webglname = 'vertexAttrib'..n..'fv'
 		gl[glname] = function(index, value)
 			value = ffi.dataToArray('Float32Array', value, n)
-			return jsgl[webglname](jsgl, index, value)
+			return webgl[webglname](webgl, index, value)
 		end
 	end
 end
@@ -1069,7 +1120,7 @@ local getVertexAttribInfo = {
 }
 
 local getVertexAttribGetter = makeGetter(getVertexAttribInfo, function(pname, index)
-	return jsgl:getVertexAttrib(index, pname)
+	return webgl:getVertexAttrib(index, pname)
 end)
 function gl.glGetVertexAttribfv(index, pname, data)
 	return getVertexAttribGetter(data, pname, index)
@@ -1077,7 +1128,7 @@ end
 gl.glGetVertexAttribiv = gl.glGetVertexAttribfv
 
 function gl.glGetActiveAttrib(program, index, bufSize, length, size, type, name)
-	local uinfo = jsgl:getActiveAttrib(getObj(program), index)
+	local uinfo = webgl:getActiveAttrib(getObj(program), index)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
@@ -1092,22 +1143,45 @@ function gl.glGetActiveAttrib(program, index, bufSize, length, size, type, name)
 	end
 end
 
+function gl.glGetVertexAttribPointerv(index, pname, pointer)
+	pointer[0] = ffi.cast('void*', webgl:getVertexAttribOffset(index, pname))
+end
+
 function gl.glGetAttribLocation(program, name)
-	return jsgl:getAttribLocation(getObj(program), ffi.string(name))
+	return webgl:getAttribLocation(getObj(program), ffi.string(name))
+end
+
+function gl.glBindAttribLocation(program, index, name)
+	return webgl:bindAttribLocation(getObj(program), index, ffi.string(name))
 end
 
 -- TODO this doesn't translate directly from ES to WebGL
 -- ES allows pointers to be passed when no buffers are bound ... right? idk about specss but it's functional on my desktop at least, similar to GL
 -- WebGL only allows this to work with bound buffers
 function gl.glVertexAttribPointer(index, size, ctype, normalized, stride, pointer)
-	return jsgl:vertexAttribPointer(index, size, ctype, jsbool(normalized), stride, tonumber(ffi.cast('intptr_t', pointer)))
+	return webgl:vertexAttribPointer(index, size, ctype, jsbool(normalized), stride, tonumber(ffi.cast('intptr_t', pointer)))
 end
 
-function gl.glEnableVertexAttribArray(...) return jsgl:enableVertexAttribArray(...) end
-function gl.glDisableVertexAttribArray(...) return jsgl:disableVertexAttribArray(...) end
+function gl.glEnableVertexAttribArray(...) return webgl:enableVertexAttribArray(...) end
+function gl.glDisableVertexAttribArray(...) return webgl:disableVertexAttribArray(...) end
 
 
 gl.glCreateShader = res:makeCreate'createShader'
+
+function gl.glDeleteShader(shader)
+	return webgl:deleteShader((findObj(shader, 'createShader')))
+end
+
+function gl.glIsShader(buffer)
+	local entry = select(2, findObj(buffer))
+	if not entry then return gl.GL_FALSE end
+	if entry.type ~= 'createShader' then return gl.GL_FALSE end	-- my own check ... why use webgl's?
+	return webgl:isShader(entry.id)
+end
+
+function gl.glShaderBinary(count, shaders, binaryFormat, binary, length)
+	error'not supported'
+end
 
 function gl.glShaderSource(shader, numStrs, strs, lens)
 	local s = table()
@@ -1116,35 +1190,58 @@ function gl.glShaderSource(shader, numStrs, strs, lens)
 	end
 	local source = s:concat()
 
-	jsgl:shaderSource(getObj(shader), source)
+	return webgl:shaderSource(getObj(shader), source)
 end
 
 function gl.glCompileShader(shader)
-	jsgl:compileShader(getObj(shader))
+	return webgl:compileShader(getObj(shader))
 end
+
+function gl.glReleaseShaderCompiler() end	-- no equivalent webgl function
 
 function gl.glGetShaderiv(shader, pname, params)
 	-- in gles but not in webgl?
 	-- or does gles not allow this also, is it just in gl but not gles?
 	if pname == gl.GL_INFO_LOG_LENGTH then
-		local log = jsgl:getShaderInfoLog(getObj(shader))
+		local log = webgl:getShaderInfoLog(getObj(shader))
 		params[0] = #log
 	elseif pname == gl.GL_SHADER_SOURCE_LENGTH then
-		params[0] = #jsgl:getShaderSource(getObj(shader))
+		params[0] = #webgl:getShaderSource(getObj(shader))
 	else
-		params[0] = jsgl:getShaderParameter(getObj(shader), pname)
+		params[0] = webgl:getShaderParameter(getObj(shader), pname)
 	end
 end
 
 function gl.glGetShaderInfoLog(shader, bufSize, length, infoLog)
-	local log = jsgl:getShaderInfoLog(getObj(shader))
+	local log = webgl:getShaderInfoLog(getObj(shader))
 	if not log then  return end
 
 	if length ~= ffi.null then
 		length[0] = #log
 	end
 	if infoLog ~= ffi.null then
-		ffi.copy(infoLog, log, bufSize)
+		ffi.copy(infoLog, log, math.min(#log+1, bufSize))
+	end
+end
+
+function gl.glGetShaderSource(shader, bufSize, length, source)
+	local src = webgl:getShaderSource(getObj(shader))
+	if length then
+		length[0] = #src
+	end
+	if source then
+		ffi.copy(source, src, math.min(#src+1, bufSize))
+	end
+end
+
+function gl.glGetShaderPrecisionFormat(shadertype, precisiontype, range, precision)
+	local result = webgl:getShaderPrecisionFormat(shadertype, precisiontype)
+	if range then
+		range[0] = result.rangeMin
+		range[1] = result.rangeMax
+	end
+	if precision then
+		precision[0] = result.precision
 	end
 end
 
@@ -1155,40 +1252,47 @@ function gl.glGenBuffers(n, buffers)
 	end
 end
 
+function gl.glDeleteBuffers(n, buffers)
+	for i=0,n-1 do
+		webgl:deleteBuffer((findObj(buffers[i], 'createBuffer')))
+	end
+end
+
+function gl.glIsBuffer(buffer)
+	local entry = select(2, findObj(buffer))
+	if not entry then return gl.GL_FALSE end
+	if entry.type ~= 'createBuffer' then return gl.GL_FALSE end	-- my own check ... why use webgl's?
+	return webgl:isBuffer(entry.id)
+end
+
 function gl.glBindBuffer(target, buffer)
-	return jsgl:bindBuffer(target, getObj(buffer))
+	return webgl:bindBuffer(target, getObj(buffer))
 end
 
 function gl.glBufferData(target, size, data, usage)
 	if data == ffi.null or data == nil then
-		return jsgl:bufferData(target, size, usage)
---[[ why isn't unsigned_short indexes working?
-	elseif target == gl.GL_ELEMENT_ARRAY_BUFFER then
---print('glBufferData', target, size, data, usage)
-		data = ffi.dataToArray('Uint16Array', data, size >> 1)
-print('glBufferData', target, data.BYTES_PER_ELEMENT, usage)
-		return jsgl:bufferData(target, data, usage)
---]]
+		return webgl:bufferData(target, size, usage)
 	else
 		data = ffi.dataToArray('Uint8Array', data, size)
-		return jsgl:bufferData(target, data, usage)
+		return webgl:bufferData(target, data, usage)
 	end
 end
 
 function gl.glBufferSubData(target, offset, size, data)
 	if data == ffi.null or data == nil then
-		return jsgl:bufferSubData(target, offset)
---[[ does webgl drawElements require that the data uploaded came from the correct TypedArray type?  that'd be ridiculous, and how can I track it?
-	elseif target == gl.GL_ELEMENT_ARRAY_BUFFER then
---print('glBufferSubData', target, offset, size, data)
-		data = ffi.dataToArray('Uint16Array', data, size >> 1)
-print('glBufferSubData', target, offset, data.BYTES_PER_ELEMENT)
-		return jsgl:bufferSubData(target, offset, data)
---]]
+		return webgl:bufferSubData(target, offset)
 	else
 		data = ffi.dataToArray('Uint8Array', data, size)
-		return jsgl:bufferSubData(target, offset, data)
+		return webgl:bufferSubData(target, offset, data)
 	end
+end
+
+local getBufferInfo = {}	-- no special array or objects here
+local getBufferGetter = makeGetter(getBufferInfo, function(pname, target)
+	return webgl:getBufferParameter(target, pname)
+end)
+function gl.glGetBufferParameteriv(target, pname, params)
+	return getBufferGetter(params, pname, target)
 end
 
 local createVertexArray = res:makeCreate'createVertexArray'
@@ -1199,8 +1303,9 @@ function gl.glGenVertexArrays(n, arrays)
 end
 
 function gl.glBindVertexArray(array)
-	jsgl:bindVertexArray(getObj(array))
+	webgl:bindVertexArray(getObj(array))
 end
+
 
 local createTexture = res:makeCreate'createTexture'
 function gl.glGenTextures(n, textures)
@@ -1209,27 +1314,71 @@ function gl.glGenTextures(n, textures)
 	end
 end
 
+function gl.glDeleteTextures(n, textures)
+	for i=0,n-1 do
+		webgl:deleteTexture((findObj(textures[i], 'createTexture')))
+	end
+end
+
+function gl.glIsTexture(buffer)
+	local entry = select(2, findObj(buffer))
+	if not entry then return gl.GL_FALSE end
+	if entry.type ~= 'createTexture' then return gl.GL_FALSE end	-- my own check ... why use webgl's?
+	return webgl:isTexture(entry.id)
+end
+
 function gl.glBindTexture(target, texture)
-	jsgl:bindTexture(target, getObj(texture))
+	return webgl:bindTexture(target, getObj(texture))
 end
 
 function gl.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
 	pixels = ffi.dataToArray(
 		type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array',
 		pixels)
-	return jsgl:texImage2D(target, level, internalformat, width, height, border, format, type, pixels)
+	return webgl:texImage2D(target, level, internalformat, width, height, border, format, type, pixels)
 end
 
 function gl.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
 	pixels = ffi.dataToArray(
 		type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array',
 		pixels)
-	return jsgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
+	return webgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
 end
 
-function gl.glTexParameterf(...) return jsgl:texParameterf(...) end
-function gl.glActiveTexture(...) return jsgl:activeTexture(...) end
-function gl.glGenerateMipmap(...) return jsgl:generateMipmap(...) end
+function gl.glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data)
+	data = ffi.dataToArray('Uint8Array', data)	-- will this have the same stupid problem as above, that data needs to be float32 vs uint8 in arbitrary situations?
+	return webgl:compressedTexImage2D(target, level, internalformat, width, height, border, data)
+end
+
+function gl.glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data)
+	data = ffi.dataToArray('Uint8Array', data)
+	return webgl:compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, data)
+end
+
+function gl.glCopyTexImage2D(...) return webgl:copyTexImage2D(...) end
+function gl.glCopyTexSubImage2D(...) return webgl:copyTexSubImage2D(...) end
+function gl.glActiveTexture(...) return webgl:activeTexture(...) end
+function gl.glGenerateMipmap(...) return webgl:generateMipmap(...) end
+
+function gl.glTexParameterf(...) return webgl:texParameterf(...) end
+function gl.glTexParameteri(...) return webgl:texParameteri(...) end
+
+function gl.glTexParameterfv(target, pname, params)
+	return webgl:texParameterf(target, pname, params[0])
+end
+function gl.glTexParameteriv(target, pname, params)
+	return webgl:texParameteri(target, pname, params[0])
+end
+
+local getTexInfo = {}	-- no arrays or objs present
+local getTexGetter = makeGetter(getTexInfo, function(pname, target)
+	return webgl:getTexParameter(target, pname)
+end)
+function gl.glGetTexParameteriv(target, pname, params)
+	return getTexGetter(params, pname, target)
+end
+gl.glGetTexParameterfv = gl.glGetTexParameteriv
+
 
 local createFramebuffer = res:makeCreate'createFramebuffer'
 function gl.glGenFramebuffers(n, framebuffers)
@@ -1238,15 +1387,39 @@ function gl.glGenFramebuffers(n, framebuffers)
 	end
 end
 
+function gl.glDeleteFramebuffers(n, framebuffers)
+	for i=0,n-1 do
+		webgl:deleteFramebuffer((findObj(framebuffers[i], 'createFramebuffer')))
+	end
+end
+
+function gl.glIsFramebuffer(buffer)
+	local entry = select(2, findObj(buffer))
+	if not entry then return gl.GL_FALSE end
+	if entry.type ~= 'createFramebuffer' then return gl.GL_FALSE end	-- my own check ... why use webgl's?
+	return webgl:isFramebuffer(entry.id)
+end
+
 function gl.glBindFramebuffer(target, framebuffer)
-	return jsgl:bindFramebuffer(target, getObj(framebuffer))
+	return webgl:bindFramebuffer(target, getObj(framebuffer))
 end
 
 function gl.glFramebufferTexture2D(target, attachment, textarget, texture, level)
-	return jsgl:framebufferTexture2D(target, attachment, textarget, getObj(texture), level)
+	return webgl:framebufferTexture2D(target, attachment, textarget, getObj(texture), level)
 end
 
-function gl.glCheckFramebufferStatus(...) return jsgl:checkFramebufferStatus(...) end
+function gl.glCheckFramebufferStatus(...) return webgl:checkFramebufferStatus(...) end
+
+local getFramebufferAttachmentInfo = {
+	[gl.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME] = {res={createTexture=1, createRenderbuffer=1}},
+}
+local getFramebufferAttachmentGetter = makeGetter(getFramebufferAttachmentInfo, function(pname, target, attachment)
+	return webgl:getFramebufferAttachment(target, attachment, pname)
+end)
+function gl.glGetFramebufferAttachmentParameteriv(target, attachment, pname, params)
+	return getFramebufferAttachmentGetter(params, pname, target, attachment)
+end
+
 
 local createRenderbuffer = res:makeCreate'createRenderbuffer'
 function gl.glGenRenderbuffers(n, renderbuffers)
@@ -1255,14 +1428,116 @@ function gl.glGenRenderbuffers(n, renderbuffers)
 	end
 end
 
-function gl.glBindRenderbuffer(target, renderbuffer)
-	return jsgl:bindRenderbuffer(target, getObj(renderbuffer))
+function gl.glDeleteRenderbuffers(n, renderbuffers)
+	for i=0,n-1 do
+		webgl:deleteRenderbuffer((findObj(renderbuffers[i], 'createRenderbuffer')))
+	end
 end
 
-function gl.glRenderbufferStorage(...) return jsgl:renderbufferStorage(...) end
+function gl.glIsRenderbuffer(buffer)
+	local entry = select(2, findObj(buffer))
+	if not entry then return gl.GL_FALSE end
+	if entry.type ~= 'createRenderbuffer' then return gl.GL_FALSE end	-- my own check ... why use webgl's?
+	return webgl:isRenderbuffer(entry.id)
+end
+
+function gl.glBindRenderbuffer(target, renderbuffer)
+	return webgl:bindRenderbuffer(target, getObj(renderbuffer))
+end
+
+function gl.glRenderbufferStorage(...) return webgl:renderbufferStorage(...) end
 
 function gl.glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer)
-	return jsgl:framebufferRenderbuffer(target, attachment, renderbuffertarget, getObj(renderbuffer))
+	return webgl:framebufferRenderbuffer(target, attachment, renderbuffertarget, getObj(renderbuffer))
+end
+
+local getRenderbufferInfo = {}	-- nothing special, only returns single ints
+local getRenderbufferGetter = makeGetter(getRenderbufferInfo, function(pname, target)
+	return webgl:getRenderbufferParameter(target, pname)
+end)
+function gl.glGetRenderbufferParameteriv(target, pname, params)
+	return getRenderbufferGetter(params, pname, target)
+end
+
+-- opengles3 / webgl2
+
+function gl.glReadBuffer(...) return webgl:readBuffer(...) end
+
+function gl.glDrawRangeElements(mode, indexStart, indexEnd, count, type, indices)
+	indices = tonumber(ffi.cast('intptr_t', ffi.cast('void*', indices)))
+	return webgl:drawRangeElements(mode, indexStart, indexEnd, count, type, indices)
+end
+
+function gl.glTexImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels)
+	pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
+	return webgl:texImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels)
+end
+
+function gl.glTexSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, type, pixels)
+	pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
+	return webgl:texSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, type, pixels)
+end
+
+function gl.glCopyTexSubImage3D(...) return webgl:copyTexSubImage3D(...) end
+
+function gl.glCompressedTexImage3D(target, level, internalformat, width, height, depth, border, imageSize, data)
+	data = ffi.dataToArray('Uint8Array', data)	-- will this have the same stupid problem as above, that data needs to be float32 vs uint8 in arbitrary situations?
+	return webgl:compressedTexImage3D(target, level, internalformat, width, height, depth, border, data)
+end
+
+function gl.glCompressedTexSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, imageSize, data)
+	data = ffi.dataToArray('Uint8Array', data)
+	return webgl:compressedTexSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, data)
+end
+
+local createQuery = res:makeCreate'createQuery'
+function gl.glGenQueries(n, ids)
+	for i=0,n-1 do
+		ids[i] = createQuery()
+	end
+end
+
+function gl.glDeleteQueries(n, ids)
+	for i=0,n-1 do
+		webgl:deleteQuery((findObj(ids[i], 'createQuery')))
+	end
+end
+
+function gl.glIsQuery(buffer)
+	local entry = select(2, findObj(buffer))
+	if not entry then return gl.GL_FALSE end
+	if entry.type ~= 'createQuery' then return gl.GL_FALSE end	-- my own check ... why use webgl's?
+	return webgl:isQuery(entry.id)
+end
+
+function gl.glBeginQuery(target, id)
+	return webgl:beginQuery(target, getObj(id))
+end
+
+function gl.glEndQuery(...) return webgl:endQuery(...) end
+
+local getQueryInfo = {
+}
+local getQueryGetter = makeGetter(getQueryInfo, function(pname, target)
+	return webgl:getQuery(target, pname)
+end)
+function gl.glGetQueryiv(target, pname, params)
+	return getQueryGetter(params, pname, target)
+end
+
+function gl.glGetQueryObjectuiv(id, pname, params)
+	params[0] = webgl:getQueryParameter(getObj(id), pname)
+end
+
+function gl.glUnmapBuffer(target) error'not supported' end	-- webgl equivalent?
+function gl.glGetBufferPointerv(target, pname, params) error'not supported' end
+
+function gl.glDrawBuffers(n, bufs)
+	local ar = js.global:Array()
+	for i=0,n do
+		ar[i] = bufs[i]
+	end
+	return webgl:drawBuffers(ar)
 end
 
 return gl
