@@ -3,9 +3,7 @@ const urlparams = new URLSearchParams(location.search);
 let rundir = urlparams.get('dir');
 let runfile = urlparams.get('file');
 
-let runargs = ((args) => {
-	return args ? JSON.parse(args) : [];	// assume it's a JS array
-})(urlparams.get('args'));
+let runargs = urlparams.get('args') || '';	//store it in JSON
 
 let editmode = !!urlparams.get('edit');
 if (!runfile || !rundir) {
@@ -20,7 +18,7 @@ if (rundir) {
 
 /* progress so far
 --rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
---rundir='glapp/tests'; runfile='test_es2.lua';				-- WORKS README
+--rundir='glapp/tests'; runfile='test_es_directcalls.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS README
 --rundir='glapp/tests'; runfile='test.lua';					-- fails, glmatrixmode
 --rundir='glapp/tests'; runfile='minimal.lua';
@@ -705,13 +703,14 @@ let outTextArea;
 let aceEditor;
 let editorPath;
 let editorFileNameSpan;
+let editorArgsInput;
 let editorSaveButton;
 const editorRun = () => {
 	editorSave();			// auto-save before run?
 	const parts = editorPath.split('/');
 	runfile = parts.pop();
 	rundir = parts.join('/');
-	runargs = [];	//TODO somewhere ...
+	runargs = editorArgsInput.value;
 	doRun();
 };
 const editorSave = () => {
@@ -1070,10 +1069,12 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 						const newUrlParams = new URLSearchParams();
 						newUrlParams.set('file', runfile);
 						newUrlParams.set('path', rundir);
+						newUrlParams.set('args', runargs);
 						const url = location.origin + location.pathname + '?' + newUrlParams.toString();
 						history.replaceState({
 							runfile : runfile,
 							rundir : rundir,
+							runargs : runargs,
 						}, document.title, url);
 
 						navigator.clipboard.writeText(url);
@@ -1101,6 +1102,14 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 				},
 			}),
 
+			editorArgsInput = Input({
+				value : runargs,
+				placeholder : 'args',
+				style : {
+					position : 'absolute',
+					right : '0px',
+				},
+			}),
 		],
 	});
 
@@ -1232,10 +1241,12 @@ const doRun = async () => {
 		const newParams = new URLSearchParams();
 		newParams.set('file', runfile);
 		newParams.set('path', rundir);
+		if (runargs) newParams.set('args', runargs);
 		const url = location.origin + location.pathname + '?' + newParams.toString();
 		history.pushState({
 			runfile : runfile,
 			rundir : rundir,
+			runargs : runargs,
 		}, document.title, url);
 	}
 
@@ -1329,6 +1340,11 @@ const doRun = async () => {
 	// ofc you can't push extra args into the call, i guess you only can via global assignments?
 	FS.chdir(rundir);
 	// TODO HERE reset the Lua state altogether
+	const args = [];
+	try {
+		args = JSON.parse(runargs) || [];
+	} catch (e) {
+	}
 	lua.doString(`
 print = function(...)
 	local s = ''
@@ -1342,7 +1358,7 @@ end
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
 	assert(loadfile'/init-jslua-bridge.lua')(
 		`+[rundir, runfile]
-			.concat(runargs).map(arg => '"'+arg+'"')
+			.concat(args).map(arg => '"'+arg+'"')
 			.join(', ')
 		+`
 	)
@@ -1359,10 +1375,12 @@ if (runfile && rundir) {
 	const newParams = new URLSearchParams();
 	newParams.set('file', runfile);
 	newParams.set('path', rundir);
+	newParams.set('args', runargs);
 	const url = location.origin + location.pathname + '?' + newParams.toString();
 	history.pushState({
 		runfile : runfile,
 		rundir : rundir,
+		runargs : runargs,
 	}, document.title, url);
 
 	await doRun();
