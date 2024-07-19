@@ -997,6 +997,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 			//run
 			A({
 				href : '#',
+				title : 'Shift+Enter to Run',
 				style : {
 					border : '1px solid #5f5f5f',
 					borderRadius : '7px',
@@ -1104,8 +1105,10 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 
 			editorArgsInput = Input({
 				value : runargs,
-				placeholder : 'args',
+				placeholder : 'args in JSON format',
 				style : {
+					color : '#ffffff',
+					background : 'Transparent',
 					position : 'absolute',
 					right : '0px',
 				},
