@@ -1430,80 +1430,98 @@ function CData:__newindex(key, value)
 --DEBUG:print('CData:__newindex', key, value)
 	local mt = debug.getmetatable(self)
 	local ctype = mt.type
-
+	local baseType = ctype.baseType
+	local keytype = type(key)
 	local valuetype = type(value)
 	local valuemt = debug.getmetatable(value)
 --DEBUG:print('CData:__newindex self=', self, 'ctype', ctype, 'key', key, 'value', value)
-	if ctype.baseType then
+	if baseType then
 		if ctype.arrayCount
 		or ctype.isPointer
 		then
---DEBUG:print('...array assignment')
-			-- array
-			local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
-			local fieldType = ctype.baseType
-			local fieldAddr = mt.addr
-			if ctype.isPointer then fieldAddr = memGetPtr(fieldAddr) end
-			fieldAddr = fieldAddr + index * ctype.baseType.size
---DEBUG:print('...fieldType', fieldType.isPrimitive, fieldType.isPointer, 'valuetype', valuetype)
-			if fieldType.isPrimitive then
-
-				if valuetype == 'cdata'
-				and valuemt.isCData
-				then
-					-- TODO here ... ffi.copy between the two ...
-					-- but only if the types can be coerced first ...
-					local valueType = valuemt.type
-					assert(valueType.isPrimitive, "can't assign a non-primitive type "..tostring(valueType).." to a primitive type "..tostring(fieldType))
-					value = valueType.get(memview, valuemt.addr)
-				elseif valuetype == 'number' then
-				elseif valuetype == 'boolean' then
-					value = value and 1 or 0
-				elseif valuetype == 'nil' then
-					value = 0
-				else
-					--[[ do I need this here?
-					if valuetype == 'string'
-					and fieldType.isPointer
-					and (fieldType.name == 'uint8_t' or fieldType.name == 'int8_t')
-					then
-						-- copy the lua-string to js-mem and return a pointer to it
-						local ptr = ffi.stringBuffer(value)
-						value = debug.getmetatable(ptr).addr
-						-- here and below as well?
+			-- luajit ffi allows ptrs to be indexed with their type's fields
+			-- but what is the precedence?  only if it's not a numeric key I guess, as that'd be a pointer-offset
+			-- especially in the case of metatypes present?  i guess still pointer indexing is handled last and only if they key is an integer
+			if ctype.isPointer and keytype == 'string' then
+				--return self[0]:__newindex(key, value)
+				-- same as struct/union below:
+				local field = baseType.fieldForName[key]
+				if field then
+					local fieldType = field.type
+					local fieldAddr = mt.addr + field.offset
+					if fieldType.isPrimitive then
+						fieldType.set(memview, fieldAddr, value)
+						return
 					else
-					--]] do
-						error("can't assign type '"..valuetype.."' to primitive c array type "..ctype.name)
+						error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
 					end
 				end
+			else
+--DEBUG:print('...array assignment')
+				local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
+				local fieldAddr = mt.addr
+				if ctype.isPointer then fieldAddr = memGetPtr(fieldAddr) end
+				fieldAddr = fieldAddr + index * baseType.size
+--DEBUG:print('...baseType', baseType.isPrimitive, baseType.isPointer, 'valuetype', valuetype)
+				if baseType.isPrimitive then
+
+					if valuetype == 'cdata'
+					and valuemt.isCData
+					then
+						-- TODO here ... ffi.copy between the two ...
+						-- but only if the types can be coerced first ...
+						local valueType = valuemt.type
+						assert(valueType.isPrimitive, "can't assign a non-primitive type "..tostring(valueType).." to a primitive type "..tostring(baseType))
+						value = valueType.get(memview, valuemt.addr)
+					elseif valuetype == 'number' then
+					elseif valuetype == 'boolean' then
+						value = value and 1 or 0
+					elseif valuetype == 'nil' then
+						value = 0
+					else
+						--[[ do I need this here?
+						if valuetype == 'string'
+						and baseType.isPointer
+						and (baseType.name == 'uint8_t' or baseType.name == 'int8_t')
+						then
+							-- copy the lua-string to js-mem and return a pointer to it
+							local ptr = ffi.stringBuffer(value)
+							value = debug.getmetatable(ptr).addr
+							-- here and below as well?
+						else
+						--]] do
+							error("can't assign type '"..valuetype.."' to primitive c array type "..ctype.name)
+						end
+					end
 
 --DEBUG:		assert(xpcall(function()
-				fieldType.set(memview, fieldAddr, value)
+					baseType.set(memview, fieldAddr, value)
 --DEBUG:		end, function(err)
---DEBUG:			return 'setting '..tostring(fieldType.name)..' addr='..tostring(fieldAddr)..' value='..tostring(value)..' buffersize='..tostring(memview.byteLength)..'\n'
+--DEBUG:			return 'setting '..tostring(baseType.name)..' addr='..tostring(fieldAddr)..' value='..tostring(value)..' buffersize='..tostring(memview.byteLength)..'\n'
 --DEBUG:				..tostring(err)..'\n'
 --DEBUG:				..debug.traceback()
 --DEBUG:		end))
-				return
-			elseif fieldType.isPointer
-			and valuetype == 'string'
-			then
-				-- copy the lua-string to js-mem and return a pointer to it
---DEBUG:print('...assigning string to ptr, got src', ptr)
-				value = pushString(value)
-				memSetPtr(fieldAddr, value)
-				return
-			else
-				if valuetype == 'cdata'
-				and valuemt.type == fieldType
+					return
+				elseif baseType.isPointer
+				and valuetype == 'string'
 				then
-					memcpyAddr(fieldAddr, getAddr(value), fieldType.size)
+					-- copy the lua-string to js-mem and return a pointer to it
+--DEBUG:print('...assigning string to ptr, got src', ptr)
+					value = pushString(value)
+					memSetPtr(fieldAddr, value)
 					return
 				else
-					error("can't assign type '"..valuetype.."'"
-						..(valuemt and valuemt.type and (' ctype='..valuemt.type.name) or '')
-						.." to non-primitive type fieldType="..fieldType.name
-					)
+					if valuetype == 'cdata'
+					and valuemt.type == baseType
+					then
+						memcpyAddr(fieldAddr, getAddr(value), baseType.size)
+						return
+					else
+						error("can't assign type '"..valuetype.."'"
+							..(valuemt and valuemt.type and (' ctype='..valuemt.type.name) or '')
+							.." to non-primitive type baseType="..baseType.name
+						)
+					end
 				end
 			end
 		else
