@@ -1332,6 +1332,14 @@ assert(ctype.size, "need to calculate a size")
 	return ctype.size
 end
 
+function ffi.offsetof(ctype, field)
+	ctype = toctypefromdata(ctype)
+	-- TODO does this handle pointers? arrays?  or just structs/unions?
+	local field = ctype.fieldForName[field]
+	if not field then return end	-- wow, the way luajit throws errors upon indexing missing fields in cdata, i didn't expect it would just return nothing upon failure here
+	return field.offset
+end
+
 -- metatable assigned *after* init for CData
 local CData = setmetatable({}, {
 	__call = function(mt, ctype, addr)
