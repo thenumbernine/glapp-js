@@ -125,6 +125,11 @@ function ig.igPopStyleVar() end
 
 function ig.igCalcTextSize() end
 
+function ig.igBeginMainMenuBar() end
+function ig.igEndMainMenuBar() end
+function ig.igBeginMenu() end
+function ig.igEndMenu() end
+
 function ig.igBegin() end
 function ig.igEnd() end
 function ig.igBeginPopupEx() end
