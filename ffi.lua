@@ -1396,7 +1396,7 @@ function CData:__index(key)
 				local field = baseType.fieldForName[key]
 				if field then
 					local fieldType = field.type
-					local fieldAddr = mt.addr + field.offset
+					local fieldAddr = memGetPtr(mt.addr) + field.offset
 					if fieldType.isPrimitive then
 						return fieldType.get(fieldAddr)
 					else
@@ -1406,16 +1406,19 @@ function CData:__index(key)
 				end
 				--]]
 			else
-				-- array ...
+				-- array or pointer with key == number
 				local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
-				local fieldType = mt.type.baseType
-				local fieldAddr = mt.addr
-				if ctype.isPointer then fieldAddr = memGetPtr(fieldAddr) end
-				fieldAddr = fieldAddr + index * baseType.size
-				if fieldType.isPrimitive then
-					return fieldType.get(fieldAddr)
+				local elemType = ctype.baseType
+				local elemAddr = mt.addr
+				if ctype.isPointer then elemAddr = memGetPtr(elemAddr) end
+				elemAddr = elemAddr + index * baseType.size
+				if elemType.isPrimitive then
+					return elemType.get(elemAddr)
 				else
-					return CData(fieldType, fieldAddr)
+					-- TODO return reftype ... but pointer for now i guess
+					--elemType = getptrtype(elemType)
+					-- return another data overlapping the memory
+					return CData(elemType, elemAddr)
 				end
 			end
 		else
@@ -1480,7 +1483,7 @@ function CData:__newindex(key, value)
 				local field = baseType.fieldForName[key]
 				if field then
 					local fieldType = field.type
-					local fieldAddr = mt.addr + field.offset
+					local fieldAddr = memGetPtr(mt.addr) + field.offset
 					if fieldType.isPrimitive then
 						fieldType.set(fieldAddr, value)
 						return
@@ -1624,7 +1627,7 @@ function CData:add(index)
 	local mt = debug.getmetatable(self)
 	local ctype = mt.type
 	local typeSize = ctype.size
-	if ctype.arrayCount 
+	if ctype.arrayCount
 	or ctype.isPointer
 	then	-- implicit convert to pointer before add
 		typeSize = ctype.baseType.size
@@ -1643,7 +1646,7 @@ function CData:add(index)
 		--]=]
 		-- [=[
 		local ret = ffi.cast(getptrtype(ctype.baseType), getAddr(self) + index * typeSize)
---DEBUG:print('ptr resides at', debug.getmetatable(ret).addr)		
+--DEBUG:print('ptr resides at', debug.getmetatable(ret).addr)
 --DEBUG:print('ptr contains', getAddr(self) + index * typeSize)
 --DEBUG:assert(memGetPtr(debug.getmetatable(ret).addr) == getAddr(self) + index * typeSize)
 		return ret
@@ -1911,25 +1914,31 @@ function ffi.cast(ctype, src)
 		if ctype.isPointer then
 			local value
 			if srctype == 'number' then
+--DEBUG:print('srctype is number')
 				value = src
 			elseif srctype == 'nil' then
+--DEBUG:print('srctype is nil')
 				value = 0
 			elseif srctype == 'cdata'
 			and srcmt.isCData
 			then
-				value = srcmt.addr
---DEBUG:print('value', value)
+--DEBUG:print('srctype is cdata with ctype', srcmt.type.name)
 				if srcmt.type.isPointer then
-					value = memGetPtr(value)
---DEBUG:print('...get ptr contents', value)
+					value = memGetPtr(srcmt.addr)
+--DEBUG:print('...isPointer with value', value)
+				else
+					value = srcmt.addr
+--DEBUG:print('...is not pointer with value', value)
 				end
 			else
 				error("idk how to assign srctype "..srctype)
 			end
 			local result = ffi.new(ctype)
+--DEBUG:print('...setting ptr')
 			memSetPtr(debug.getmetatable(result).addr, value)
 			return result
 		else
+--DEBUG:print('...setting new')
 			-- same as ffi.new?
 			return ffi.new(ctype, src)
 		end

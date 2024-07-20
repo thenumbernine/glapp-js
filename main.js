@@ -1265,6 +1265,7 @@ const doRun = async () => {
 		newParams.set('file', runfile);
 		newParams.set('dir', rundir);
 		if (runargs) newParams.set('args', runargs);
+		if (editmode) newParams.set('edit', editmode);
 		const url = location.origin + location.pathname + '?' + newParams.toString();
 		history.pushState({
 			runfile : runfile,
@@ -1516,6 +1517,7 @@ if (runfile && rundir) {
 	newParams.set('file', runfile);
 	newParams.set('dir', rundir);
 	newParams.set('args', runargs);
+	if (editmode) newParams.set('edit', editmode);
 	const url = location.origin + location.pathname + '?' + newParams.toString();
 	history.pushState({
 		runfile : runfile,
