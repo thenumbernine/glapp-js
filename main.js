@@ -720,9 +720,21 @@ const editorSave = () => {
 	editorSaveButton.setAttribute('disabled', 'disabled');
 };
 const editorLoad = () => {
-	const fileStr = new TextDecoder().decode(FS.readFile(editorPath, {encoding:'binary'}));
-	aceEditor.setValue(fileStr);
-	aceEditor.clearSelection();
+	let failed;
+	try {
+		const fileStr = new TextDecoder().decode(FS.readFile(editorPath, {encoding:'binary'}));
+		aceEditor.setValue(fileStr);
+		aceEditor.clearSelection();
+	} catch (e) {		// TODO file went wrong ... what to do
+		e = ''+e;
+		outTextArea.value += e + '\n';	// or if this happens at init, is outTextArea cleared shortly after?
+		console.log(e);
+		failed = true;
+	}
+	if (failed && !editmode) {
+		editmode = true;
+		refreshEditMode();
+	}
 	aceEditor.focus();
 };
 
@@ -1149,9 +1161,6 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 	aceEditor.session.setMode(new LuaMode());
 }
 window.imgui = imgui;
-if (rundir && runfile) {
-	setEditorFilePath(rundir+'/'+runfile);
-}
 
 document.body.style.overflow = 'hidden';	//slowly sorting this out ...
 let canvas;
@@ -1222,6 +1231,12 @@ const resize = e => {
 };
 window.addEventListener('resize', resize);
 refreshEditMode();	// will trigger resize()
+
+// make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
+// in fact, why not do this within doRun?
+if (rundir && runfile) {
+	setEditorFilePath(rundir+'/'+runfile);
+}
 
 let gl;
 const closeGL = () => {
@@ -1382,7 +1397,7 @@ local function shim()
 
 	-- shim complex to not try to use ffi complex types (until I implement them)
 	do
-		local pushffi = ffi
+		local pushffi = _G.ffi
 		_G.ffi = nil
 		package.loaded.ffi = nil
 		local pushreq = require
