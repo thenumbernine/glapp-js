@@ -1381,8 +1381,10 @@ function CData:__index(key)
 		then
 			-- if it's a pointer and the key is a string then treat it like a field
 			if ctype.isPointer and keytype == 'string' then
-				--return self[0]:__index(key)
-				-- same as struct/union below:
+				--[[
+				return self[0][key]
+				--]]
+				-- [[ same as struct/union below:
 				local field = baseType.fieldForName[key]
 				if field then
 					local fieldType = field.type
@@ -1394,6 +1396,7 @@ function CData:__index(key)
 						return CData(fieldType, fieldAddr)
 					end
 				end
+				--]]
 			else
 				-- array ...
 				local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
@@ -1461,8 +1464,11 @@ function CData:__newindex(key, value)
 			-- but what is the precedence?  only if it's not a numeric key I guess, as that'd be a pointer-offset
 			-- especially in the case of metatypes present?  i guess still pointer indexing is handled last and only if they key is an integer
 			if ctype.isPointer and keytype == 'string' then
-				--return self[0]:__newindex(key, value)
-				-- same as struct/union below:
+				--[[
+				self[0][key] = value
+				return
+				--]]
+				-- [[ same as struct/union below:
 				local field = baseType.fieldForName[key]
 				if field then
 					local fieldType = field.type
@@ -1474,6 +1480,7 @@ function CData:__newindex(key, value)
 						error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
 					end
 				end
+				--]]
 			else
 --DEBUG:print('...array assignment')
 				local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
@@ -1609,7 +1616,7 @@ function CData:add(index)
 	local typeSize = ctype.size
 	if ctype.arrayCount then	-- implicit convert to pointer before add
 		typeSize = ctype.baseType.size
-		--[[ change to type[1] so we can use it as a ref and reuse the address?
+		-- [[ change to type[1] so we can use it as a ref and reuse the address?
 		-- sounds nice but luajit ffi doesn't allow implicit string field index on array types, only on pointer types,
 		-- so returning an array here would break that behavior
 		-- don't use the whole array - just use an array[1] like its a ref, i.e. like a ptr (without allocating the pointer)
@@ -1622,15 +1629,12 @@ function CData:add(index)
 		-- in fact, you cannot ffi.new('T*', number), only ffi.cast('T*', number)
 		return ffi.new(getptrtype(ctype.baseType), mt.addr + index * typeSize)
 		--]=]
-		-- [=[
+		--[=[
 		return ffi.cast(getptrtype(ctype.baseType), mt.addr + index * typeSize)
 		--]=]
 		--]]
 	end
-	return CData(
-		ctype,
-		mt.addr + index * typeSize
-	)
+	return CData(ctype, mt.addr + index * typeSize)
 end
 
 function CData.__unm(a)
