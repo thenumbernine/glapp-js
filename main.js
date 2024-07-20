@@ -374,12 +374,14 @@ await Promise.all([
 //console.log('glapp', FS.stat('/glapp'));
 
 // shim layer filesystem stuff here:
+
 FS.writeFile('audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
 
 FS.writeFile('image/luajit/jscanvas.lua', `
 local ffi = require 'ffi'
 local class = require 'ext.class'
 local path = require 'ext.path'
+
 local CanvasImageLoader = class()
 local Image = require 'image'	-- don't require until after setting image.luajit.png
 
@@ -408,6 +410,12 @@ FS.writeFile('image/luajit/gif.lua', `return require 'image.luajit.jscanvas'\n`,
 FS.writeFile('image/luajit/jpeg.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
 FS.writeFile('image/luajit/png.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
 FS.writeFile('image/luajit/tiff.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
+
+// remove ffi check from complex
+FS.writeFile(
+	'/complex/complex.lua',
+	FS.readFile('/complex/complex.lua', {encoding:'utf8'}).replace(` = pcall(require, 'ffi')`, ``),
+	{encoding:'binary'});
 
 const refreshEditMode = () => {
 	if (editmode) {
@@ -1421,7 +1429,8 @@ print = function(...)
 	js.redirectPrint(s)
 end
 
-local function shim()
+xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
+
 	local rundir = '`+rundir+`'
 	local runfile = '`+runfile+`'
 	_G.arg = {`+args.map(arg => '"'+arg+'"')+`}
@@ -1437,27 +1446,6 @@ local function shim()
 
 	-- this modifies some of the _G functions so it should go first
 	local ffi = require 'ffi'
-
-	-- shim layer stuff
-
-	-- shim complex to not try to use ffi complex types (until I implement them)
-	do
-		local push_G_ffi = _G.ffi
-		_G.ffi = nil
-		local push_package_ffi = package.loaded.ffi
-		package.loaded.ffi = nil
-		local pushreq = require
-		require = function(fn, ...)
-			if fn == 'ffi' then return false, "nope" end
-			return pushreq(fn, ...)
-		end
-
-		require 'complex'
-
-		_G.ffi = push_G_ffi
-		require = pushreq
-		package.loaded.ffi = push_package_ffi
-	end
 
 	-- start it as a new thread ...
 	-- TODO can I just wrap the whole dofile() in a main thread?
@@ -1496,10 +1484,7 @@ local function shim()
 		-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
 		tryToResume()
 	end, 10)
-end
 
-xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
-	shim()
 end, function(err)
 	print(err)
 	print(debug.traceback())
