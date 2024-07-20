@@ -1920,6 +1920,11 @@ function ffi.stringBuffer(str)
 end
 
 function ffi.metatype(ctype, mt)
+	local mttype = type(mt)
+	if mttype ~= 'table' then
+		error("bad argument #2 to 'metatype', (table expected, got "..mttype..")")
+	end
+
 --DEBUG:print('ffi.metatype', ctype, mt)
 	if type(ctype) == 'string' then
 		-- TODO parseType instead of getctype to handle spaces/aliases
