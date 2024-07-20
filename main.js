@@ -373,6 +373,42 @@ await Promise.all([
 // why is this here when it's not down there in FS.readdir'/' ?
 //console.log('glapp', FS.stat('/glapp'));
 
+// shim layer filesystem stuff here:
+FS.writeFile('audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
+
+FS.writeFile('image/luajit/jscanvas.lua', `
+local ffi = require 'ffi'
+local class = require 'ext.class'
+local path = require 'ext.path'
+local CanvasImageLoader = class()
+local Image = require 'image'	-- don't require until after setting image.luajit.png
+
+-- ... do browsers support save functionality?
+function CanvasImageLoader:save(args) error("save not supported") end
+
+function CanvasImageLoader:load(fn)
+	local jssrc = js.loadImage(path(fn).path)
+	local len = jssrc.buffer.byteLength
+	-- copy from javascript Uint8Array to our ffi memory
+	local dstbuf = ffi.new('char[?]', len)
+	ffi.dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
+	return {
+		data = dstbuf,
+		width = jssrc.width,
+		height = jssrc.height,
+		channels = jssrc.channels,
+	}
+end
+
+return CanvasImageLoader
+`, {encoding:'binary'});
+FS.writeFile('image/luajit/bmp.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
+//FS.writeFile('image/luajit/fits.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});	// I'm pretty sure canvases can't load FITS files
+FS.writeFile('image/luajit/gif.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
+FS.writeFile('image/luajit/jpeg.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
+FS.writeFile('image/luajit/png.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
+FS.writeFile('image/luajit/tiff.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
+
 const refreshEditMode = () => {
 	if (editmode) {
 		fsDiv.style.display = 'block';
@@ -1403,7 +1439,6 @@ local function shim()
 	local ffi = require 'ffi'
 
 	-- shim layer stuff
-	package.loaded['audio.currentsystem'] = 'null'
 
 	-- shim complex to not try to use ffi complex types (until I implement them)
 	do
@@ -1422,45 +1457,6 @@ local function shim()
 		_G.ffi = push_G_ffi
 		require = pushreq
 		package.loaded.ffi = push_package_ffi
-	end
-
-	-- shim layer canvas loader
-	do
-		local class = require 'ext.class'
-		local path = require 'ext.path'
-
-		local CanvasImageLoader = class()
-		package.loaded['image.luajit.png'] = CanvasImageLoader
-		package.loaded['image.luajit.jpeg'] = CanvasImageLoader
-		package.loaded['image.luajit.bmp'] = CanvasImageLoader
-		package.loaded['image.luajit.gif'] = CanvasImageLoader
-		package.loaded['image.luajit.tiff'] = CanvasImageLoader
-		--package.loaded['image.luajit.fits'] = CanvasImageLoader	-- I'm pretty sure canvases can't load FITS files
-		local Image = require 'image'	-- don't require until after setting image.luajit.png
-
-		-- ... though it could be, right?
-		function CanvasImageLoader:save(args) error("save not supported") end
-
-		function CanvasImageLoader:load(fn)
-			local jssrc = js.loadImage(path(fn).path)
-			local len = jssrc.buffer.byteLength
-			-- copy from javascript Uint8Array to our ffi memory
-			local dstbuf = ffi.new('char[?]', len)
-			ffi.dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
-			return {
-				data = dstbuf,
-				width = jssrc.width,
-				height = jssrc.height,
-				channels = jssrc.channels,
-			}
-		end
-	end
-
-	-- shim audio TODO
-	do
-		-- TODO change to browser-based audio
-		package.loaded['audio.currentsystem'] = 'null'
-		-- TODO provide audio, buffer, source classes
 	end
 
 	-- start it as a new thread ...
