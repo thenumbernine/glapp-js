@@ -1582,6 +1582,10 @@ end
 function sdl.SDL_DestroyWindow(sdlWindow) return 0 end
 function sdl.SDL_SetWindowSize(sdlWindow, width, height) end
 
+function sdl.SDL_SetWindowTitle(sdlWindow, title)
+	js.global.document.title = title
+end
+
 local webgl
 -- oof, this returns on-stack a SDL_GLContext ... how to handle that ...
 function sdl.SDL_GL_CreateContext(sdlWindow)
