@@ -1371,24 +1371,41 @@ function CData:__index(key)
 	local mt = debug.getmetatable(self)
 --print('mt', mt)
 	local ctype = mt.type
+	local baseType = ctype.baseType
 --print('ctype', ctype)
-	assert(debug.getmetatable(ctype) == CType)
-	local ctypemt = ctype.mt
+	local keytype = type(key)
 
-	if ctype.baseType then
+	if baseType then
 		if ctype.arrayCount
 		or ctype.isPointer
 		then
-			-- array ...
-			local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
-			local fieldType = mt.type.baseType
-			local fieldAddr = mt.addr
-			if ctype.isPointer then fieldAddr = memGetPtr(fieldAddr) end
-			fieldAddr = fieldAddr + index * ctype.baseType.size
-			if fieldType.isPrimitive then
-				return fieldType.get(memview, fieldAddr)
+			-- if it's a pointer and the key is a string then treat it like a field
+			if ctype.isPointer and keytype == 'string' then
+				--return self[0]:__index(key)
+				-- same as struct/union below:
+				local field = baseType.fieldForName[key]
+				if field then
+					local fieldType = field.type
+					local fieldAddr = mt.addr + field.offset
+					if fieldType.isPrimitive then
+						return fieldType.get(memview, fieldAddr)
+					else
+						-- TODO the returned type should be a ref-type ... indicating not to copy upon assign ...
+						return CData(fieldType, fieldAddr)
+					end
+				end
 			else
-				return CData(fieldType, fieldAddr)
+				-- array ...
+				local index = oldtonumber(key) or error("expected key to be integer, found "..require 'ext.tolua'(key))
+				local fieldType = mt.type.baseType
+				local fieldAddr = mt.addr
+				if ctype.isPointer then fieldAddr = memGetPtr(fieldAddr) end
+				fieldAddr = fieldAddr + index * baseType.size
+				if fieldType.isPrimitive then
+					return fieldType.get(memview, fieldAddr)
+				else
+					return CData(fieldType, fieldAddr)
+				end
 			end
 		else
 			-- typedef
@@ -1411,6 +1428,7 @@ function CData:__index(key)
 		error("can't index cdata of type "..tostring(mt.type))
 	end
 
+	local ctypemt = ctype.mt
 	if ctypemt then
 		local index = ctypemt.__index
 --DEBUG:print('calling __index', index)
@@ -1546,8 +1564,9 @@ function CData:__newindex(key, value)
 		error("can't assign cdata of type "..tostring(mt.type))
 	end
 
-	if ctype.mt and ctype.mt.__newindex then
-		return ctype.mt.__newindex(self, key, value)
+	local ctypemt = ctype.mt
+	if ctypemt and ctypemt.__newindex then
+		return ctypemt.__newindex(self, key, value)
 	end
 
 	error("in type "..ctype.name.." couldn't find field "..tostring(key))
