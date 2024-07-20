@@ -1310,7 +1310,7 @@ const doRun = async () => {
 				},
 				prependTo : document.body,
 			});
-			window.canvas = canvas;			// global?  do I really need it? debugging?
+window.canvas = canvas;			// global?  do I really need it? debugging?  used in ffi.cimgui right now
 			resize();	// set our initial size
 			return canvas;
 		},
