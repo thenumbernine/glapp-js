@@ -156,14 +156,14 @@ ffi.ctypes = ctypes
 -- ptr type and 64 and js is a mess
 local ptrtype
 local function memSetPtr(addr, value)
-	ptrtype.set(memview, addr, value)
+	ptrtype.set(addr, value)
 end
 ffi.memSetPtr = memSetPtr
 
 -- read the pointer in memory at addr
 local function memGetPtr(addr)
-	return ctypes.uint32_t.get(memview, addr)
---		| (ctypes.uint32_t.get(memview, addr + 4, 0) << 32)	-- allow >32 bit?
+	return ctypes.uint32_t.get(addr)
+--		| (ctypes.uint32_t.get(addr + 4, 0) << 32)	-- allow >32 bit?
 end
 ffi.memGetPtr = memGetPtr
 
@@ -458,7 +458,7 @@ function CType:assign(addr, ...)
 --DEBUG:print('...assigning to primitive or pointer')
 			-- TODO maybe all this goes inside self.set?
 			if src == nil then
-				self.set(memview, addr, 0)
+				self.set(addr, 0)
 			elseif srctype == 'cdata'
 			and srcmt.isCData
 			then
@@ -476,19 +476,19 @@ function CType:assign(addr, ...)
 					-- TODO only if we are assigning to a pointer?  to an intptr_t ?
 					value = srcmt.addr
 				else
-					value = srcctype.get(memview, srcmt.addr)
+					value = srcctype.get(srcmt.addr)
 				end
 				if self.isPointer then
 					memSetPtr(addr, value)
 				else
 					assert(self.isPrimitive, "assigning to a non-primitive...")
-					self.set(memview, addr, value)
+					self.set(addr, value)
 				end
 			elseif srctype ~= 'number' then
 				error("can't convert '"..srctype.."' to '"..self.name.."'")
 			else
-assert(self.set, "expected primitive to have a setter")
-				self.set(memview, addr, src)
+assert(self.set, "expected primitive "..self.name.." to have a setter")
+				self.set(addr, src)
 			end
 --DEBUG:print('TODO *('..tostring(self)..')(ptr+'..tostring(addr)..') = '..tostring(src))
 --DEBUG:print(debug.traceback())
@@ -577,36 +577,36 @@ end
 
 CType{name='void', size=1, isPrimitive=true}	-- let's all admit that a void* is really a char*
 CType{name='bool', size=1, isPrimitive=true,	-- not a typedef of char / byte ...
-	get = function(memview, addr) return memview:getUint8(addr, true) end,
-	set = function(memview, addr, v) return memview:setUint8(addr, v, true) end,
+	get = function(addr) return memview:getUint8(addr, true) end,
+	set = function(addr, v) return memview:setUint8(addr, v, true) end,
 }
 CType{name='int8_t', size=1, isPrimitive=true,
-	get = function(memview, addr) return memview:getInt8(addr, true) end,
-	set = function(memview, addr, v) return memview:setInt8(addr, v, true) end,
+	get = function(addr) return memview:getInt8(addr, true) end,
+	set = function(addr, v) return memview:setInt8(addr, v, true) end,
 }
 CType{name='uint8_t', size=1, isPrimitive=true,
-	get = function(memview, addr) return memview:getUint8(addr, true) end,
-	set = function(memview, addr, v) return memview:setUint8(addr, v, true) end,
+	get = function(addr) return memview:getUint8(addr, true) end,
+	set = function(addr, v) return memview:setUint8(addr, v, true) end,
 }
 CType{name='int16_t', size=2, isPrimitive=true,
-	get = function(memview, addr) return memview:getInt16(addr, true) end,
-	set = function(memview, addr, v) return memview:setInt16(addr, v, true) end,
+	get = function(addr) return memview:getInt16(addr, true) end,
+	set = function(addr, v) return memview:setInt16(addr, v, true) end,
 }
 CType{name='uint16_t', size=2, isPrimitive=true,
-	get = function(memview, addr) return memview:getUint16(addr, true) end,
-	set = function(memview, addr, v) return memview:setUint16(addr, v, true) end,
+	get = function(addr) return memview:getUint16(addr, true) end,
+	set = function(addr, v) return memview:setUint16(addr, v, true) end,
 }
 CType{name='int32_t', size=4, isPrimitive=true,
-	get = function(memview, addr) return memview:getInt32(addr, true) end,
-	set = function(memview, addr, v) return memview:setInt32(addr, v, true) end,
+	get = function(addr) return memview:getInt32(addr, true) end,
+	set = function(addr, v) return memview:setInt32(addr, v, true) end,
 }
 CType{name='uint32_t', size=4, isPrimitive=true,
-	get = function(memview, addr) return memview:getUint32(addr, true) end,
-	set = function(memview, addr, v) return memview:setUint32(addr, v, true) end,
+	get = function(addr) return memview:getUint32(addr, true) end,
+	set = function(addr, v) return memview:setUint32(addr, v, true) end,
 }
 
 CType{name='int64_t', size=8, isPrimitive=true,
-	get=function(memview, addr)
+	get = function(addr)
 		--[[
 		return memview:getBigInt64(addr)
 		--]]
@@ -615,7 +615,7 @@ CType{name='int64_t', size=8, isPrimitive=true,
 			(memview:getUint32(addr + 4, true) << 32)
 		--]]
 	end,
-	set=function(memview, addr, v)
+	set = function(addr, v)
 		--[[ "Cannot convert undefined to a BigInt"
 		return memview:setBigInt64(addr, js.global.BigInt(v))
 		--]]
@@ -632,12 +632,12 @@ CType{name='int64_t', size=8, isPrimitive=true,
 	end,
 }	-- why Big?
 CType{name='uint64_t', size=8, isPrimitive=true,
-	get=function(memview, addr)
+	get = function(addr)
 		--return memview:getBigUInt64(addr)
 		return memview:getUint32(addr, true) |
 			(memview:getUint32(addr + 4, true) << 32)
 	end,
-	set=function(memview, addr, v)
+	set = function(addr, v)
 		--return memview:setBigUInt64(addr, js.global.BigInt(v))
 		memview:setUint32(addr, v & 0xffffffff, true)
 		memview:setUint32(addr + 4, (v >> 32) & 0xffffffff, true)
@@ -646,18 +646,18 @@ CType{name='uint64_t', size=8, isPrimitive=true,
 
 -- i hate javascript ... endianness problems ...
 CType{name='float', size=4, isPrimitive=true,
-	get=function(memview, addr)
+	get = function(addr)
 		return memview:getFloat32(addr, true)
 	end,
-	set=function(memview, addr, v)
+	set = function(addr, v)
 		memview:setFloat32(addr, v, true)
 	end,
 }
 CType{name='double', size=8, isPrimitive=true,
-	get=function(memview, addr)
+	get = function(addr)
 		return memview:getFloat64(addr, true)
 	end,
-	set=function(memview, addr, v)
+	set = function(addr, v)
 		memview:setFloat64(addr, v, true)
 	end,
 }
@@ -1388,7 +1388,7 @@ function CData:__index(key)
 					local fieldType = field.type
 					local fieldAddr = mt.addr + field.offset
 					if fieldType.isPrimitive then
-						return fieldType.get(memview, fieldAddr)
+						return fieldType.get(fieldAddr)
 					else
 						-- TODO the returned type should be a ref-type ... indicating not to copy upon assign ...
 						return CData(fieldType, fieldAddr)
@@ -1402,7 +1402,7 @@ function CData:__index(key)
 				if ctype.isPointer then fieldAddr = memGetPtr(fieldAddr) end
 				fieldAddr = fieldAddr + index * baseType.size
 				if fieldType.isPrimitive then
-					return fieldType.get(memview, fieldAddr)
+					return fieldType.get(fieldAddr)
 				else
 					return CData(fieldType, fieldAddr)
 				end
@@ -1418,7 +1418,7 @@ function CData:__index(key)
 			local fieldType = field.type
 			local fieldAddr = mt.addr + field.offset
 			if fieldType.isPrimitive then
-				return fieldType.get(memview, fieldAddr)
+				return fieldType.get(fieldAddr)
 			else
 				-- TODO the returned type should be a ref-type ... indicating not to copy upon assign ...
 				return CData(fieldType, fieldAddr)
@@ -1468,7 +1468,7 @@ function CData:__newindex(key, value)
 					local fieldType = field.type
 					local fieldAddr = mt.addr + field.offset
 					if fieldType.isPrimitive then
-						fieldType.set(memview, fieldAddr, value)
+						fieldType.set(fieldAddr, value)
 						return
 					else
 						error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
@@ -1490,7 +1490,7 @@ function CData:__newindex(key, value)
 						-- but only if the types can be coerced first ...
 						local valueType = valuemt.type
 						assert(valueType.isPrimitive, "can't assign a non-primitive type "..tostring(valueType).." to a primitive type "..tostring(baseType))
-						value = valueType.get(memview, valuemt.addr)
+						value = valueType.get(valuemt.addr)
 					elseif valuetype == 'number' then
 					elseif valuetype == 'boolean' then
 						value = value and 1 or 0
@@ -1513,7 +1513,7 @@ function CData:__newindex(key, value)
 					end
 
 --DEBUG:		assert(xpcall(function()
-					baseType.set(memview, fieldAddr, value)
+					baseType.set(fieldAddr, value)
 --DEBUG:		end, function(err)
 --DEBUG:			return 'setting '..tostring(baseType.name)..' addr='..tostring(fieldAddr)..' value='..tostring(value)..' buffersize='..tostring(memview.byteLength)..'\n'
 --DEBUG:				..tostring(err)..'\n'
@@ -1554,7 +1554,7 @@ function CData:__newindex(key, value)
 			local fieldType = field.type
 			local fieldAddr = mt.addr + field.offset
 			if fieldType.isPrimitive then
-				fieldType.set(memview, fieldAddr, value)
+				fieldType.set(fieldAddr, value)
 				return
 			else
 				error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
@@ -1587,7 +1587,7 @@ function CData:__tostring()
 	local value
 	if ctype.isPrimitive then
 		assert(ctype ~= ctypes.void, "how did you get a void type?")
-		value = ctype.get(memview, mt.addr)
+		value = ctype.get(mt.addr)
 --DEBUG:print('...prim value', value)
 	elseif ctype.isPointer then
 --DEBUG:print('...ptr value')
@@ -1609,8 +1609,23 @@ function CData:add(index)
 	local typeSize = ctype.size
 	if ctype.arrayCount then	-- implicit convert to pointer before add
 		typeSize = ctype.baseType.size
+		--[[ change to type[1] so we can use it as a ref and reuse the address?
+		-- sounds nice but luajit ffi doesn't allow implicit string field index on array types, only on pointer types,
+		-- so returning an array here would break that behavior
 		-- don't use the whole array - just use an array[1] like its a ref, i.e. like a ptr (without allocating the pointer)
 		ctype = getArrayType(ctype.baseType, 1)
+		--]]
+		-- [[ but if we use ptrs then we gotta give them memory ...
+
+		--[=[ hmm this runs through the field setters ...
+		-- TODO is this another error?  that ffi.new('T*', addr) doesn't work?  or should it?
+		-- in fact, you cannot ffi.new('T*', number), only ffi.cast('T*', number)
+		return ffi.new(getptrtype(ctype.baseType), mt.addr + index * typeSize)
+		--]=]
+		-- [=[
+		return ffi.cast(getptrtype(ctype.baseType), mt.addr + index * typeSize)
+		--]=]
+		--]]
 	end
 	return CData(
 		ctype,
@@ -2080,7 +2095,7 @@ function tonumber(x, ...)
 	then
 		local ctype = mt.type
 		if ctype.isPrimitive then
-			return ctype.get(memview, mt.addr)
+			return ctype.get(mt.addr)
 		else
 			return nil
 		end
