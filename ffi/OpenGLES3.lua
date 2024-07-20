@@ -870,7 +870,7 @@ function gl.glPolygonOffset(...) return webgl:polygonOffset(...) end
 
 function gl.glReadPixels(x, y, width, height, format, type, pixels)
 	-- TODO when treat pixels as an offset vs when to treat it as a pointer?
-	return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pointer)))
+	return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pixels)))
 end
 
 function gl.glSampleCoverage(...) return webgl:sampleCoverage(...) end
