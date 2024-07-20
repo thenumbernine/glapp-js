@@ -309,7 +309,7 @@ const addLuaDir = (path, files) => addFromToDir('/lua/'+path, path, files);
 // and in a smarter future, you'd do a first pass of running the app to capture all associated files to preload ...
 // but for now just load everything
 await Promise.all([
-	addFromToDir('.', '.', ['ffi.lua', 'init-jslua-bridge.lua']),
+	addFromToDir('.', '.', ['ffi.lua']),
 	addFromToDir('ffi', 'ffi', ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']),
 	addFromToDir('ffi/c', 'ffi/c', ['errno.lua', 'stdlib.lua', 'string.lua']),
 	addFromToDir('ffi/c/sys', 'ffi/c/sys', ['time.lua']),
@@ -1359,13 +1359,125 @@ print = function(...)
 	end
 	js.redirectPrint(s)
 end
+
+local function shim()
+	local rundir = '`+rundir+`'
+	local runfile = '`+runfile+`'
+	_G.arg = {`+args.map(arg => '"'+arg+'"')+`}
+	-- ok this has become the launcer of everything
+	-- Lua 5.3
+	-- TODO move this into main.js
+
+	package.path = table.concat({
+		'./?.lua',
+		'/?.lua',
+		'/?/?.lua',
+	}, ';')
+
+	-- this modifies some of the _G functions so it should go first
+	local ffi = require 'ffi'
+
+	-- shim layer stuff
+	package.loaded['audio.currentsystem'] = 'null'
+
+	-- shim complex to not try to use ffi complex types (until I implement them)
+	do
+		local pushffi = ffi
+		_G.ffi = nil
+		package.loaded.ffi = nil
+		local pushreq = require
+		require = function(fn, ...)
+			if fn == 'ffi' then return false, "nope" end
+			return pushreq(fn, ...)
+		end
+
+		require 'complex'
+
+		_G.ffi = pushffi
+		require = pushreq
+		package.loaded.ffi = pushffi
+	end
+
+	-- shim layer canvas loader
+	do
+		local class = require 'ext.class'
+		local path = require 'ext.path'
+
+		local CanvasImageLoader = class()
+		package.loaded['image.luajit.png'] = CanvasImageLoader
+		package.loaded['image.luajit.jpeg'] = CanvasImageLoader
+		package.loaded['image.luajit.bmp'] = CanvasImageLoader
+		package.loaded['image.luajit.gif'] = CanvasImageLoader
+		package.loaded['image.luajit.tiff'] = CanvasImageLoader
+		--package.loaded['image.luajit.fits'] = CanvasImageLoader	-- I'm pretty sure canvases can't load FITS files
+		local Image = require 'image'	-- don't require until after setting image.luajit.png
+
+		-- ... though it could be, right?
+		function CanvasImageLoader:save(args) error("save not supported") end
+
+		function CanvasImageLoader:load(fn)
+			local jssrc = js.loadImage(path(fn).path)
+			local len = jssrc.buffer.byteLength
+			-- copy from javascript Uint8Array to our ffi memory
+			local dstbuf = ffi.new('char[?]', len)
+			ffi.dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
+			return {
+				data = dstbuf,
+				width = jssrc.width,
+				height = jssrc.height,
+				channels = jssrc.channels,
+			}
+		end
+	end
+
+	-- shim audio TODO
+	do
+		-- TODO change to browser-based audio
+		package.loaded['audio.currentsystem'] = 'null'
+		-- TODO provide audio, buffer, source classes
+	end
+
+	-- start it as a new thread ...
+	-- TODO can I just wrap the whole dofile() in a main thread?
+	-- the tradeoff is I'd lose my ability for main coroutine detection ...
+	-- or maybe I should shim that function as well ...
+	local sdl = require 'ffi.sdl'
+	local function run(path, file, ...)
+		local fn = '/'..path..'/'..file
+		arg[0] = fn
+		--dofile(fn)	-- doesn't handle ...
+		assert(loadfile(fn))(table.unpack(arg))
+	end
+	sdl.mainthread = coroutine.create(function()
+		run(rundir, runfile)
+	end)
+
+	local interval
+	local window = js.global
+	local function tryToResume()
+		--coroutine.assertresume(sdl.mainthread)
+		if coroutine.status(sdl.mainthread) == 'dead' then return false, 'dead' end
+		local res, err = coroutine.resume(sdl.mainthread)
+		if not res then
+			print('coroutine.resume failed')
+			print(err)
+			print(debug.traceback(sdl.mainthread))
+			window:clearInterval(interval)
+		end
+	end
+
+	tryToResume()
+
+	-- set up main loop
+	-- TOOD use requestAnimationFrame instead
+	interval = window:setInterval(function()
+		-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
+		tryToResume()
+	end, 10)
+end
+
 xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
-	assert(loadfile'/init-jslua-bridge.lua')(
-		`+[rundir, runfile]
-			.concat(args).map(arg => '"'+arg+'"')
-			.join(', ')
-		+`
-	)
+	shim()
 end, function(err)
 	print(err)
 	print(debug.traceback())
