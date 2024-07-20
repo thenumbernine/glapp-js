@@ -416,13 +416,20 @@ function CType:assign(addr, ...)
 	if select('#', ...) > 0 then
 		if self.fields then
 --DEBUG:print('...assigning to struct')
+			-- if we're assigning to a struct and we have a single-table argument ...
+			if select('#', ...) == 1 and srctype == 'table' then
+--DEBUG:print('...unwrapping single-table ctor')
+				return self:assign(addr, table.unpack(src))
+			end
+
 			-- assigning struct to struct ... what if the types don't match?  what if they do ...
-			if srctype == 'cdata' 
+			if srctype == 'cdata'
 			and srcmt.isCData
 			and srcmt.type == self
 			then
 				memcpyAddr(addr, srcmt.addr, self.size)
 			else
+				-- TODO luajit ffi struct ctor consumes values as it gets them, even across nested structs/unions (or only for anonymous?), so union{struct{a,b,c},struct{d,e,f},h[3]} can be constructed with {1,2,3,4,5,6} or {1,2,3,4,5,6,{7,8,9}} (but not {1,2,3,4,5,6,7,8,9})
 				-- structs
 				if self.isunion then
 					-- then only assign to the first entry? hmmm ...
@@ -478,7 +485,7 @@ function CType:assign(addr, ...)
 					self.set(memview, addr, value)
 				end
 			elseif srctype ~= 'number' then
-				error("can't convert "..srctype.." to number")
+				error("can't convert '"..srctype.."' to '"..self.name.."'")
 			else
 assert(self.set, "expected primitive to have a setter")
 				self.set(memview, addr, src)
