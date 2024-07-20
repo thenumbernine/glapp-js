@@ -869,8 +869,15 @@ function gl.glPixelStorei(...) return webgl:pixelStorei(...) end
 function gl.glPolygonOffset(...) return webgl:polygonOffset(...) end
 
 function gl.glReadPixels(x, y, width, height, format, type, pixels)
-	-- TODO when treat pixels as an offset vs when to treat it as a pointer?
-	return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pixels)))
+	-- if webgl:getParameter(gl.GL_PIXEL_PACK_BUFFER_BINDING) == js.null then	-- ... getting our stupid 'then' error
+	if false then
+		-- if PIXEL_PACK_BUFFER is bound then we are reading into it, and 'pixels' is an offset
+		return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pixels)))
+	else
+		-- otherwise pixels is an address in memory
+		-- TODO webgl will complain if the TypedArray type doesn't match the GL type
+		return webgl:readPixels(x, y, width, height, format, type, ffi.dataToArray('Uint8Array', pixels))
+	end
 end
 
 function gl.glSampleCoverage(...) return webgl:sampleCoverage(...) end
