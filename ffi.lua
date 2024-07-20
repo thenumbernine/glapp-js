@@ -1614,9 +1614,11 @@ function CData:add(index)
 	local mt = debug.getmetatable(self)
 	local ctype = mt.type
 	local typeSize = ctype.size
-	if ctype.arrayCount then	-- implicit convert to pointer before add
+	if ctype.arrayCount 
+	or ctype.isPointer
+	then	-- implicit convert to pointer before add
 		typeSize = ctype.baseType.size
-		-- [[ change to type[1] so we can use it as a ref and reuse the address?
+		--[[ change to type[1] so we can use it as a ref and reuse the address?
 		-- sounds nice but luajit ffi doesn't allow implicit string field index on array types, only on pointer types,
 		-- so returning an array here would break that behavior
 		-- don't use the whole array - just use an array[1] like its a ref, i.e. like a ptr (without allocating the pointer)
@@ -1627,10 +1629,14 @@ function CData:add(index)
 		--[=[ hmm this runs through the field setters ...
 		-- TODO is this another error?  that ffi.new('T*', addr) doesn't work?  or should it?
 		-- in fact, you cannot ffi.new('T*', number), only ffi.cast('T*', number)
-		return ffi.new(getptrtype(ctype.baseType), mt.addr + index * typeSize)
+		return ffi.new(getptrtype(ctype.baseType), getAddr(self) + index * typeSize)
 		--]=]
-		--[=[
-		return ffi.cast(getptrtype(ctype.baseType), mt.addr + index * typeSize)
+		-- [=[
+		local ret = ffi.cast(getptrtype(ctype.baseType), getAddr(self) + index * typeSize)
+--DEBUG:print('ptr resides at', debug.getmetatable(ret).addr)		
+--DEBUG:print('ptr contains', getAddr(self) + index * typeSize)
+--DEBUG:assert(memGetPtr(debug.getmetatable(ret).addr) == getAddr(self) + index * typeSize)
+		return ret
 		--]=]
 		--]]
 	end
