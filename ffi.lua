@@ -1477,7 +1477,7 @@ function CData:__newindex(key, value)
 						fieldType.set(fieldAddr, value)
 						return
 					else
-						error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
+						error("cannot convert '"..valuetype.."' to '"..field.type.name.."'")
 					end
 				end
 				--]]
@@ -1489,15 +1489,14 @@ function CData:__newindex(key, value)
 				fieldAddr = fieldAddr + index * baseType.size
 --DEBUG:print('...baseType', baseType.isPrimitive, baseType.isPointer, 'valuetype', valuetype)
 				if baseType.isPrimitive then
-
 					if valuetype == 'cdata'
 					and valuemt.isCData
 					then
 						-- TODO here ... ffi.copy between the two ...
 						-- but only if the types can be coerced first ...
-						local valueType = valuemt.type
-						assert(valueType.isPrimitive, "can't assign a non-primitive type "..tostring(valueType).." to a primitive type "..tostring(baseType))
-						value = valueType.get(valuemt.addr)
+						local valueCType = valuemt.type
+						assert(valueCType.isPrimitive, "can't assign a non-primitive type "..valueCType.name.." to a primitive type "..baseType.name)
+						value = valueCType.get(valuemt.addr)
 					elseif valuetype == 'number' then
 					elseif valuetype == 'boolean' then
 						value = value and 1 or 0
@@ -1522,7 +1521,7 @@ function CData:__newindex(key, value)
 --DEBUG:		assert(xpcall(function()
 					baseType.set(fieldAddr, value)
 --DEBUG:		end, function(err)
---DEBUG:			return 'setting '..tostring(baseType.name)..' addr='..tostring(fieldAddr)..' value='..tostring(value)..' buffersize='..tostring(memview.byteLength)..'\n'
+--DEBUG:			return 'setting '..baseType.name..' addr='..tostring(fieldAddr)..' value='..tostring(value)..' buffersize='..tostring(memview.byteLength)..'\n'
 --DEBUG:				..tostring(err)..'\n'
 --DEBUG:				..debug.traceback()
 --DEBUG:		end))
@@ -1536,9 +1535,7 @@ function CData:__newindex(key, value)
 					memSetPtr(fieldAddr, value)
 					return
 				else
-					if valuetype == 'cdata'
-					and valuemt.type == baseType
-					then
+					if valuetype == 'cdata' and valuemt.type == baseType then
 						memcpyAddr(fieldAddr, getAddr(value), baseType.size)
 						return
 					else
@@ -1563,12 +1560,17 @@ function CData:__newindex(key, value)
 			if fieldType.isPrimitive then
 				fieldType.set(fieldAddr, value)
 				return
+			elseif valuetype == 'cdata' and valuemt.type == field.type then
+				memcpyAddr(fieldAddr, getAddr(value), field.type.size)
+				return
 			else
-				error("cannot convert '"..type(value).."' to '"..tostring(field.type).."'")
+				error("cannot convert '"..valuetype.."'"
+					..(valuemt and valuemt.type and (' ctype='..valuemt.type.name) or '')
+					.." to '"..field.type.name.."'")
 			end
 		end
 	else
-		error("can't assign cdata of type "..tostring(mt.type))
+		error("can't assign cdata of type "..mt.type.name)
 	end
 
 	local ctypemt = ctype.mt
@@ -1718,6 +1720,21 @@ function CData.__mul(a,b)
 		end
 	end
 	error("don't know how to mul")
+end
+
+function CData.__concat(a,b)
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local pa = ma and ma.isCData
+	local pb = mb and mb.isCData
+	if pa or pb then
+		local h = (pa and ma.type and ma.type.mt and ma.type.mt.__concat)
+			or (pb and mb.type and mb.type.mt and mb.type.mt.__concat)
+		if h then
+			return h(a,b)
+		end
+	end
+	error("don't know how to concat")
 end
 
 function CData.__div(a,b)
