@@ -1156,6 +1156,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 
 	// ace editor: https://github.com/ajaxorg/ace
 	aceEditor = ace.edit("taDiv");
+	aceEditor.setBehavioursEnabled(false);
 	aceEditor.setTheme("ace/theme/tomorrow_night_bright");
 	const LuaMode = ace.require("ace/mode/lua").Mode;
 	aceEditor.session.setMode(new LuaMode());
