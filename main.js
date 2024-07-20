@@ -1398,9 +1398,9 @@ local function shim()
 
 	-- shim complex to not try to use ffi complex types (until I implement them)
 	do
-		local pushffi = ffi
-		--local pushffi = _G.ffi
+		local push_G_ffi = _G.ffi
 		_G.ffi = nil
+		local push_package_ffi = package.loaded.ffi
 		package.loaded.ffi = nil
 		local pushreq = require
 		require = function(fn, ...)
@@ -1410,9 +1410,9 @@ local function shim()
 
 		require 'complex'
 
-		_G.ffi = pushffi
+		_G.ffi = push_G_ffi
 		require = pushreq
-		package.loaded.ffi = pushffi
+		package.loaded.ffi = push_package_ffi
 	end
 
 	-- shim layer canvas loader
