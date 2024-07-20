@@ -315,6 +315,7 @@ await Promise.all([
 	addFromToDir('ffi/c/sys', 'ffi/c/sys', ['time.lua']),
 	addFromToDir('ffi/cpp', 'ffi/cpp', ['vector-lua.lua', 'vector.lua']),
 	addFromToDir('ffi/gcwrapper', 'ffi/gcwrapper', ['gcwrapper.lua']),
+	addFromToDir('lfs_ffi', 'lfs_ffi', ['lfs_ffi.lua']),
 
 	addLuaDir('bit', ['bit.lua']),
 	addLuaDir('template', ['output.lua', 'showcode.lua', 'template.lua']),
@@ -1285,6 +1286,9 @@ const doRun = async () => {
 
 	lua.global.set('js', {
 		global : window,	//for fengari compat
+
+		FS : FS,
+
 		// welp looks like wasmoon wraps only some builtin classes (ArrayBuffer) into lambdas to treat them all ONLY AS CTORS so i can't access properties of them, because retarded
 		// so I cannot pass them through lua back to js for any kind of operations
 		// so all JS operations now have to be abstracted into a new api
