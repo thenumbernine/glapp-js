@@ -1398,7 +1398,8 @@ local function shim()
 
 	-- shim complex to not try to use ffi complex types (until I implement them)
 	do
-		local pushffi = _G.ffi
+		local pushffi = ffi
+		--local pushffi = _G.ffi
 		_G.ffi = nil
 		package.loaded.ffi = nil
 		local pushreq = require
