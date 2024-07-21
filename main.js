@@ -312,8 +312,10 @@ const addPackage = pkg =>
 
 import { luaPackages } from '/js/lua-packages.js';
 
-await Promise.all([
-	addPackage([
+{
+	const pkgs = [];
+	//push local glapp-js package
+	pkgs.push([
 		{from : '.', to : '.', files : ['ffi.lua']},
 		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']},
 		{from : './ffi/c', to : 'ffi/c', files : ['errno.lua', 'stdlib.lua', 'string.lua']},
@@ -321,38 +323,13 @@ await Promise.all([
 		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
 		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
 		{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
-	]),
-	addPackage(luaPackages['bit']),
-	addPackage(luaPackages['template']),
-	addPackage(luaPackages['ext']),
-	addPackage(luaPackages['struct']),
-	addPackage(luaPackages['modules']),
-	addPackage(luaPackages['vec-ffi']),
-	addPackage(luaPackages['matrix']),
-	addPackage(luaPackages['gl']),
-	addPackage(luaPackages['cl']),
-	addPackage(luaPackages['image']),
-	addPackage(luaPackages['dkjson']),
-	addPackage(luaPackages['mesh']),
-	addPackage(luaPackages['audio']),
-	addPackage(luaPackages['glapp']),
-	addPackage(luaPackages['imgui']),
-	addPackage(luaPackages['imguiapp']),
-	addPackage(luaPackages['line-integral-convolution']),
-	addPackage(luaPackages['rule110']),
-	addPackage(luaPackages['n-points']),
-	addPackage(luaPackages['seashell']),
-	addPackage(luaPackages['complex']),
-	addPackage(luaPackages['bignumber']),
-	addPackage(luaPackages['symmath']),
-	addPackage(luaPackages['geographic-charts']),
-	addPackage(luaPackages['prime-spiral']),
-	addPackage(luaPackages['fibonacci-modulo']),
-	addPackage(luaPackages['lambda-cdm']),
-	addPackage(luaPackages['surface-from-connection']),
-	addPackage(luaPackages['SphericalHarmonicGraphs']),
-	addPackage(luaPackages['sand-attack']),
-]).catch(e => { throw e; });
+	]);
+	//push all other packages
+	for (let k in luaPackages) pkgs.push(luaPackages[k]);
+	// and wait for them all to load
+	await Promise.all(pkgs.map(pkg => addPackage(pkg)))
+	.catch(e => { throw e; });
+}
 // why is this here when it's not down there in FS.readdir'/' ?
 //console.log('glapp', FS.stat('/glapp'));
 
