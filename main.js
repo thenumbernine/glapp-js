@@ -303,70 +303,55 @@ const addFromToDir = (fromPath, toPath, files) =>
 
 const addLuaDir = (path, files) => addFromToDir('/lua/'+path, path, files);
 
-import { luaPackages } from '/js/lua-packages.js';
-
-// can I add packages locally?
-// would I want to?
-luaPackages['glapp-js'] = [
-	{from : '.', to : '.', files : ['ffi.lua']},
-	{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']},
-	{from : './ffi/c', to : 'ffi/c', files : ['errno.lua', 'stdlib.lua', 'string.lua']},
-	{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua']},
-	{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
-	{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
-	{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
-];
-
-const addPackage = name =>
+const addPackage = pkg =>
 	Promise.all(
-		luaPackages[name].map(fileset =>
+		pkg.map(fileset =>
 			addFromToDir(fileset.from, fileset.to, fileset.files)
 		)
 	);
 
-await Promise.all([
-	/*
-	addFromToDir('.', '.', ['ffi.lua']),
-	addFromToDir('ffi', 'ffi', ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']),
-	addFromToDir('ffi/c', 'ffi/c', ['errno.lua', 'stdlib.lua', 'string.lua']),
-	addFromToDir('ffi/c/sys', 'ffi/c/sys', ['time.lua']),
-	addFromToDir('ffi/cpp', 'ffi/cpp', ['vector-lua.lua', 'vector.lua']),
-	addFromToDir('ffi/gcwrapper', 'ffi/gcwrapper', ['gcwrapper.lua']),
-	addFromToDir('lfs_ffi', 'lfs_ffi', ['lfs_ffi.lua']),
-	*/
-	addPackage('glapp-js'),
+import { luaPackages } from '/js/lua-packages.js';
 
-	// TODO autogen these / merge this with lua.vm-util.js
-	addPackage('bit'),
-	addPackage('template'),
-	addPackage('ext'),
-	addPackage('struct'),
-	addPackage('modules'),
-	addPackage('vec-ffi'),
-	addPackage('matrix'),
-	addPackage('gl'),
-	addPackage('cl'),
-	addPackage('image'),
-	addPackage('dkjson'),
-	addPackage('mesh'),
-	addPackage('audio'),
-	addPackage('glapp'),
-	addPackage('imgui'),
-	addPackage('imguiapp'),
-	addPackage('line-integral-convolution'),
-	addPackage('rule110'),
-	addPackage('n-points'),
-	addPackage('seashell'),
-	addPackage('complex'),
-	addPackage('bignumber'),
-	addPackage('symmath'),
-	addPackage('geographic-charts'),
-	addPackage('prime-spiral'),
-	addPackage('fibonacci-modulo'),
-	addPackage('lambda-cdm'),
-	addPackage('surface-from-connection'),
-	addPackage('SphericalHarmonicGraphs'),
-	addPackage('sand-attack'),
+await Promise.all([
+	addPackage([
+		{from : '.', to : '.', files : ['ffi.lua']},
+		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']},
+		{from : './ffi/c', to : 'ffi/c', files : ['errno.lua', 'stdlib.lua', 'string.lua']},
+		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua']},
+		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
+		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
+		{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
+	]),
+	addPackage(luaPackages['bit']),
+	addPackage(luaPackages['template']),
+	addPackage(luaPackages['ext']),
+	addPackage(luaPackages['struct']),
+	addPackage(luaPackages['modules']),
+	addPackage(luaPackages['vec-ffi']),
+	addPackage(luaPackages['matrix']),
+	addPackage(luaPackages['gl']),
+	addPackage(luaPackages['cl']),
+	addPackage(luaPackages['image']),
+	addPackage(luaPackages['dkjson']),
+	addPackage(luaPackages['mesh']),
+	addPackage(luaPackages['audio']),
+	addPackage(luaPackages['glapp']),
+	addPackage(luaPackages['imgui']),
+	addPackage(luaPackages['imguiapp']),
+	addPackage(luaPackages['line-integral-convolution']),
+	addPackage(luaPackages['rule110']),
+	addPackage(luaPackages['n-points']),
+	addPackage(luaPackages['seashell']),
+	addPackage(luaPackages['complex']),
+	addPackage(luaPackages['bignumber']),
+	addPackage(luaPackages['symmath']),
+	addPackage(luaPackages['geographic-charts']),
+	addPackage(luaPackages['prime-spiral']),
+	addPackage(luaPackages['fibonacci-modulo']),
+	addPackage(luaPackages['lambda-cdm']),
+	addPackage(luaPackages['surface-from-connection']),
+	addPackage(luaPackages['SphericalHarmonicGraphs']),
+	addPackage(luaPackages['sand-attack']),
 ]).catch(e => { throw e; });
 // why is this here when it's not down there in FS.readdir'/' ?
 //console.log('glapp', FS.stat('/glapp'));
