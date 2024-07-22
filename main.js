@@ -1328,6 +1328,8 @@ const closeCanvas = () => {
 
 let lua;
 const doRun = async () => {
+	document.title = runfile;
+
 	//TODO maybe, if our run file is dif from the last run file then window.history.pushState() ?
 	{
 		const newParams = new URLSearchParams();
