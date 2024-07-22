@@ -17,31 +17,35 @@ if (rundir) {
 }
 
 /* progress so far
---rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
---rundir='glapp/tests'; runfile='test_es_directcalls.lua';				-- WORKS README
---rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS README
---rundir='glapp/tests'; runfile='test.lua';					-- fails, glmatrixmode
---rundir='glapp/tests'; runfile='minimal.lua';
---rundir='glapp/tests'; runfile='pointtest.lua';
---rundir='glapp/tests'; runfile='info.lua';
---rundir='line-integral-convolution'; runfile='run.lua';	-- welp this was working for a good long while until I started adding imgui stuff ... now it's not working anymore ...
---rundir='rule110'; runfile='rule110.lua';					-- WORKS README but imgui
---rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README but imgui
---rundir='n-points'; runfile='run.lua';						-- WORKS README but imgui
---rundir='n-points'; runfile='run_orbit.lua';				-- todo ... or not, it's kinda dumb i guess
---rundir='geographic-charts'; runfile='test.lua';			-- WORKS README but indexed geometry could help it
---rundir='prime-spiral'; runfile='run.lua';					-- WORKS README but needs tracking shift for key events for it to work ...
---rundir='lambda-cdm'; runfile='run.lua';					-- WORKS README but imgui
---rundir='seashell'; runfile='run.lua';						-- very slow (didn't finish)
---rundir='SphericalHarmonicGraphs'; runfile='run.lua';		-- very slow (didn't finish)
---rundir='metric'; runfile='run.lua';
---rundir='sand-attack'; runfile='run.lua'; runargs=["skipCustomFont","config=nil"]		-- dir() is failing ... hmm
---rundir='surface-from-connection'; runfile='run.lua';		-- needs to be glsl-remade
-TODO mesh viewer
-TODO chess on manifold
+rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
+rundir='glapp/tests'; runfile='test_es_directcalls.lua';				-- WORKS README
+rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS README
+rundir='glapp/tests'; runfile='test.lua';					-- fails, glmatrixmode
+rundir='glapp/tests'; runfile='minimal.lua';
+rundir='glapp/tests'; runfile='pointtest.lua';
+rundir='glapp/tests'; runfile='info.lua';
+rundir='line-integral-convolution'; runfile='run.lua';	-- welp this was working for a good long while until I started adding imgui stuff ... now it's not working anymore ...
+rundir='rule110'; runfile='rule110.lua';					-- WORKS README needs imgui
+rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README needs imgui
+rundir='n-points'; runfile='run.lua';						-- WORKS README needs imgui
+rundir='n-points'; runfile='run_orbit.lua';				-- todo ... or not, it's kinda dumb i guess
+rundir='geographic-charts'; runfile='test.lua';			-- WORKS README but indexed geometry could help it
+rundir='prime-spiral'; runfile='run.lua';					-- WORKS README but needs tracking shift for key events for it to work ...
+rundir='lambda-cdm'; runfile='run.lua';					-- WORKS README needs imgui
+rundir='seashell'; runfile='run.lua';						-- very slow (didn't finish)
+rundir='SphericalHarmonicGraphs'; runfile='run.lua';		-- very slow (didn't finish)
+rundir='metric'; runfile='run.lua';
+rundir='sand-attack'; runfile='run.lua';					-- freezes, needs imgui
+rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README
+rundir='mesh'												-- WORKS README
+
+rundir='earth-magnetic-field'								-- TODO change it to use geographic-charts
+rundir='VectorFieldDecomposition'							-- TODO doesn't run
+rundir='geo-center-earth'									-- TODO ... ?
 TODO chompman
+TODO chess on manifold
 TODO tetris-attack
-TODO dumpworld/zeta2d
+TODO zeta2d/dumpworld
 TODO farmgame
 TODO imgui library <-> html shim layer
 TODO hydro-cl
@@ -50,12 +54,9 @@ TODO nbody-gpu
 TODO waves-in-curved space ... ?
 TODO celestial-gravitomagnetics ... ?
 TODO seismograph-stations ... ?
-TODO earth-magnetic-field ... ?
 TODO gravitational-waves
 TODO hydro-cl
 TODO cdfmesh
-TODO VectorFieldDecomposition ... ?
-TODO geo-center-earth ... ?
 TODO asteroids3d
 TODO tacticslua
 TODO inspiration engine
@@ -258,7 +259,7 @@ const fetchBytes = src => {
 // https://github.com/hellpanderrr/lua-in-browser
 const mountFile = (filePath, luaPath) => {
 	return fetchBytes(filePath)
-	.then((fileContent) => {
+	.then(fileContent => {
 		// contents of wasmoon factory.ts BUT WITH BINARY ENCODING FDJLFUICLJFSDFLKJDS:LJFD
 
 		const fileSep = luaPath.lastIndexOf('/');
@@ -299,9 +300,10 @@ const mountFile = (filePath, luaPath) => {
 }
 
 const addFromToDir = (fromPath, toPath, files) =>
-	Promise.all(files.map(f => mountFile(fromPath+'/'+f, toPath+'/'+f)));
-
-const addLuaDir = (path, files) => addFromToDir('/lua/'+path, path, files);
+	Promise.all(files.map(f => mountFile(
+		(fromPath+'/'+f).replace('+', '%2b'),	//TODO full url escape? but not for /'s
+		toPath+'/'+f
+	)));
 
 const addPackage = pkg =>
 	Promise.all(
@@ -586,8 +588,8 @@ class Split {
 
 	setVisible(x) {
 		this.divider.style.display = x ? 'block' : 'none';
-		if (this.L) this.L.setVisible(x);
-		if (this.R) this.R.setVisible(x);
+		this.L?.setVisible(x);
+		this.R?.setVisible(x);
 	}
 
 	dragMouse(x,y) {
@@ -606,14 +608,10 @@ class Split {
 		const childBounds = this.getChildBounds();
 		this.refreshDom();
 		this.onDrag(this, childBounds);
-		if (this.L) {
-			this.L.setBounds(...childBounds.L);
-			this.L.refreshOffset();
-		}
-		if (this.R) {
-			this.R.setBounds(...childBounds.R);
-			this.R.refreshOffset();
-		}
+		this.L?.setBounds(...childBounds.L);
+		this.L?.refreshOffset();
+		this.R?.setBounds(...childBounds.R);
+		this.R?.refreshOffset();
 	}
 
 	//called by refreshOffset after dragMouse and after ctor
@@ -622,8 +620,8 @@ class Split {
 		this.refreshDom();
 		const childBounds = this.getChildBounds();
 		this.onDrag(this, childBounds);
-		if (this.L) this.L.setBounds(...childBounds.L);
-		if (this.R) this.R.setBounds(...childBounds.R);
+		this.L?.setBounds(...childBounds.L);
+		this.R?.setBounds(...childBounds.R);
 	}
 
 	//called upon resize
@@ -634,8 +632,8 @@ class Split {
 		this.refreshDom();
 		const childBounds = this.getChildBounds();
 		this.onDrag(this, childBounds);
-		if (this.L) this.L.resizeBounds(...childBounds.L);
-		if (this.R) this.R.resizeBounds(...childBounds.R);
+		this.L?.resizeBounds(...childBounds.L);
+		this.R?.resizeBounds(...childBounds.R);
 	}
 
 	refreshDom() {
@@ -691,14 +689,10 @@ class Split {
 	}
 }
 window.addEventListener('mousemove', e => {
-	if (splitDragging) {
-		splitDragging.dragMouse(e.pageX, e.pageY);
-	}
+	splitDragging?.dragMouse(e.pageX, e.pageY);
 });
 window.addEventListener('mouseup', e => {
-	if (splitDragging) {
-		splitDragging = undefined;
-	}
+	splitDragging = undefined;
 });
 
 // resize uses this too
@@ -868,113 +862,140 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 		}
 		titleDiv.innerText = name;	//update name if it's a dir
 
-		//delete button
-		A({
-			style : {
-				color : '#ff3f3f',
-				cssFloat : 'right',
-				//textAlign : 'right',	// for children?
-				right : '0px',
-				backgroundColor : '#000000',
-				border : '1px solid #5f5f5f',
-				borderRadius : '7px',
-				paddingLeft : '3px',
-				paddingRight : '3px',
-			},
-			events : {
-				click : e => {
-					e.stopPropagation();	//stop fallthru to title click
-					if (pathIsDir) {
-						FS.rmdir(path);	// can we rmdir empty dirs? nope.
-					} else {
-						FS.unlink(path);
-					}
+		const onDelete = () => {
+			if (pathIsDir) {
+				FS.rmdir(path);	// can we rmdir empty dirs? nope.
+			} else {
+				FS.unlink(path);
+			}
 
-					// remove from children ...
-					parentFileInfo?.childrenDiv.removeChild(fileInfo.fileDiv);
+			// remove from children ...
+			parentFileInfo?.childrenDiv.removeChild(fileInfo.fileDiv);
 
-					if (editorPath == path) {
-						 // TODO what to set the editor path to if we delete the current file?
-					}
-				},
-			},
-			appendTo : titleDiv,
-			children : [
-				Img({
-					src : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw1AUhU9TpSIVh3YQcchQnSxIleKoVShChVArtOpg8tI/aGJIUlwcBdeCgz+LVQcXZ10dXAVB8AfE2cFJ0UVKvC8ptIjxweV9nPfO4b77AKFZY5rVMwFoum1m0ykxX1gRQ68IIUKVREJmljErSRn4rq97BPh+F+dZ/vf+XANq0WJAQCSeYYZpE68TJzdtg/M+cZRVZJX4nHjcpAaJH7muePzGueyywDOjZi47RxwlFstdrHQxq5ga8RRxTNV0yhfyHquctzhrtTpr98lfGC7qy0tcpxpBGgtYhAQRCuqoogYbcdp1Uixk6Tzl4x92/RK5FHJVwcgxjw1okF0/+B/8nq1Vmkx4SeEU0PviOB+jQGgXaDUc5/vYcVonQPAZuNI7/o0mMP1JeqOjxY6AwW3g4rqjKXvA5Q4w9GTIpuxKQSqhVALez+ibCkDkFuhf9ebWPsfpA5CjWWVugINDYKxM2Ws+7+7rntu/d9rz+wHKUnLK2aV6FwAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwgBHitISrQAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAACIElEQVRYw+2WTWsTURSGnzszZmgSdzKSgm5cKGjVCmlFaBCl7vQfdGndSVuwXWkqAdeWqosu6kcFoSCCrkRQzELwKxSTSiP4C0pdFdNMnFwX02DmZqKTZsYvemAW99wz8z5c3nPuCALE12OZx8BZOosn8UL+3K+KhCIkgINKTT9wj63FCEIseTJSLscLedlYGsoLT4FhwosFpFRzz4AzjYWmbJ4m+jjVvND4w/HXAXz+DZoeDdWEw5uPHpG4s2lC/zZsasd9qllCiOfxQr7lhI02xQ+AdMgAb4GBoCbsieD4e/6JLtgGaHtlxeZnMR/dR2QG2pbJwaNs3LlBdeYaCBEegDh5Av3IYbS9ezBzWURm0Fe8MjWBk0rx7cB+5E9AOwaQL17hfCi6MMkkZu6KB6IhLhMJt7dXyoiXr8P1gH1hHKdYaoFoES9/wpyaDuyBdpOwCBxq2YjtIDZ3Hb3P3ZLr63xZW/OKT2Zhw/b7bCleyPd11wV2DXt0zHMSAcVDbEO7Ru32AjjOj1y9TmzxYcfiWwIQQ2nMq5dBb7owNY3KxEXk8f5oAcRQGjM3jdiZdO/W0jLGStn1QyJBZXK8YwitG3F7dAzzUrYriGAAvZY7gBRxqjbYNV8Ieq0QJ2HKQiR9xJuMqUJIa1cgACPQJHxfojp7C7HbwpmZ84orEPr5EcTqKmLpY3gAAPW7i4Fa1Lg5v/0/8H8AvItA641f8jtDCMZ/I7Ih8wAAAABJRU5ErkJggg==',
-					height : 14,
-				}),
-			],
-		});
+			if (editorPath == path) {
+				 // TODO what to set the editor path to if we delete the current file?
+			}	
+		};
 
+		const onNewFolder = () => {
+			const newname = prompt('File Name:', '');
+			if (newname) {
+				const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
+				FS.mkdir(newpath);
+				makeFileDiv(newpath, newname, fileInfo);
+				fileInfo.sortChildren();
+			}
+		};
+
+		const onNewFile = () => {
+			const newname = prompt('File Name:', '');
+			if (newname) {
+				const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
+				FS.writeFile(newpath, '', {encoding:'binary'});
+				makeFileDiv(newpath, newname, fileInfo);
+				fileInfo.sortChildren();
+				setEditorFilePath(newpath);			//auto-open?
+			}
+		};
+
+		const cmds = [];
 		if (pathIsDir) {
-			//new-folder button
-			A({
-				style : {
-					color : '#3fff3f',
-					cssFloat : 'right',
-					//textAlign : 'right',	// for children?
-					right : '0px',
-					border : '1px solid #5f5f5f',
-					borderRadius : '7px',
-					paddingLeft : '3px',
-					paddingRight : '3px',
-				},
-				events : {
-					click : e => {
-						e.stopPropagation();	//stop fallthru to title click
-						const newname = prompt('File Name:', '');
-						if (newname) {
-							const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
-							FS.mkdir(newpath);
-							makeFileDiv(newpath, newname, fileInfo);
-							fileInfo.sortChildren();
-						}
-					},
-				},
-				appendTo : titleDiv,
-				children : [
-					Img({
-						src : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9bpUUqDi0i4pCh6mJBVMRRq1CECqFWaNXB5NIvaNKQpLg4Cq4FBz8Wqw4uzro6uAqC4AeIs4OToouU+L+k0CLGg+N+vLv3uHsH+BsVpppd44CqWUY6mRCyuVUh+IogIgihH6MSM/U5UUzBc3zdw8fXuzjP8j735+hV8iYDfALxLNMNi3iDeHrT0jnvE0dZSVKIz4nHDLog8SPXZZffOBcd9vPMqJFJzxNHiYViB8sdzEqGSjxFHFNUjfL9WZcVzluc1UqNte7JXxjOayvLXKc5hCQWsQQRAmTUUEYFFuK0aqSYSNN+wsM/6PhFcsnkKoORYwFVqJAcP/gf/O7WLExOuEnhBND9Ytsfw0BwF2jWbfv72LabJ0DgGbjS2v5qA5j5JL3e1mJHQN82cHHd1uQ94HIHGHjSJUNypABNf6EAvJ/RN+WAyC3Qs+b21trH6QOQoa5SN8DBITBSpOx1j3eHOnv790yrvx9hlHKgn1zBvAAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwgXENBo0mQAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAA1klEQVRYw+2WPQrCQBCFH9EiQTxO+tzEU3gFY59brb3XENKHz2YCKiHkZ7MbZB8MW8ww8+aXlRIS9gZQDmpALYgfeYFqULYlgWYg8FppzW8+hUCfeTmgq0DdCiLNFAKAGNHXZvMEFROrWvaV8EGgsOCA6hmtHfU7y9Ay6kyq4ATM7rZkDnwSOIDutprhCcxc7VNUAmN+s9iX9xgw1sPvvnpC9BZsSgDkQM7LtPqc/P9ugZX9K/OPS+h2V4FZH5ItZsDXl8wtJTB0Ca/2XiSdg1y/hISYeAMW5MAnrSYD2QAAAABJRU5ErkJggg==',
-						height : 14,
-					}),
-				],
-			});
-
-			//new-file button
-			A({
-				style : {
-					color : '#3fff3f',
-					cssFloat : 'right',
-					//textAlign : 'right',	// for children?
-					right : '0px',
-					border : '1px solid #5f5f5f',
-					borderRadius : '7px',
-					paddingLeft : '3px',
-					paddingRight : '3px',
-				},
-				events : {
-					click : e => {
-						e.stopPropagation();	//stop fallthru to title click
-						const newname = prompt('File Name:', '');
-						if (newname) {
-							const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
-							FS.writeFile(newpath, '', {encoding:'binary'});
-							makeFileDiv(newpath, newname, fileInfo);
-							fileInfo.sortChildren();
-							setEditorFilePath(newpath);			//auto-open?
-						}
-					},
-				},
-				appendTo : titleDiv,
-				children : [
-					Img({
-						src : 'data:image/png;base64,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IlhNUCBDb3JlIDQuNC4wLUV4aXYyIj4KIDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+CiAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIgogICAgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIKICAgIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIKICAgIHhtbG5zOkdJTVA9Imh0dHA6Ly93d3cuZ2ltcC5vcmcveG1wLyIKICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIgogICB4bXBNTTpEb2N1bWVudElEPSJnaW1wOmRvY2lkOmdpbXA6NzU4NjMwMGYtNjRmYS00MDMyLTlkYWMtN2IxMTdkOGQyYjgyIgogICB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjAwYTExNjRmLWFiNDgtNGVhMy04NzFhLWU2YmQ2ZWNjNGRkYyIKICAgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ4bXAuZGlkOjI4ZmViYjVjLTRlMWEtNDAzMC1hODIwLTZjZTg0Y2U2MTA2NyIKICAgZGM6Rm9ybWF0PSJpbWFnZS9wbmciCiAgIEdJTVA6QVBJPSIyLjAiCiAgIEdJTVA6UGxhdGZvcm09IkxpbnV4IgogICBHSU1QOlRpbWVTdGFtcD0iMTcyMTM3NTg4NTExNDc2OCIKICAgR0lNUDpWZXJzaW9uPSIyLjEwLjM4IgogICB0aWZmOk9yaWVudGF0aW9uPSIxIgogICB4bXA6Q3JlYXRvclRvb2w9IkdJTVAgMi4xMCIKICAgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyNDowNzoxOVQxMzo1ODowMyswNjowMCIKICAgeG1wOk1vZGlmeURhdGU9IjIwMjQ6MDc6MTlUMTM6NTg6MDMrMDY6MDAiPgogICA8eG1wTU06SGlzdG9yeT4KICAgIDxyZGY6U2VxPgogICAgIDxyZGY6bGkKICAgICAgc3RFdnQ6YWN0aW9uPSJzYXZlZCIKICAgICAgc3RFdnQ6Y2hhbmdlZD0iLyIKICAgICAgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDo3ZDA3YjY4My1mMjMwLTQ1MjUtOWU5Ni0zZDhhZDc4ZjRjYTQiCiAgICAgIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkdpbXAgMi4xMCAoTGludXgpIgogICAgICBzdEV2dDp3aGVuPSIyMDI0LTA3LTE5VDEzOjU4OjA1KzA2OjAwIi8+CiAgICA8L3JkZjpTZXE+CiAgIDwveG1wTU06SGlzdG9yeT4KICA8L3JkZjpEZXNjcmlwdGlvbj4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pihzw7IAAAAGYktHRAD/AP8A/6C9p5MAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfoBxMHOgWWwytdAAAAGXRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBHSU1QV4EOFwAAAQlJREFUWMPtlz0OgkAQhR/EwphszUk8B0fwAtzAeAYL76OFVlhoYaW3oKHA5FmwBEGQZXf5S5gpaJjZb+btQAYYrRE+iBOIBFT2F4gdiJXp4fsWh1b5HYRnUjlBxCACEEIxzilBPPQg0rYTRKAR+324JkSuuTAA8PQhshR68uWx2hBmAJGMXldA3NSmwwzg0DAd264BlhIiqgF4dgugMqIlc3v5qjr1BbmGlYUgQtv/AHUJLLzbjwR/bGIAqeb8aWdx1MJJdWC+hIMDLAzjr8PeAQt55zswSoC31ExY1F8UcjcAXORzY7HQLNe5u8WkrvI0Ryxz+n2tZlW+11nRji2X07InMoePsdoHHAdgdUB5RO8AAAAASUVORK5CYII=',
-						height : 14,
-					}),
-				],
-			});
+			cmds.push({name:'New File', func:onNewFile});
+			cmds.push({name:'New Folder', func:onNewFolder});
 		}
+		cmds.push({name:'Delete', func:onDelete});
+
+		/* as context menu * /
+		let popupDiv;
+		const openContextMenu = e => {
+			e.preventDefault();		// no brower right-click
+			e.stopPropagation();	// sometimes two files will get hit ...
+			popupDiv.parentNode?.removeChild(popupDiv);
+			
+			// hmm how to handle this ...
+			const closeEH = () => {
+				window.removeEventListener('click', closeEH);
+				window.removeEventListener('contextmenu', closeEH);
+			};
+			closeEH();
+	
+			popupDiv = Div({
+				style : {
+					zIndex : -1,
+					position : 'absolute',
+					left : e.pageX + 'px',
+					top : e.pageY + 'px',
+					backgroundColor : '#000000',
+					border : '1px solid #5f5f5f',
+					borderRadius : '7px',
+					padding : '1px 3px 1px 3px',
+					cursor : 'pointer',
+				},
+				appendTo : document.body,
+				children : cmds.map(cmd => 
+					Div({
+						innerText : cmd.name,
+						style : {
+							backgroundColor : '#000000',
+							border : '1px solid #5f5f5f',
+							borderRadius : '7px',
+							padding : '1px 3px 1px 3px',
+						},
+						events : {
+							click : e => {
+								e.stopPropagation();
+								closeEH();
+								cmd.func();
+							},
+						},
+					})
+				),
+			});
+		
+			window.addEventListener('click', closeEH);
+		};
+		titleDiv.addEventListener('contextmenu', e => {
+			e.preventDefault();
+			openContextMenu(e);
+		});
+		/* */
+		/* as buttons ... easier than handling page-wise mouse events ... but takes up more UI space ... */
+		const imgsForCmds = {
+			['New File'] : 'data:image/png;base64,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IlhNUCBDb3JlIDQuNC4wLUV4aXYyIj4KIDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+CiAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIgogICAgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIKICAgIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIKICAgIHhtbG5zOkdJTVA9Imh0dHA6Ly93d3cuZ2ltcC5vcmcveG1wLyIKICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIgogICB4bXBNTTpEb2N1bWVudElEPSJnaW1wOmRvY2lkOmdpbXA6NzU4NjMwMGYtNjRmYS00MDMyLTlkYWMtN2IxMTdkOGQyYjgyIgogICB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjAwYTExNjRmLWFiNDgtNGVhMy04NzFhLWU2YmQ2ZWNjNGRkYyIKICAgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ4bXAuZGlkOjI4ZmViYjVjLTRlMWEtNDAzMC1hODIwLTZjZTg0Y2U2MTA2NyIKICAgZGM6Rm9ybWF0PSJpbWFnZS9wbmciCiAgIEdJTVA6QVBJPSIyLjAiCiAgIEdJTVA6UGxhdGZvcm09IkxpbnV4IgogICBHSU1QOlRpbWVTdGFtcD0iMTcyMTM3NTg4NTExNDc2OCIKICAgR0lNUDpWZXJzaW9uPSIyLjEwLjM4IgogICB0aWZmOk9yaWVudGF0aW9uPSIxIgogICB4bXA6Q3JlYXRvclRvb2w9IkdJTVAgMi4xMCIKICAgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyNDowNzoxOVQxMzo1ODowMyswNjowMCIKICAgeG1wOk1vZGlmeURhdGU9IjIwMjQ6MDc6MTlUMTM6NTg6MDMrMDY6MDAiPgogICA8eG1wTU06SGlzdG9yeT4KICAgIDxyZGY6U2VxPgogICAgIDxyZGY6bGkKICAgICAgc3RFdnQ6YWN0aW9uPSJzYXZlZCIKICAgICAgc3RFdnQ6Y2hhbmdlZD0iLyIKICAgICAgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDo3ZDA3YjY4My1mMjMwLTQ1MjUtOWU5Ni0zZDhhZDc4ZjRjYTQiCiAgICAgIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkdpbXAgMi4xMCAoTGludXgpIgogICAgICBzdEV2dDp3aGVuPSIyMDI0LTA3LTE5VDEzOjU4OjA1KzA2OjAwIi8+CiAgICA8L3JkZjpTZXE+CiAgIDwveG1wTU06SGlzdG9yeT4KICA8L3JkZjpEZXNjcmlwdGlvbj4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pihzw7IAAAAGYktHRAD/AP8A/6C9p5MAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfoBxMHOgWWwytdAAAAGXRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBHSU1QV4EOFwAAAQlJREFUWMPtlz0OgkAQhR/EwphszUk8B0fwAtzAeAYL76OFVlhoYaW3oKHA5FmwBEGQZXf5S5gpaJjZb+btQAYYrRE+iBOIBFT2F4gdiJXp4fsWh1b5HYRnUjlBxCACEEIxzilBPPQg0rYTRKAR+324JkSuuTAA8PQhshR68uWx2hBmAJGMXldA3NSmwwzg0DAd264BlhIiqgF4dgugMqIlc3v5qjr1BbmGlYUgQtv/AHUJLLzbjwR/bGIAqeb8aWdx1MJJdWC+hIMDLAzjr8PeAQt55zswSoC31ExY1F8UcjcAXORzY7HQLNe5u8WkrvI0Ryxz+n2tZlW+11nRji2X07InMoePsdoHHAdgdUB5RO8AAAAASUVORK5CYII=',
+			['New Folder'] : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9bpUUqDi0i4pCh6mJBVMRRq1CECqFWaNXB5NIvaNKQpLg4Cq4FBz8Wqw4uzro6uAqC4AeIs4OToouU+L+k0CLGg+N+vLv3uHsH+BsVpppd44CqWUY6mRCyuVUh+IogIgihH6MSM/U5UUzBc3zdw8fXuzjP8j735+hV8iYDfALxLNMNi3iDeHrT0jnvE0dZSVKIz4nHDLog8SPXZZffOBcd9vPMqJFJzxNHiYViB8sdzEqGSjxFHFNUjfL9WZcVzluc1UqNte7JXxjOayvLXKc5hCQWsQQRAmTUUEYFFuK0aqSYSNN+wsM/6PhFcsnkKoORYwFVqJAcP/gf/O7WLExOuEnhBND9Ytsfw0BwF2jWbfv72LabJ0DgGbjS2v5qA5j5JL3e1mJHQN82cHHd1uQ94HIHGHjSJUNypABNf6EAvJ/RN+WAyC3Qs+b21trH6QOQoa5SN8DBITBSpOx1j3eHOnv790yrvx9hlHKgn1zBvAAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwgXENBo0mQAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAA1klEQVRYw+2WPQrCQBCFH9EiQTxO+tzEU3gFY59brb3XENKHz2YCKiHkZ7MbZB8MW8ww8+aXlRIS9gZQDmpALYgfeYFqULYlgWYg8FppzW8+hUCfeTmgq0DdCiLNFAKAGNHXZvMEFROrWvaV8EGgsOCA6hmtHfU7y9Ay6kyq4ATM7rZkDnwSOIDutprhCcxc7VNUAmN+s9iX9xgw1sPvvnpC9BZsSgDkQM7LtPqc/P9ugZX9K/OPS+h2V4FZH5ItZsDXl8wtJTB0Ca/2XiSdg1y/hISYeAMW5MAnrSYD2QAAAABJRU5ErkJggg==',
+			Delete : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw1AUhU9TpSIVh3YQcchQnSxIleKoVShChVArtOpg8tI/aGJIUlwcBdeCgz+LVQcXZ10dXAVB8AfE2cFJ0UVKvC8ptIjxweV9nPfO4b77AKFZY5rVMwFoum1m0ykxX1gRQ68IIUKVREJmljErSRn4rq97BPh+F+dZ/vf+XANq0WJAQCSeYYZpE68TJzdtg/M+cZRVZJX4nHjcpAaJH7muePzGueyywDOjZi47RxwlFstdrHQxq5ga8RRxTNV0yhfyHquctzhrtTpr98lfGC7qy0tcpxpBGgtYhAQRCuqoogYbcdp1Uixk6Tzl4x92/RK5FHJVwcgxjw1okF0/+B/8nq1Vmkx4SeEU0PviOB+jQGgXaDUc5/vYcVonQPAZuNI7/o0mMP1JeqOjxY6AwW3g4rqjKXvA5Q4w9GTIpuxKQSqhVALez+ibCkDkFuhf9ebWPsfpA5CjWWVugINDYKxM2Ws+7+7rntu/d9rz+wHKUnLK2aV6FwAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gHEwgBHitISrQAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAACIElEQVRYw+2WTWsTURSGnzszZmgSdzKSgm5cKGjVCmlFaBCl7vQfdGndSVuwXWkqAdeWqosu6kcFoSCCrkRQzELwKxSTSiP4C0pdFdNMnFwX02DmZqKTZsYvemAW99wz8z5c3nPuCALE12OZx8BZOosn8UL+3K+KhCIkgINKTT9wj63FCEIseTJSLscLedlYGsoLT4FhwosFpFRzz4AzjYWmbJ4m+jjVvND4w/HXAXz+DZoeDdWEw5uPHpG4s2lC/zZsasd9qllCiOfxQr7lhI02xQ+AdMgAb4GBoCbsieD4e/6JLtgGaHtlxeZnMR/dR2QG2pbJwaNs3LlBdeYaCBEegDh5Av3IYbS9ezBzWURm0Fe8MjWBk0rx7cB+5E9AOwaQL17hfCi6MMkkZu6KB6IhLhMJt7dXyoiXr8P1gH1hHKdYaoFoES9/wpyaDuyBdpOwCBxq2YjtIDZ3Hb3P3ZLr63xZW/OKT2Zhw/b7bCleyPd11wV2DXt0zHMSAcVDbEO7Ru32AjjOj1y9TmzxYcfiWwIQQ2nMq5dBb7owNY3KxEXk8f5oAcRQGjM3jdiZdO/W0jLGStn1QyJBZXK8YwitG3F7dAzzUrYriGAAvZY7gBRxqjbYNV8Ieq0QJ2HKQiR9xJuMqUJIa1cgACPQJHxfojp7C7HbwpmZ84orEPr5EcTqKmLpY3gAAPW7i4Fa1Lg5v/0/8H8AvItA641f8jtDCMZ/I7Ih8wAAAABJRU5ErkJggg==',
+		};
+		[...cmds].reverse().forEach(cmd => {
+			A({
+				href : '#',
+				title : cmd.name,
+				style : {
+					color : '#ff3f3f',
+					cssFloat : 'right',
+					//textAlign : 'right',	// for children?
+					right : '0px',
+					backgroundColor : '#000000',
+					border : '1px solid #5f5f5f',
+					borderRadius : '7px',
+					paddingLeft : '3px',
+					paddingRight : '3px',
+				},
+				events : {
+					click : e => {
+						e.stopPropagation();	//stop fallthru to title click
+						cmd.func();
+					},
+				},
+				appendTo : titleDiv,
+				children : [
+					Img({
+						src : imgsForCmds[cmd.name],
+						height : 14,
+					}),
+				],
+			});
+		});
+		/**/
 	};
 	FS.chdir('/');
 	makeFileDiv('/', '/', undefined);
@@ -1101,13 +1122,11 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 
 						navigator.clipboard.writeText(url);
 
-						if (navigator.share) {
-							navigator.share({
-								title : document.title,
-								text : 'GLApp',
-								url : url,
-							})
-						}
+						navigator?.share({
+							title : document.title,
+							text : 'GLApp',
+							url : url,
+						})
 					},
 				},
 				children : [
@@ -1250,15 +1269,12 @@ if (rundir && runfile) {
 
 let gl;
 const closeGL = () => {
-	if (gl) {
-		const WEBGL_lose_context = gl.getExtension('WEBGL_lose_context');
-		if (WEBGL_lose_context) WEBGL_lose_context.loseContext();
-	}
+	gl?.getExtension('WEBGL_lose_context')?.loseContext();
 	gl = undefined;
 };
 const closeCanvas = () => {
 	closeGL();
-	if (canvas) document.body.removeChild(canvas);
+	canvas?.parentNode?.removeChild(canvas);
 	canvas = undefined;
 };
 
