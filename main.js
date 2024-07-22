@@ -1229,6 +1229,7 @@ window.imgui = imgui;
 
 document.body.style.overflow = 'hidden';	//slowly sorting this out ...
 let canvas;
+let canvasOutputSplit;
 
 const rootSplit = new Split({
 	bounds : [0, 0, window.innerWidth, window.innerHeight],
@@ -1259,10 +1260,8 @@ const rootSplit = new Split({
 			taDiv.style.height = (L[3] - 24) + 'px';
 
 			const R = childBounds.R;
-
-
 		},
-		R : new Split({
+		R : canvasOutputSplit = new Split({
 			dir : 'horz',
 			offset : window.innerHeight / 2,
 			onDrag : (split, childBounds) => {
@@ -1279,19 +1278,31 @@ const rootSplit = new Split({
 						canvas.width = window.innerWidth;
 						canvas.height = window.innerHeight;
 					}
+				
+					const D = childBounds.R;
+					outDiv.style.left = D[0] + 'px';
+					outDiv.style.top = D[1] + 'px';
+					outDiv.style.width = D[2] + 'px';
+					outDiv.style.height = D[3] + 'px';
+				} else {
+					// no canvas? don't split ...
+					const D = split.bounds;
+					outDiv.style.left = D[0] + 'px';
+					outDiv.style.top = D[1] + 'px';
+					outDiv.style.width = D[2] + 'px';
+					outDiv.style.height = D[3] + 'px';
 				}
-
-				const D = childBounds.R;
-				outDiv.style.left = D[0] + 'px';
-				outDiv.style.top = D[1] + 'px';
-				outDiv.style.width = D[2] + 'px';
-				outDiv.style.height = D[3] + 'px';
 			},
 		}),
 	}),
 });
 window.rootSplit = rootSplit;
 const resize = e => {
+	//hide/show the split if canvas is present
+	// i'm 50/50 on giving the splits child divs themselves and not resizing based on the child bounds
+	// and then i could dynamically add/remove this split ...
+	canvasOutputSplit.divider.style.display = canvas ? 'block' : 'none';
+
 	rootSplit.resizeBounds(0, 0, window.innerWidth, window.innerHeight);
 };
 window.addEventListener('resize', resize);
@@ -1312,6 +1323,7 @@ const closeCanvas = () => {
 	closeGL();
 	canvas?.parentNode?.removeChild(canvas);
 	canvas = undefined;
+	resize(); // refresh split
 };
 
 let lua;
