@@ -700,8 +700,14 @@ let fsDiv;
 let taDiv;
 let titleBarDiv;
 let outDiv;
-let outTextArea;
+let stdoutTA;
+let stdinTA;
 // store as pixel <=> smoother scrolling when resizing divider, store as fraction <=> smoother when resizing window ... shrug
+
+const stdoutPrint = s => {
+	stdoutTA.value += s + '\n';
+	console.log('> '+s);	//log here too?
+};
 
 let aceEditor;
 let editorPath;
@@ -730,8 +736,7 @@ const editorLoad = () => {
 		aceEditor.clearSelection();
 	} catch (e) {		// TODO file went wrong ... what to do
 		e = ''+e;
-		outTextArea.value += e + '\n';	// or if this happens at init, is outTextArea cleared shortly after?
-		console.log(e);
+		stdoutPrint(e);	// or if this happens at init, is stdoutTA cleared shortly after?
 		failed = true;
 	}
 	if (failed && !editmode) {
@@ -1164,7 +1169,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 		},
 		appendTo : document.body,
 		children : [
-			outTextArea = TextArea({
+			stdoutTA = TextArea({
 				readOnly : true,
 				style : {
 					backgroundColor : '#000000',
@@ -1177,6 +1182,37 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 					whiteSpace : 'pre',
 					overflowWrap : 'normal',
 					overflow : 'auto',
+				},
+			}),
+			stdinTA = TextArea({
+				style : {
+					position : 'absolute',	// \_ these two together put it at the bottom of its container
+					bottom : '0px',			// /
+					backgroundColor : '#000000',
+					color : '#ffffff',
+					width : '100%',
+					height : '1em',
+					tabSize : 4,
+					MozTabSize : 4,
+					OTabSize : 4,
+					whiteSpace : 'pre',
+					overflowWrap : 'normal',
+					overflow : 'hidden',
+				},
+				events : {
+					keypress : e => {
+						// what should execute? enter or shift+enter ?
+						if (e.code == 'Enter') {
+							e.preventDefault();
+							const txt = stdinTA.value;
+							stdinTA.value = '';
+							if (lua) {
+								lua.doString(txt);
+							} else {
+								stdoutPrint('lua state not present');
+							}
+						}
+					},
 				},
 			}),
 		],
@@ -1376,14 +1412,11 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		// https://github.com/ceifa/wasmoon/issues/21
 		// wait does this say to just overwrite _G.print?  like you can't do that in a single line of "print=function..."
 		// no, I want to override all output, including the stack traces that Lua prints when an error happens ... smh everyone ...
-		redirectPrint : s => {
-			outTextArea.value += s + '\n';
-			console.log('> '+s);	//log here too?
-		},
+		redirectPrint : s => { stdoutPrint(s); },
 	});
 
 	imgui.clear();
-	outTextArea.value = '';
+	stdoutTA.value = '';
 
 	// ofc you can't push extra args into the call, i guess you only can via global assignments?
 	FS.chdir(rundir);
