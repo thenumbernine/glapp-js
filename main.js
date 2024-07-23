@@ -871,40 +871,51 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 		titleDiv.innerText = name;	//update name if it's a dir
 
 		const onUpload = () => {
-			const file = document.createElement('input');
-			file.type = 'file';
-			file.addEventListener('change', e => {
-				const filesrc = file.files[0];
-				const reader = new FileReader();
-				reader.addEventListener('load', e => {
-					const result = e.target.result;
-					const newname = filesrc.name;
-					const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
-					FS.writeFile(newpath, new Uint8Array(result), {encoding:'binary'});
+			Input({
+				type : 'file',
+				events : {
+					change : e => {
+						const filesrc = e.target.files[0];
+						const reader = new FileReader();
+						reader.addEventListener('load', e => {
+							const result = e.target.result;
+							const newname = filesrc.name;
+							const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
+							FS.writeFile(newpath, new Uint8Array(result), {encoding:'binary'});
 
-					// also in mountFile ... TODO if someone modifies an image file then they will need to regen this as well ... hmm ...
-					const ext = newpath.split('.').pop();
-					if (ext == 'png' ||
-						ext == 'jpg' ||
-						ext == 'jpeg' ||
-						ext == 'gif' ||
-						ext == 'tiff' ||
-						ext == 'bmp'
-					) {
-						preloadImage(newpath, ext);
-					}
+							// also in mountFile ... TODO if someone modifies an image file then they will need to regen this as well ... hmm ...
+							const ext = newpath.split('.').pop();
+							if (ext == 'png' ||
+								ext == 'jpg' ||
+								ext == 'jpeg' ||
+								ext == 'gif' ||
+								ext == 'tiff' ||
+								ext == 'bmp'
+							) {
+								preloadImage(newpath, ext);
+							}
 
-					makeFileDiv(newpath, newname, fileInfo);
-					fileInfo.sortChildren();
-					// TODO will aceEditor screw up binary files if i select them + my auto-save-upon-changing-viewed-file ?
-					//setEditorFilePath(newpath);		// set it as our current file too? or bad idea if it's a binary file ...
-				});
-				reader.readAsArrayBuffer(filesrc);
-			});
-			file.click();
+							makeFileDiv(newpath, newname, fileInfo);
+							fileInfo.sortChildren();
+							// TODO will aceEditor screw up binary files if i select them + my auto-save-upon-changing-viewed-file ?
+							//setEditorFilePath(newpath);		// set it as our current file too? or bad idea if it's a binary file ...
+						});
+						reader.readAsArrayBuffer(filesrc);
+					},
+				},
+			}).click();
 		};
 
 		const onDownload = () => {
+			const data = FS.readFile(path, {encoding:'binary'});
+			const blob = new Blob([data]);	//TODO {type:mimeType} based on extension or something idk
+			const url = URL.createObjectURL(blob);
+			//TODO URL.revokeObjectURL eventually / upon finish
+
+			A({
+				href : url,
+				download : name,
+			}).click();
 		};
 
 		const onNewFile = () => {
@@ -944,12 +955,10 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 		};
 
 		const cmds = [];
-		if (pathIsDir) {
-			cmds.push({name:'Upload', func:onUpload});
-			//cmds.push({name:'Download', func:onDownload});
-			cmds.push({name:'New File', func:onNewFile});
-			cmds.push({name:'New Folder', func:onNewFolder});
-		}
+		if (pathIsDir) cmds.push({name:'Upload', func:onUpload});
+		if (!pathIsDir) cmds.push({name:'Download', func:onDownload});
+		if (pathIsDir) cmds.push({name:'New File', func:onNewFile});
+		if (pathIsDir) cmds.push({name:'New Folder', func:onNewFolder});
 		cmds.push({name:'Delete', func:onDelete});
 
 		/* as context menu * /
