@@ -1301,7 +1301,7 @@ const resize = e => {
 	//hide/show the split if canvas is present
 	// i'm 50/50 on giving the splits child divs themselves and not resizing based on the child bounds
 	// and then i could dynamically add/remove this split ...
-	canvasOutputSplit.divider.style.display = canvas ? 'block' : 'none';
+	canvasOutputSplit.divider.style.display = (editmode && canvas) ? 'block' : 'none';
 
 	rootSplit.resizeBounds(0, 0, window.innerWidth, window.innerHeight);
 };
