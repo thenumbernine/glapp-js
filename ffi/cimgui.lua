@@ -94,6 +94,18 @@ end
 
 ig.igColorButton = ig.igButton
 
+--(const char* label, int* current_item, const char* const items[], int items_count, int popup_max_height_in_items)
+function ig.igCombo_Str_arr(label, currentItem, items, itemCount, popupMaxHeight)
+end
+
+--(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_max_height_in_items)
+function ig.igCombo_Str(label, currentItem, items, popupMaxHeight)
+end
+
+--(const char* label, int* current_item, const char*(*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items)
+function ig.igCombo_FnBoolPtr(label, currentItem, getter, userData, itemsCount, popupMaxHeight)
+end
+
 function ig.igGetMainViewport()
 	local canvas = js.global.canvas	-- assigned in createCanvas right now
 	return {

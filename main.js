@@ -38,6 +38,8 @@ rundir='metric'; runfile='run.lua';
 rundir='sand-attack'; runfile='run.lua';					-- freezes, needs imgui
 rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README
 rundir='mesh'												-- WORKS README
+rundir='sphere-grid'; runfile='run.lua';					-- WORKS README
+rundir='topple'; runfile='topple-glsl.lua';					-- WORKS README
 
 rundir='earth-magnetic-field'								-- TODO change it to use geographic-charts
 rundir='VectorFieldDecomposition'							-- TODO doesn't run
@@ -62,7 +64,6 @@ TODO tacticslua
 TODO inspiration engine
 TODO ... solarsystem graph ... takes GBs of data ...
 TODO black-hole-skymap, but the lua ver is in a subdir of the js ver ... but maybe i'll put the js vers on here too ...
---rundir='sphere-grid'; runfile='run.lua';
 */
 
 const merge = (mergedst, ...mergesrcs) => {
@@ -525,7 +526,7 @@ const imgui = {
 		// TODO upon creation set this, then monitor its changes and return' true' if found
 		let changed = false;
 		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
-		const iv = parseFloat(input.value)
+		const iv = parseFloat(input.value);
 		if (v[0] !== iv) {
 			v[0] = iv;
 			changed = true;
@@ -547,7 +548,7 @@ const imgui = {
 		// TODO upon creation set this, then monitor its changes and return' true' if found
 		let changed = false;
 		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
-		const iv = parseInt(input.value)
+		const iv = parseInt(input.value);
 		if (v[0] !== iv) {
 			v[0] = iv;
 			changed = true;
@@ -1458,10 +1459,11 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		// if Lua->JS code throws an exception then Wasmoon gives a nonsense error `TypeError: Cannot read properties of null (reading 'then')`
 		// to fix that, wrap any such calls in try/catch blocks
 		safecall : (f, ...args) => {
+			// wait does multret work? https://github.com/ceifa/wasmoon/pull/87
 			try {
-				return true, f.call(...args);
+				return [true, f.call(...args)];
 			} catch (e) {
-				return false, ''+e;	// I think this will always be the nonsense error `TypeError: Cannot read properties of null (reading 'then')`, but I'll return it anyways
+				return [false, ''+e];	// I think this will always be the nonsense error `TypeError: Cannot read properties of null (reading 'then')`, but I'll return it anyways
 			}
 		},
 
