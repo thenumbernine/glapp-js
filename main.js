@@ -1453,13 +1453,16 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 			closeGL();
 			gl = gl_;
 			window.gl = gl;
+		},
 
-			// these calls didn't work from within Lua, but they work fine here.
-			gl.getExtension('OES_element_index_uint');
-			gl.getExtension('OES_standard_derivatives');
-			gl.getExtension('OES_texture_float');	//needed for webgl framebuffer+rgba32f
-			gl.getExtension('OES_texture_float_linear');
-			gl.getExtension('EXT_color_buffer_float');	//needed for webgl2 framebuffer+rgba32f
+		// if Lua->JS code throws an exception then Wasmoon gives a nonsense error `TypeError: Cannot read properties of null (reading 'then')`
+		// to fix that, wrap any such calls in try/catch blocks
+		safecall : (f, ...args) => {
+			try {
+				return true, f.call(...args);
+			} catch (e) {
+				return false, ''+e;	// I think this will always be the nonsense error `TypeError: Cannot read properties of null (reading 'then')`, but I'll return it anyways
+			}
 		},
 
 		// using js proxy in wasmoon is complete trash ... makes me really appreciate how flawless it was in fengari

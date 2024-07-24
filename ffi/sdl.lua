@@ -1615,19 +1615,21 @@ function sdl.SDL_GL_CreateContext(sdlWindow)
 	-- behind the scenes hack
 	require 'gl'.setWebGLContext(webgl)
 
-	-- get exts we want to use
-	-- TypeError: Cannot read properties of null (reading 'then')
-	-- wtf "then" ?  wasmoon...
-	--[[
-	webgl.getExtension'OES_element_index_uint'
-	webgl.getExtension'OES_standard_derivatives'
-	webgl.getExtension'OES_texture_float'	--needed for webgl framebuffer+rgba32f
-	webgl.getExtension'OES_texture_float_linear'
-	webgl.getExtension'EXT_color_buffer_float'	--needed for webgl2 framebuffer+rgba32f
-	--]]
-	-- [[ or I can just call them from JS and it works
+	-- close any old webgl context, store the new webgl context.
 	js.webglInit(webgl)
-	--]]
+
+	-- if you request a webgl extension that's not there then it throws an exception
+	-- and if wasmoon lua->js calls throw exceptions, wasmoon gives you a nonsense error and stops
+	-- so "safecall" these
+	for _, ext in ipairs{
+		'OES_element_index_uint',
+		'OES_standard_derivatives',
+		'OES_texture_float',		-- needed for webgl framebuffer+rgba32f
+		'OES_texture_float_linear',
+		'EXT_color_buffer_float',	-- needed for webgl2 framebuffer+rgba32f
+	} do
+		print(ext, js.safecall(webgl.getExtension, webgl, ext))
+	end
 
 	coroutine.yield(sdl.mainthread)
 
