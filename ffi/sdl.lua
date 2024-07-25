@@ -1691,8 +1691,6 @@ function sdl.SDL_GL_SwapWindow(window)
 			lastWindowWidth = width
 			lastWindowHeight = height
 
-print("ffi.sizeof'SDL_Event'", ffi.sizeof'SDL_Event')
-print('sdl.SDL_WINDOWEVENT_SIZE_CHANGED', sdl.SDL_WINDOWEVENT_SIZE_CHANGED, width, height)
 			-- push resize event
 			local sdlev = eventQueue:emplace_back()
 			sdlev[0].type = sdl.SDL_WINDOWEVENT
