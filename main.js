@@ -428,6 +428,8 @@ A({
 // i wanted to do this in lua but wasmoon disagrees.
 const imgui = {
 	init : function() {
+		this?.div?.parentNode.removeChild(this.div);
+
 		// TODO make sure this.div is attached too? or trust it's not tampered with ...
 		this.div = Div({
 			style : {
@@ -557,6 +559,7 @@ const imgui = {
 		return changed;
 	},
 };
+window.imgui = imgui;
 
 let splitDragging;
 class Split {
@@ -780,8 +783,6 @@ const setEditorFilePath = path => {
 const isDir = path => FS.lstat(path).mode & 0x4000;
 
 {
-	imgui.init();	// make the imgui div
-
 	fsDiv = Div({
 		style : {
 			position : 'absolute',
@@ -1381,7 +1382,18 @@ const closeCanvas = () => {
 };
 
 let lua;
+let mainInterval;
 const doRun = async () => {
+
+	// we need to make sure the old setInterval is dead before starting the new one ...
+	// ... or else the next update could kill us ...
+	if (mainInterval) {
+		clearInterval(mainInterval);
+		mainInterval = undefined;
+	}
+
+	imgui.init();	// make the imgui div
+
 	document.title = runfile;
 
 	//TODO maybe, if our run file is dif from the last run file then window.history.pushState() ?
@@ -1434,6 +1446,10 @@ const doRun = async () => {
 			return img;
 		},
 
+		setMainInterval : (interval) => {
+			mainInterval = interval;
+		},
+
 		createCanvas : () => {
 			closeCanvas();
 			canvas = Canvas({
@@ -1471,12 +1487,12 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		// member object calls sometimes work and sometimes dont
 		// the more i push code back into js the smoother things seem to go, but never 100%
 		// so here's me pushing a lot of the cimgui stuff into js ...
-		imguiNewFrame : () => {},//imgui.newFrame(),
-		imguiRender : () => {},// imgui.render(),
-		imguiText : (...args) => {},// imgui.text(...args),
-		imguiButton : (...args) => {},// imgui.button(...args),
-		imguiInputFloat : (...args) => {},// imgui.inputFloat(...args),
-		imguiInputInt : (...args) => {},// imgui.inputInt(...args),
+		imguiNewFrame : () => imgui.newFrame(),
+		imguiRender : () => imgui.render(),
+		imguiText : (...args) => imgui.text(...args),
+		imguiButton : (...args) => imgui.button(...args),
+		imguiInputFloat : (...args) => imgui.inputFloat(...args),
+		imguiInputInt : (...args) => imgui.inputInt(...args),
 
 		// https://devcodef1.com/news/1119293/stdout-stderr-in-webassembly
 		// if only it was this easy
@@ -1553,6 +1569,7 @@ xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
 			print('coroutine.resume failed')
 			print(err)
 			print(debug.traceback(sdl.mainthread))
+			js.setMainInterval(nil)
 			window:clearInterval(interval)
 		end
 	end
@@ -1565,6 +1582,7 @@ xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
 		-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
 		tryToResume()
 	end, 10)
+	js.setMainInterval(interval)
 
 end, function(err)
 	print(err)
