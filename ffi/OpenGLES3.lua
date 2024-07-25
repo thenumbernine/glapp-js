@@ -684,7 +684,7 @@ ffi.typedefs{
 	-- these are in desktop GL but not GLES
 	{GLdouble = 'double'},
 	{GLclampd = 'double'},
-},
+}
 
 local gl = setmetatable({}, {
 	__index = ffi.C,

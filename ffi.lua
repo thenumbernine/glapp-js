@@ -689,6 +689,65 @@ CType{name='uintptr_t', baseType=assert(ctypes.uint32_t)}
 CType{name='ssize_t', baseType=assert(ctypes.int64_t)}
 CType{name='size_t', baseType=assert(ctypes.uint64_t)}
 
+
+-- follow typedef baseType lookups to the origin and return that
+local function getctype(typename)
+	local ctype = ctypes[typename]
+	if not ctype then return end
+
+	if ctype.baseType
+	and not ctype.arrayCount
+	and not ctype.isPointer
+	then
+		local sofar = {}
+		-- if it has a baseType and no arrayCount then it's just a typedef ...
+		repeat
+			if sofar[ctype] then
+				error"found a typedef loop"
+			end
+			sofar[ctypes] = true
+			ctype = ctype.baseType
+		until not (
+			ctype.baseType
+			and not ctype.arrayCount
+			and not ctype.isPointer
+		)
+	end
+	return ctype
+end
+
+local function getptrtype(baseType)
+--DEBUG:print('getptrtype', baseType)
+	local ptrtypename = baseType.name..'*'
+--DEBUG:print('getptrtype ptrtypename', ptrtypename)
+	local ptrType = getctype(ptrtypename)
+	if ptrType then
+--DEBUG:print('...getptrtype found old', ptrType, ptrType == ctypes.void, ptrType==ctypes['void*'])
+		return ptrType
+	end
+	ptrType = CType{
+		baseType = baseType,
+		isPointer = true,
+	}
+--DEBUG:print('...getptrtype made new', ptrType)
+	return ptrType
+end
+
+local function getArrayType(baseType, ar)
+	local ctype = getctype(baseType.name..'['..ar..']')
+--DEBUG:print('looking for ctype name', baseType.name..'['..ar..'], got', ctype)
+	-- if not then make the array-type
+	if not ctype then
+		ctype = CType{
+			baseType = baseType,
+			arrayCount = ar,
+		}
+	end
+	return ctype
+end
+
+
+
 -- spare emulated lua some needless parsing 
 function ffi.enum(ks)
 	local lastvalue = 0
@@ -807,62 +866,6 @@ local function consume(str)
 	end
 
 	error("unknown token "..str)
-end
-
--- follow typedef baseType lookups to the origin and return that
-local function getctype(typename)
-	local ctype = ctypes[typename]
-	if not ctype then return end
-
-	if ctype.baseType
-	and not ctype.arrayCount
-	and not ctype.isPointer
-	then
-		local sofar = {}
-		-- if it has a baseType and no arrayCount then it's just a typedef ...
-		repeat
-			if sofar[ctype] then
-				error"found a typedef loop"
-			end
-			sofar[ctypes] = true
-			ctype = ctype.baseType
-		until not (
-			ctype.baseType
-			and not ctype.arrayCount
-			and not ctype.isPointer
-		)
-	end
-	return ctype
-end
-
-local function getptrtype(baseType)
---DEBUG:print('getptrtype', baseType)
-	local ptrtypename = baseType.name..'*'
---DEBUG:print('getptrtype ptrtypename', ptrtypename)
-	local ptrType = getctype(ptrtypename)
-	if ptrType then
---DEBUG:print('...getptrtype found old', ptrType, ptrType == ctypes.void, ptrType==ctypes['void*'])
-		return ptrType
-	end
-	ptrType = CType{
-		baseType = baseType,
-		isPointer = true,
-	}
---DEBUG:print('...getptrtype made new', ptrType)
-	return ptrType
-end
-
-local function getArrayType(baseType, ar)
-	local ctype = getctype(baseType.name..'['..ar..']')
---DEBUG:print('looking for ctype name', baseType.name..'['..ar..'], got', ctype)
-	-- if not then make the array-type
-	if not ctype then
-		ctype = CType{
-			baseType = baseType,
-			arrayCount = ar,
-		}
-	end
-	return ctype
 end
 
 -- parse a ffi.cast or ffi.new
