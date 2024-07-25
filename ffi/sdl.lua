@@ -788,19 +788,24 @@ ffi.enum{
 	SDL_GL_CONTEXT_MINOR_VERSION,
 }
 
+ffi.typedefs{
+	{Sint8 = 'int8_t'},
+	{Uint8 = 'uint8_t'},
+	{Sint16 = 'int16_t'},
+	{Uint16 = 'uint16_t'},
+	{Sint32 = 'int32_t'},
+	{Uint32 = 'uint32_t'},
+	{Sint64 = 'int64_t'},
+	{Uint64 = 'uint64_t'},
+	{SDL_JoystickID = 'Sint32'},
+	{SDL_JoystickType = 'int'},
+	{SDL_JoystickPowerLevel = 'int'},
+	{SDL_TouchID = 'Sint64'},
+	{SDL_FingerID = 'Sint64'},
+	{SDL_TouchDeviceType = 'int'},
+}
 
 ffi.cdef[[
-// fengari-specific:
-
-typedef int8_t Sint8;
-typedef uint8_t Uint8;
-typedef int16_t Sint16;
-typedef uint16_t Uint16;
-typedef int32_t Sint32;
-typedef uint32_t Uint32;
-typedef int64_t Sint64;
-typedef uint64_t Uint64;
-
 struct SDL_Window {};
 struct SDL_Thread {};
 struct SDL_Renderer {};
@@ -809,38 +814,31 @@ struct SDL_iconv_t {};
 struct SDL_SysWMmsg {};
 struct SDL_Cursor {};
 struct SDL_Joystick {};
-typedef Sint32 SDL_JoystickID;
-typedef int SDL_JoystickType;
-typedef int SDL_JoystickPowerLevel;
 
-typedef Sint64 SDL_TouchID;
-typedef Sint64 SDL_FingerID;
-typedef int SDL_TouchDeviceType;
 typedef struct SDL_Finger {
 	SDL_FingerID id;
 	float x;
 	float y;
 	float pressure;
 } SDL_Finger;
+]]
 
-typedef Sint64 SDL_GestureID;
+ffi.typedefs{
+	{SDL_GestureID = 'Sint64'},
+	{SDL_bool = 'int'},
+	{SDL_Keycode = 'Sint32'},
+	{SDL_Scancode = 'int'},
+	{SDL_KeyCode = 'int'},
+	{SDL_Keymod = 'int'},
+}
 
-typedef int SDL_bool;
-
-typedef Sint32 SDL_Keycode;
-typedef int SDL_Scancode;
-typedef int SDL_KeyCode;
-typedef int SDL_Keymod;
-
+ffi.cdef[[
 typedef struct SDL_Keysym {
 	SDL_Scancode scancode;
 	SDL_Keycode sym;
 	Uint16 mod;
 	Uint32 unused;
 } SDL_Keysym;
-
-typedef int SDL_EventType;
-
 typedef struct {
 	Uint32 format;
 	int w;
@@ -848,29 +846,30 @@ typedef struct {
 	int refresh_rate;
 	void *driverdata;
 } SDL_DisplayMode;
-typedef struct SDL_Window SDL_Window;
-typedef int SDL_WindowFlags;
+]]
 
-typedef int SDL_WindowEventID;
+ffi.typedefs{
+	{SDL_EventType = 'int'},
+	{SDL_Window = 'struct SDL_Window'},
+	{SDL_WindowFlags = 'int'},
+	{SDL_WindowEventID = 'int'},
+	{SDL_DisplayEventID = 'int'},
+	{SDL_DisplayOrientation = 'int'},
+	{SDL_FlashOperation = 'int'},
+	{SDL_GLContext = 'void*'},
+	{SDL_GLattr = 'int'},
+	{SDL_GLprofile = 'int'},
+	{SDL_GLcontextFlag = 'int'},
+	{SDL_GLcontextReleaseFlag = 'int'},
+	{SDL_GLContextResetNotification = 'int'},
+}
 
-typedef int SDL_DisplayEventID;
-
-typedef int SDL_DisplayOrientation;
-
-typedef int SDL_FlashOperation;
-typedef void *SDL_GLContext;
-typedef int SDL_GLattr;
-typedef int SDL_GLprofile;
-typedef int SDL_GLcontextFlag;
-typedef int SDL_GLcontextReleaseFlag;
-typedef int SDL_GLContextResetNotification;
-
+ffi.cdef[[
 typedef struct SDL_version {
 	Uint8 major;
 	Uint8 minor;
 	Uint8 patch;
 } SDL_version;
-
 typedef struct SDL_CommonEvent {
 	Uint32 type;
 	Uint32 timestamp;
@@ -1170,7 +1169,6 @@ typedef union SDL_Event {
 	SDL_DropEvent drop;
 	Uint8 padding[56];	//[sizeof(void *) <= 8 ? 56 : sizeof(void *) == 16 ? 64 : 3 * sizeof(void *)];
 } SDL_Event;
-
 ]]
 
 local vector = require 'ffi.cpp.vector-lua'

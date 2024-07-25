@@ -689,7 +689,6 @@ CType{name='uintptr_t', baseType=assert(ctypes.uint32_t)}
 CType{name='ssize_t', baseType=assert(ctypes.int64_t)}
 CType{name='size_t', baseType=assert(ctypes.uint64_t)}
 
-
 -- spare emulated lua some needless parsing 
 function ffi.enum(ks)
 	local lastvalue = 0
@@ -699,6 +698,16 @@ function ffi.enum(ks)
 		end
 		ffi.C[k] = lastvalue
 		lastvalue = lastvalue + 1
+	end
+end
+
+function ffi.typedefs(kvs)
+	for _,kv in ipairs(kvs) do
+		local toname, fromname = next(kv)
+		CType{
+			name = toname,
+			baseType = getctype(fromname) or error("couldn't find type "..tostring(fromname)),
+		}
 	end
 end
 

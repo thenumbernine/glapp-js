@@ -629,62 +629,62 @@ ffi.enum{
 	{GL_TEXTURE_IMMUTABLE_LEVELS = 33503},
 }
 
-ffi.cdef[[
-///khrplatform
-typedef int32_t khronos_int32_t;
-typedef uint32_t khronos_uint32_t;
-typedef int64_t khronos_int64_t;
-typedef uint64_t khronos_uint64_t;
-//enum { KHRONOS_SUPPORT_INT64 = 1 };
-//enum { KHRONOS_SUPPORT_FLOAT = 1 };
-typedef signed char khronos_int8_t;
-typedef unsigned char khronos_uint8_t;
-// TODO errors on this one ...
-// TODO FIXME tried to redefine int ...
-//typedef signed short int khronos_int16_t;
-typedef short khronos_int16_t;
-//typedef unsigned short int khronos_uint16_t;
-typedef unsigned short khronos_uint16_t;
-//typedef signed long int khronos_intptr_t;
-typedef long khronos_intptr_t;
-//typedef unsigned long int khronos_uintptr_t;
-typedef unsigned long khronos_uintptr_t;
-//typedef signed long int khronos_ssize_t;
-typedef long khronos_ssize_t;
-typedef unsigned long khronos_usize_t;
-typedef float khronos_float_t;
-typedef khronos_uint64_t khronos_utime_nanoseconds_t;
-typedef khronos_int64_t khronos_stime_nanoseconds_t;
-//enum { KHRONOS_MAX_ENUM = 2147483647 };
-//typedef enum { KHRONOS_FALSE = 0, KHRONOS_TRUE = 1, KHRONOS_BOOLEAN_ENUM_FORCE_SIZE = 0x7FFFFFFF } khronos_boolean_enum_t;
+ffi.typedefs{
+	--/khrplatform
+	{khronos_int32_t = 'int32_t'},
+	{khronos_uint32_t = 'uint32_t'},
+	{khronos_int64_t = 'int64_t'},
+	{khronos_uint64_t = 'uint64_t'},
+	--enum { KHRONOS_SUPPORT_INT64 = 1 };
+	--enum { KHRONOS_SUPPORT_FLOAT = 1 };
+	{khronos_int8_t = 'signed char'},
+	{khronos_uint8_t = 'unsigned char'},
+	-- TODO errors on this one ...
+	-- TODO FIXME tried to redefine int ...
+	--typedef signed short int khronos_int16_t;
+	{khronos_int16_t = 'short'},
+	--typedef unsigned short int khronos_uint16_t;
+	{khronos_uint16_t = 'unsigned short'},
+	--typedef signed long int khronos_intptr_t;
+	{khronos_intptr_t = 'long'},
+	--typedef unsigned long int khronos_uintptr_t;
+	{khronos_uintptr_t = 'unsigned long'},
+	--typedef signed long int khronos_ssize_t;
+	{khronos_ssize_t = 'long'},
+	{khronos_usize_t = 'unsigned long'},
+	{khronos_float_t = 'float'},
+	{khronos_utime_nanoseconds_t = 'khronos_uint64_t'},
+	{khronos_stime_nanoseconds_t = 'khronos_int64_t'},
+	--enum { KHRONOS_MAX_ENUM = 2147483647 };
+	--typedef enum { KHRONOS_FALSE = 0, KHRONOS_TRUE = 1, KHRONOS_BOOLEAN_ENUM_FORCE_SIZE = 0x7FFFFFFF } khronos_boolean_enum_t;
 
-//gles3
-typedef khronos_int8_t GLbyte;
-typedef khronos_float_t GLclampf;
-typedef khronos_int32_t GLfixed;
-typedef khronos_int16_t GLshort;
-typedef khronos_uint16_t GLushort;
-typedef void GLvoid;
-//typedef struct __GLsync *GLsync;
-typedef khronos_int64_t GLint64;
-typedef khronos_uint64_t GLuint64;
-typedef unsigned int GLenum;
-typedef unsigned int GLuint;
-typedef char GLchar;
-typedef khronos_float_t GLfloat;
-typedef khronos_ssize_t GLsizeiptr;
-typedef khronos_intptr_t GLintptr;
-typedef unsigned int GLbitfield;
-typedef int GLint;
-typedef unsigned char GLboolean;
-typedef int GLsizei;
-typedef khronos_uint8_t GLubyte;
-typedef khronos_uint16_t GLhalf;
+	--gles3
+	{GLbyte = 'khronos_int8_t'},
+	{GLclampf = 'khronos_float_t'},
+	{GLfixed = 'khronos_int32_t'},
+	{GLshort = 'khronos_int16_t'},
+	{GLushort = 'khronos_uint16_t'},
+	{GLvoid = 'void'},
+	--typedef struct __GLsync *GLsync;
+	{GLint64 = 'khronos_int64_t'},
+	{GLuint64 = 'khronos_uint64_t'},
+	{GLenum = 'unsigned int'},
+	{GLuint = 'unsigned int'},
+	{GLchar = 'char'},
+	{GLfloat = 'khronos_float_t'},
+	{GLsizeiptr = 'khronos_ssize_t'},
+	{GLintptr = 'khronos_intptr_t'},
+	{GLbitfield = 'unsigned int'},
+	{GLint = 'int'},
+	{GLboolean = 'unsigned char'},
+	{GLsizei = 'int'},
+	{GLubyte = 'khronos_uint8_t'},
+	{GLhalf = 'khronos_uint16_t'},
 
-// these are in desktop GL but not GLES
-typedef double GLdouble;
-typedef double GLclampd;
-]]
+	-- these are in desktop GL but not GLES
+	{GLdouble = 'double'},
+	{GLclampd = 'double'},
+},
 
 local gl = setmetatable({}, {
 	__index = ffi.C,

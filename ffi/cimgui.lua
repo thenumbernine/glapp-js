@@ -950,84 +950,86 @@ ffi.enum {
 	{ImGuiTabItemFlags_Unsorted = 4194304},
 }
 
-ffi.cdef[[
-typedef int ImGuiWindowFlags_;
-typedef int ImGuiChildFlags_;
-typedef int ImGuiInputTextFlags_;
-typedef int ImGuiTreeNodeFlags_;
-typedef int ImGuiPopupFlags_;
-typedef int ImGuiSelectableFlags_;
-typedef int ImGuiComboFlags_;
-typedef int ImGuiTabBarFlags_;
-typedef int ImGuiTabItemFlags_;
-typedef int ImGuiFocusedFlags_;
-typedef int ImGuiHoveredFlags_;
-typedef int ImGuiDockNodeFlags_;
-typedef int ImGuiDragDropFlags_;
-typedef int ImGuiDataType_;
-typedef int ImGuiDataTypePrivate_;
-typedef int ImGuiDir_;
-typedef int ImGuiSortDirection_;
-typedef int ImGuiKey;
-typedef int ImGuiConfigFlags_;
-typedef int ImGuiBackendFlags_;
-typedef int ImGuiCol_;
-typedef int ImGuiStyleVar_;
-typedef int ImGuiButtonFlags_;
-typedef int ImGuiColorEditFlags_;
-typedef int ImGuiSliderFlags_;
-typedef int ImGuiMouseButton_;
-typedef int ImGuiMouseCursor_;
-typedef int ImGuiMouseSource;
-typedef int ImGuiCond_;
-typedef int ImGuiTableFlags_;
-typedef int ImGuiTableColumnFlags_;
-typedef int ImGuiTableRowFlags_;
-typedef int ImGuiTableBgTarget_;
-typedef int ImGuiViewportFlags_;
-typedef int ImGuiItemFlags_;
-typedef int ImGuiItemStatusFlags_;
-typedef int ImGuiHoveredFlagsPrivate_;
-typedef int ImGuiInputTextFlagsPrivate_;
-typedef int ImGuiButtonFlagsPrivate_;
-typedef int ImGuiComboFlagsPrivate_;
-typedef int ImGuiSliderFlagsPrivate_;
-typedef int ImGuiSelectableFlagsPrivate_;
-typedef int ImGuiTreeNodeFlagsPrivate_;
-typedef int ImGuiSeparatorFlags_;
-typedef int ImGuiFocusRequestFlags_;
-typedef int ImGuiTextFlags_;
-typedef int ImGuiTooltipFlags_;
-typedef int ImGuiLayoutType_;
-typedef int ImGuiLogType;
-typedef int ImGuiAxis;
-typedef int ImGuiPlotType;
-typedef int ImGuiNextWindowDataFlags_;
-typedef int ImGuiNextItemDataFlags_;
-typedef int ImGuiPopupPositionPolicy;
-typedef int ImGuiInputEventType;
-typedef int ImGuiInputSource;
-typedef int ImGuiInputFlags_;
-typedef int ImGuiActivateFlags_;
-typedef int ImGuiScrollFlags_;
-typedef int ImGuiNavHighlightFlags_;
-typedef int ImGuiNavMoveFlags_;
-typedef int ImGuiNavLayer;
-typedef int ImGuiTypingSelectFlags_;
-typedef int ImGuiOldColumnFlags_;
-typedef int ImGuiDockNodeFlagsPrivate_;
-typedef int ImGuiDataAuthority_;
-typedef int ImGuiDockNodeState;
-typedef int ImGuiWindowDockStyleCol;
-typedef int ImGuiLocKey;
-typedef int ImGuiDebugLogFlags_;
-typedef int ImGuiContextHookType;
-typedef int ImGuiTabBarFlagsPrivate_;
-typedef int ImGuiTabItemFlagsPrivate_;
-typedef int ImDrawFlags_;
-typedef int ImDrawListFlags_;
-typedef int ImFontAtlasFlags_;
+ffi.typedefs{
+	{ImGuiWindowFlags_ = 'int'},
+	{ImGuiChildFlags_ = 'int'},
+	{ImGuiInputTextFlags_ = 'int'},
+	{ImGuiTreeNodeFlags_ = 'int'},
+	{ImGuiPopupFlags_ = 'int'},
+	{ImGuiSelectableFlags_ = 'int'},
+	{ImGuiComboFlags_ = 'int'},
+	{ImGuiTabBarFlags_ = 'int'},
+	{ImGuiTabItemFlags_ = 'int'},
+	{ImGuiFocusedFlags_ = 'int'},
+	{ImGuiHoveredFlags_ = 'int'},
+	{ImGuiDockNodeFlags_ = 'int'},
+	{ImGuiDragDropFlags_ = 'int'},
+	{ImGuiDataType_ = 'int'},
+	{ImGuiDataTypePrivate_ = 'int'},
+	{ImGuiDir_ = 'int'},
+	{ImGuiSortDirection_ = 'int'},
+	{ImGuiKey = 'int'},
+	{ImGuiConfigFlags_ = 'int'},
+	{ImGuiBackendFlags_ = 'int'},
+	{ImGuiCol_ = 'int'},
+	{ImGuiStyleVar_ = 'int'},
+	{ImGuiButtonFlags_ = 'int'},
+	{ImGuiColorEditFlags_ = 'int'},
+	{ImGuiSliderFlags_ = 'int'},
+	{ImGuiMouseButton_ = 'int'},
+	{ImGuiMouseCursor_ = 'int'},
+	{ImGuiMouseSource = 'int'},
+	{ImGuiCond_ = 'int'},
+	{ImGuiTableFlags_ = 'int'},
+	{ImGuiTableColumnFlags_ = 'int'},
+	{ImGuiTableRowFlags_ = 'int'},
+	{ImGuiTableBgTarget_ = 'int'},
+	{ImGuiViewportFlags_ = 'int'},
+	{ImGuiItemFlags_ = 'int'},
+	{ImGuiItemStatusFlags_ = 'int'},
+	{ImGuiHoveredFlagsPrivate_ = 'int'},
+	{ImGuiInputTextFlagsPrivate_ = 'int'},
+	{ImGuiButtonFlagsPrivate_ = 'int'},
+	{ImGuiComboFlagsPrivate_ = 'int'},
+	{ImGuiSliderFlagsPrivate_ = 'int'},
+	{ImGuiSelectableFlagsPrivate_ = 'int'},
+	{ImGuiTreeNodeFlagsPrivate_ = 'int'},
+	{ImGuiSeparatorFlags_ = 'int'},
+	{ImGuiFocusRequestFlags_ = 'int'},
+	{ImGuiTextFlags_ = 'int'},
+	{ImGuiTooltipFlags_ = 'int'},
+	{ImGuiLayoutType_ = 'int'},
+	{ImGuiLogType = 'int'},
+	{ImGuiAxis = 'int'},
+	{ImGuiPlotType = 'int'},
+	{ImGuiNextWindowDataFlags_ = 'int'},
+	{ImGuiNextItemDataFlags_ = 'int'},
+	{ImGuiPopupPositionPolicy = 'int'},
+	{ImGuiInputEventType = 'int'},
+	{ImGuiInputSource = 'int'},
+	{ImGuiInputFlags_ = 'int'},
+	{ImGuiActivateFlags_ = 'int'},
+	{ImGuiScrollFlags_ = 'int'},
+	{ImGuiNavHighlightFlags_ = 'int'},
+	{ImGuiNavMoveFlags_ = 'int'},
+	{ImGuiNavLayer = 'int'},
+	{ImGuiTypingSelectFlags_ = 'int'},
+	{ImGuiOldColumnFlags_ = 'int'},
+	{ImGuiDockNodeFlagsPrivate_ = 'int'},
+	{ImGuiDataAuthority_ = 'int'},
+	{ImGuiDockNodeState = 'int'},
+	{ImGuiWindowDockStyleCol = 'int'},
+	{ImGuiLocKey = 'int'},
+	{ImGuiDebugLogFlags_ = 'int'},
+	{ImGuiContextHookType = 'int'},
+	{ImGuiTabBarFlagsPrivate_ = 'int'},
+	{ImGuiTabItemFlagsPrivate_ = 'int'},
+	{ImDrawFlags_ = 'int'},
+	{ImDrawListFlags_ = 'int'},
+	{ImFontAtlasFlags_ = 'int'},
+}
 
+ffi.cdef[[
 struct ImVec2 {
 	float x, y;
 };
