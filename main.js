@@ -1471,12 +1471,12 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		// member object calls sometimes work and sometimes dont
 		// the more i push code back into js the smoother things seem to go, but never 100%
 		// so here's me pushing a lot of the cimgui stuff into js ...
-		imguiNewFrame : () => imgui.newFrame(),
-		imguiRender : () => imgui.render(),
-		imguiText : (...args) => imgui.text(...args),
-		imguiButton : (...args) => imgui.button(...args),
-		imguiInputFloat : (...args) => imgui.inputFloat(...args),
-		imguiInputInt : (...args) => imgui.inputInt(...args),
+		imguiNewFrame : () => {},//imgui.newFrame(),
+		imguiRender : () => {},// imgui.render(),
+		imguiText : (...args) => {},// imgui.text(...args),
+		imguiButton : (...args) => {},// imgui.button(...args),
+		imguiInputFloat : (...args) => {},// imgui.inputFloat(...args),
+		imguiInputInt : (...args) => {},// imgui.inputInt(...args),
 
 		// https://devcodef1.com/news/1119293/stdout-stderr-in-webassembly
 		// if only it was this easy

@@ -689,6 +689,20 @@ CType{name='uintptr_t', baseType=assert(ctypes.uint32_t)}
 CType{name='ssize_t', baseType=assert(ctypes.int64_t)}
 CType{name='size_t', baseType=assert(ctypes.uint64_t)}
 
+
+-- spare emulated lua some needless parsing 
+function ffi.enum(ks)
+	local lastvalue = 0
+	for _,k in ipairs(ks) do
+		if type(k) == 'table' then
+			k, lastvalue = next(k)
+		end
+		ffi.C[k] = lastvalue
+		lastvalue = lastvalue + 1
+	end
+end
+
+
 local function consume(str)
 	str = trim(str)
 	if #str == 0 then return end
