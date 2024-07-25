@@ -85,6 +85,8 @@ ffi.membuf = membuf
 local memview = js.newnamed('DataView', membuf)
 ffi.memview = memview
 
+local byteview = js.newnamed('Uint8Array', membuf)
+
 local memUsedSoFar = 0
 function ffi.getMemUsedSoFar() return memUsedSoFar end
 
@@ -132,6 +134,7 @@ local function mallocAddr(size)
 		)
 		membuf = newmembuf
 		memview = js.newnamed('DataView', membuf)
+		byteview = js.newnamed('Uint8Array', membuf)
 		--]]
 --print('resizing base memory to', membuf.byteLength)
 	end
@@ -215,9 +218,7 @@ end
 ffi.free = free
 
 local function memcpyAddr(dstaddr, srcaddr, len)
-	js.newnamed('Uint8Array', membuf, dstaddr, len):set(
-		js.newnamed('Uint8Array', membuf, srcaddr, len)
-	)
+	byteview:set(byteview:subarray(srcaddr, srcaddr + len), dstaddr)
 end
 
 local function strlenAddr(addr)
@@ -233,15 +234,18 @@ local function strlenAddr(addr)
 	return len
 end
 
+local function copyLuaStrToMem(addr, str, size)
+	for i=1,size do
+		memview:setUint8(addr + i-1, str:byte(i) or 0)
+	end
+end
+
 -- alloc and push string onto mem and return its addr
 local function pushString(str)
 	str = tostring(str)
-	local len = #str
-	local addr = mallocAddr(len+1)
-	for i=1,len do
-		memview:setUint8(addr + i-1, str:byte(i))
-	end
-	memview:setUint8(addr + len, 0)
+	local size = #str+1
+	local addr = mallocAddr(size)
+	copyLuaStrToMem(addr, str, size)
 	return addr
 end
 
@@ -2018,6 +2022,7 @@ function ffi.string(ptr, len)
 --DEBUG:print('...addr', addr)
 	if not len then len = strlenAddr(addr) end
 --DEBUG:print('...len', len)
+	-- TODO just use strlen since that's probably what ffi.string does irl
 	return tostring(js.newnamed('TextDecoder'):decode(
 		js.newnamed('DataView', membuf, addr, len)
 	))
@@ -2140,9 +2145,7 @@ function ffi.copy(dst, src, len)
 	if type(src) == 'string' then
 		-- convert from lua string to js buffer
 		len = len or #src+1	-- ...including the newline
-		for i=1,len do
-			memview:setUint8(dstaddr + i-1, src:byte(i) or 0)
-		end
+		copyLuaStrToMem(dstaddr, src, len)
 	else
 		assert(len, "expected len")	-- or can't it coerce size from cdata?
 		-- construct a temporary object just to copy bytes.  why is javascript so retarded?
@@ -2155,7 +2158,7 @@ function ffi.fill(dst, len, value)
 	local addr = getAddr(dst)
 	value = value or 0
 	-- what type/size does luajit ffi fill with?  uint8? 16? 32? 64?
-	js.newnamed('Uint8Array', membuf, addr, len):fill(value, 0, len)
+	byteview:fill(0, addr, addr+len)
 end
 
 function tonumber(x, ...)
