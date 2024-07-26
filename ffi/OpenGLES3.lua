@@ -874,8 +874,8 @@ function gl.glReadPixels(x, y, width, height, format, type, pixels)
 		return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pixels)))
 	else
 		-- otherwise pixels is an address in memory
-		-- TODO webgl will complain if the TypedArray type doesn't match the GL type
-		return webgl:readPixels(x, y, width, height, format, type, ffi.dataToArray('Uint8Array', pixels))
+		pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
+		return webgl:readPixels(x, y, width, height, format, type, pixels)
 	end
 end
 

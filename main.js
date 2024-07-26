@@ -38,7 +38,7 @@ rundir='metric'; runfile='run.lua';
 rundir='sand-attack'; runfile='run.lua';					-- freezes, needs imgui
 rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README
 rundir='mesh'												-- WORKS README
-rundir='sphere-grid'; runfile='run.lua';					-- WORKS README
+rundir='sphere-grid'; runfile='run.lua';					-- WORKS README ... runs horribly slow when vec3d = require'vec-ffi.vec3d', runs blazing fast when vec3d = require'vec.vec3'
 rundir='topple'; runfile='topple-glsl.lua';					-- WORKS README
 
 rundir='earth-magnetic-field'								-- TODO change it to use geographic-charts
