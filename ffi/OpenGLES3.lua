@@ -1066,7 +1066,16 @@ end
 -- TODO glGetUniformiv/glGetUniformfv
 
 function gl.glGetUniformLocation(program, name)
+	--[[
 	return webgl:getUniformLocation(getObj(program), ffi.string(name)) or nil
+	--]]
+	-- [[ Because js is retarded, it throws an exception if the uniform isn't available.
+	-- This apathetic design mentality of WebGL/JS is why my native run LuaJIT GLES bindings run 2x or more faster than WebGL+JS
+	-- Sad I have to emulate it to get it to work in-browser ...
+	local success, res = table.unpack(js.safecall(webgl.getUniformLocation, webgl, getObj(program), ffi.string(name)))
+	if not success then return nil end
+	return res
+	--]]
 end
 
 for n=1,4 do
