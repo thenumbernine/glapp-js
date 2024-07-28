@@ -1474,7 +1474,9 @@ function gl.glGetRenderbufferParameteriv(target, pname, params)
 	return getRenderbufferGetter(params, pname, target)
 end
 
+
 -- opengles3 / webgl2
+
 
 function gl.glReadBuffer(...) return webgl:readBuffer(...) end
 
@@ -1482,6 +1484,9 @@ function gl.glDrawRangeElements(mode, indexStart, indexEnd, count, type, indices
 	indices = tonumber(ffi.cast('intptr_t', ffi.cast('void*', indices)))
 	return webgl:drawRangeElements(mode, indexStart, indexEnd, count, type, indices)
 end
+
+
+function gl.glDrawArraysInstanced(...) return webgl:drawArraysInstanced(...) end
 
 function gl.glTexImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels)
 	pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
