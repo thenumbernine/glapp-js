@@ -483,7 +483,7 @@ const imgui = {
 			this.lastTouchedDom = dom;
 			return dom;
 		}
-//console.log('rebuilding', id);
+console.log('rebuilding', id);
 		dom = createCB();
 		this.cache[id] = dom;
 		if (!this.div) throw "imgui.create called before imgui.newFrame...";
@@ -591,11 +591,28 @@ const imgui = {
 			})),
 		}));
 		const iv = sel.selectedIndex;
-//console.log('current dom value', iv, 'lua value', v[0]);
 		const changed = v !== iv;
 		this.lastValue = iv;
-//console.log('changed, verify lua', v[0]);
 		this.create(label+'_bf', Br);
+		return changed;
+	},
+
+	inputRadio : function(label, result, radioValue, radioGroup) {
+		const input = this.create(label+'_value', () => Input({
+			type : 'radio',
+			name : radioGroup,
+			value : radioValue,
+		}));
+		this.create(label, () => Span({
+			innerText : label,
+			style : {
+				paddingRight : '20px',
+			},
+		}));
+		const inputValue = input.value;
+		const changed = result !== inputValue;
+		this.lastValue = inputValue;
+		this.create(label+'_br', Br);
 		return changed;
 	},
 };
@@ -1535,6 +1552,7 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		imguiInputInt : (...args) => imgui.inputInt(...args),
 		imguiInputText : (...args) => imgui.inputText(...args),
 		imguiInputCombo : (...args) => imgui.inputCombo(...args),
+		imguiInputRadio : (...args) => imgui.inputRadio(...args),
 		imguiLastValue : () => imgui.lastValue,
 
 		// https://devcodef1.com/news/1119293/stdout-stderr-in-webassembly

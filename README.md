@@ -60,4 +60,4 @@ I'm going through different Lua/JS libraries to see which works best.
 - Other contenders?
 	- https://github.com/Doridian/LuaJS
 
-
+- TODO maybe - pause button <-> pause the setinterval for the main event loop.

@@ -869,7 +869,8 @@ function gl.glPolygonOffset(...) return webgl:polygonOffset(...) end
 
 function gl.glReadPixels(x, y, width, height, format, type, pixels)
 	-- if webgl:getParameter(gl.GL_PIXEL_PACK_BUFFER_BINDING) == js.null then	-- ... getting our stupid 'then' error
-	if false then
+	-- TODO if 'pixels' is any kind of pointer ...
+	if pixels == ffi.null or pixels == nil then
 		-- if PIXEL_PACK_BUFFER is bound then we are reading into it, and 'pixels' is an offset
 		return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pixels)))
 	else

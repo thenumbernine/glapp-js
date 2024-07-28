@@ -1072,6 +1072,7 @@ function ig.igInputFloat(label, v, ...)
 	--local v = ffi.dataToArray('Float32Array', v, 1);
 	local changed = js.imguiInputFloat(label, v[0], ...)
 	if changed then
+		-- before I was fasting the v ptr through to the js functions, and within that writing to v[0] ... which must've done some js magic under the hood? to be able to invoke the lua metamethod ... bad idea I guess?  i can't tell ...
 		-- reading/writing lua numbers and reading js callback single-value returns is muuuch faster than the alternatives
 		v[0] = js.imguiLastValue()
 	end
@@ -1095,6 +1096,16 @@ function ig.igInputText(label, buf, bufsize, flags, callback, user_data)
 	local changed = js.imguiInputText(label, buf)
 	if changed then
 		ffi.copy(buf, js.imguiLastValue(), bufsize)
+	end
+	return changed
+end
+
+--(const char* label,int* v,int v_button);
+function ig.igRadioButton_IntPtr(label, result, radioValue)
+	local radioGroup = tostring(result)	-- if a unique result determines our radio group ... then use the result's address ...
+	local changed = js.imguiInputRadio(label, result[0], radioValue, radioGroup)
+	if changed then
+		result[0] = radioValue
 	end
 	return changed
 end
@@ -1163,7 +1174,6 @@ function ig.igSetWindowFontScale() end
 function ig.igSetNextWindowBgAlpha() end
 
 function ig.igCheckbox() end
-function ig.igRadioButton_IntPtr() end
 function ig.igIsItemHovered() end
 function ig.igSetMouseCursor() end
 function ig.igSetCursorPosY() end
