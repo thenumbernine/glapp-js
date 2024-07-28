@@ -1,4 +1,5 @@
 local ffi = require 'ffi'
+require 'ffi.c.string'	-- strlen
 
 ffi.enum{
 	{ImGuiWindowFlags_None = 0},
@@ -1055,32 +1056,10 @@ end
 function ig.igRender()
 	js.imguiRender()
 end
-function ig.igGetDrawData() end
-function ig.ImGui_ImplOpenGL3_RenderDrawData() end
 
 function ig.igText(...)
 	return js.imguiText(...)
 end
-
-function ig.igSliderFloat(label, v, ...)
-	-- 'v' is cdata, it is where things get written upon succes ...
-	local p = ffi.dataToArray('Float32Array', v, 1)
-	return js.imguiInputFloat(label, p, ...)
-end
-
-function ig.igInputFloat(label, v, ...)
-	-- 'v' is cdata, it is where things get written upon succes ...
-	local p = ffi.dataToArray('Float32Array', v, 1)
-	return js.imguiInputFloat(label, p, ...)
-end
-
-function ig.igInputInt(label, v, ...)
-	-- 'v' is cdata, it is where things get written upon succes ...
-	local p = ffi.dataToArray('Int32Array', v, 1)
-	return js.imguiInputInt(label, p, ...)
-end
-
-function ig.igInputText() end
 
 function ig.igButton(...)
 	return js.imguiButton(...)
@@ -1088,16 +1067,77 @@ end
 
 ig.igColorButton = ig.igButton
 
---(const char* label, int* current_item, const char* const items[], int items_count, int popup_max_height_in_items)
-function ig.igCombo_Str_arr(label, currentItem, items, itemCount, popupMaxHeight)
+function ig.igInputFloat(label, v, ...)
+	-- 'v' is cdata, it is where things get written upon succes ...
+	--local v = ffi.dataToArray('Float32Array', v, 1);
+	local changed = js.imguiInputFloat(label, v[0], ...)
+	if changed then
+		-- reading/writing lua numbers and reading js callback single-value returns is muuuch faster than the alternatives
+		v[0] = js.imguiLastValue()
+	end
+	return changed
+end
+ig.igSliderFloat = ig.igInputFloat
+
+function ig.igInputInt(label, v, ...)
+	-- 'v' is cdata, it is where things get written upon succes ...
+	--local v = ffi.dataToArray('Int32Array', v, 1);
+	local changed = js.imguiInputInt(label, v[0], ...)
+	if changed then
+		v[0] = js.imguiLastValue()
+	end
+	return changed
+end
+ig.igSliderInt = ig.igInputInt
+
+function ig.igInputText(label, buf, bufsize, flags, callback, user_data)
+	buf = ffi.string(buf, bufsize)
+	local changed = js.imguiInputText(label, buf)
+	if changed then
+		ffi.copy(buf, js.imguiLastValue(), bufsize)
+	end
+	return changed
 end
 
---(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_max_height_in_items)
-function ig.igCombo_Str(label, currentItem, items, popupMaxHeight)
+--(const char* label, int* current_item, const char* const items[], int itemCount, int popup_max_height_in_items)
+function ig.igCombo_Str_arr(label, currentItem, items, itemCount, popupMaxHeight)
+	local items = {}
+	for i=1,itemCount do
+		items[i] = ffi.string(items[i])
+	end
+	local changed = js.imguiInputCombo(label, currentItem[0], items)
+	if changed then
+		currentItem[0] = js.imguiLastValue()
+	end
+	return changed
+end
+
+--(const char* label, int* current_item, const char* itemsZeroSep, int popup_max_height_in_items)
+function ig.igCombo_Str(label, currentItem, itemsZeroSep, popupMaxHeight)
+	local p = ffi.cast('char*', itemsZeroSep)
+	local items = {}
+	while p[0] ~= 0 do
+		table.insert(items, ffi.string(p))
+		p = p + ffi.C.strlen(p) + 1
+	end
+	local changed = js.imguiInputCombo(label, currentItem[0], items)
+	if changed then
+		currentItem[0] = js.imguiLastValue()
+	end
+	return changed
 end
 
 --(const char* label, int* current_item, const char*(*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items)
 function ig.igCombo_FnBoolPtr(label, currentItem, getter, userData, itemsCount, popupMaxHeight)
+	local items = {}
+	for i=0,itemsCount-1 do
+		table.insert(items, ffi.string(getter(userData, i)))
+	end
+	local changed = js.imguiInputCombo(label, currentItem[0], items)
+	if changed then
+		currentItem[0] = js.imguiLastValue()
+	end
+	return changed
 end
 
 function ig.igGetMainViewport()
@@ -1107,6 +1147,10 @@ function ig.igGetMainViewport()
 		WorkSize = ffi.new('ImVec2', canvas.width, canvas.height),
 	}
 end
+
+function ig.igGetDrawData() end
+function ig.ImGui_ImplOpenGL3_RenderDrawData() end
+
 function ig.igColorPicker3() end
 
 function ig.igNewLine() end

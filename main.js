@@ -143,9 +143,11 @@ const Canvas = DomTag('canvas');
 const Img = DomTag('img');
 const A = DomTag('a');
 const Br = DomTag('br');
+const Button = DomTag('button');
 const Div = DomTag('div');
 const Input = DomTag('input');
-const Button = DomTag('button');
+const Option = DomTag('option');
+const Select = DomTag('select');
 const Span = DomTag('span');
 const TextArea = DomTag('textarea');
 
@@ -430,6 +432,9 @@ const imgui = {
 	init : function() {
 		this?.div?.parentNode.removeChild(this.div);
 
+		// I was using id, but knowing browser software quality standards, any builtin functions are probably ridiculously slow
+		this.cache = {};
+
 		// TODO make sure this.div is attached too? or trust it's not tampered with ...
 		this.div = Div({
 			style : {
@@ -471,15 +476,16 @@ const imgui = {
 	create : function(idsuffix, createCB) {
 		// TODO maybe I should be using order of creation instead of text names?
 		const id = 'imgui_'+idsuffix; // ... plus id stack
-		let dom = document.getElementById(id);
+		let dom = this.cache[id];
 		if (dom) {
 			// TODO and make sure the dom tag is correct
 			dom.taggedThisFrame = true;
 			this.lastTouchedDom = dom;
 			return dom;
 		}
+//console.log('rebuilding', id);
 		dom = createCB();
-		dom.id = id;
+		this.cache[id] = dom;
 		if (!this.div) throw "imgui.create called before imgui.newFrame...";
 		if (this.lastTouchedDom && this.lastTouchedDom.nextSibling) {
 			this.div.insertBefore(dom, this.lastTouchedDom.nextSibling);
@@ -514,6 +520,7 @@ const imgui = {
 		button.imguiClicked = false;
 		return clicked;
 	},
+
 	inputFloat : function(label, v, v_min, v_max, format, flags) {
 		this.create(label, () => Span({
 			innerText : label,
@@ -523,38 +530,71 @@ const imgui = {
 		}));
 		// TODO use id stack instead of label, or something, idk
 		const input = this.create(label+'_value', () => Input({
-			value : v[0],
+			value : v,
 		}));
 		// TODO upon creation set this, then monitor its changes and return' true' if found
-		let changed = false;
 		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
 		const iv = parseFloat(input.value);
-		if (v[0] !== iv) {
-			v[0] = iv;
-			changed = true;
-		}
+		const changed = v !== iv;
+		this.lastValue = iv;
 		this.create(label+'_bf', Br);
 		return changed;
 	},
+
 	inputInt : function(label, v, v_min, v_max, format, flags) {
 		this.create(label, () => Span({
 			innerText : label,
 			style : {
 				paddingRight : '20px',
-			}
+			},
 		}));
 		// TODO use id stack instead of label, or something, idk
 		const input = this.create(label+'_value', () => Input({
-			value : v[0],
+			value : v,
 		}));
 		// TODO upon creation set this, then monitor its changes and return' true' if found
-		let changed = false;
 		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
 		const iv = parseInt(input.value);
-		if (v[0] !== iv) {
-			v[0] = iv;
-			changed = true;
-		}
+		const changed = v !== iv;
+		this.lastValue = iv;
+		this.create(label+'_bf', Br);
+		return changed;
+	},
+
+	inputText : function(label, v) {
+		this.create(label, () => Span({
+			innerText : label,
+			style : {
+				paddingRight : '20px',
+			},
+		}));
+		const input = this.create(label+'_value', () => Input({
+			value : v,
+		}));
+		const iv = input.value;
+		const changed = v !== iv;
+		this.lastValue = iv;
+		this.create(label+'_bf', Br);
+		return changed;
+	},
+
+	inputCombo : function(label, v, items) {
+		this.create(label, () => Span({
+			innerText : label,
+			style : {
+				paddingRight : '20px',
+			},
+		}));
+		const sel = this.create(label+'_value', () =>  Select({
+			children : items.map(item => Option({
+				innerText : item,
+			})),
+		}));
+		const iv = sel.selectedIndex;
+//console.log('current dom value', iv, 'lua value', v[0]);
+		const changed = v !== iv;
+		this.lastValue = iv;
+//console.log('changed, verify lua', v[0]);
 		this.create(label+'_bf', Br);
 		return changed;
 	},
@@ -1493,6 +1533,9 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		imguiButton : (...args) => imgui.button(...args),
 		imguiInputFloat : (...args) => imgui.inputFloat(...args),
 		imguiInputInt : (...args) => imgui.inputInt(...args),
+		imguiInputText : (...args) => imgui.inputText(...args),
+		imguiInputCombo : (...args) => imgui.inputCombo(...args),
+		imguiLastValue : () => imgui.lastValue,
 
 		// https://devcodef1.com/news/1119293/stdout-stderr-in-webassembly
 		// if only it was this easy

@@ -233,6 +233,7 @@ local function strlenAddr(addr)
 	end
 	return len
 end
+ffi.strlenAddr = strlenAddr
 
 local function copyLuaStrToMem(addr, str, size)
 	for i=1,size do
