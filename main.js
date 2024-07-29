@@ -18,21 +18,21 @@ if (rundir) {
 
 /* progress so far
 rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
-rundir='glapp/tests'; runfile='test_es_directcalls.lua';				-- WORKS README
+rundir='glapp/tests'; runfile='test_es_directcalls.lua';	-- WORKS README
 rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS README
 rundir='glapp/tests'; runfile='test.lua';					-- fails, glmatrixmode
 rundir='glapp/tests'; runfile='minimal.lua';
 rundir='glapp/tests'; runfile='pointtest.lua';
 rundir='glapp/tests'; runfile='info.lua';
-rundir='line-integral-convolution'; runfile='run.lua';	-- welp this was working for a good long while until I started adding imgui stuff ... now it's not working anymore ...
-rundir='rule110'; runfile='rule110.lua';					-- WORKS README needs imgui
-rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README needs imgui
-rundir='n-points'; runfile='run.lua';						-- WORKS README needs imgui
-rundir='n-points'; runfile='run_orbit.lua';				-- todo ... or not, it's kinda dumb i guess
-rundir='geographic-charts'; runfile='test.lua';			-- WORKS README but indexed geometry could help it
-rundir='prime-spiral'; runfile='run.lua';					-- WORKS README but needs tracking shift for key events for it to work ...
-rundir='lambda-cdm'; runfile='run.lua';					-- WORKS README needs imgui
-rundir='seashell'; runfile='run.lua';						-- very slow (didn't finish)
+rundir='line-integral-convolution'; runfile='run.lua';		-- WORKS README
+rundir='rule110'; runfile='rule110.lua';					-- WORKS README
+rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README
+rundir='n-points'; runfile='run.lua';						-- WORKS README
+rundir='n-points'; runfile='run_orbit.lua';					-- todo ... or not, it's kinda dumb i guess
+rundir='geographic-charts'; runfile='test.lua';				-- WORKS README
+rundir='prime-spiral'; runfile='run.lua';					-- WORKS README
+rundir='lambda-cdm'; runfile='run.lua';						-- WORKS README
+rundir='seashell'; runfile='run.lua';						-- WORKS README ... I had to scale down the mesh from 2000x2000 to 200x200 or it ran too slow to finish ... TODO needs menubar support
 rundir='SphericalHarmonicGraphs'; runfile='run.lua';		-- very slow (didn't finish)
 rundir='metric'; runfile='run.lua';
 rundir='sand-attack'; runfile='run.lua';					-- freezes, needs imgui
@@ -40,8 +40,9 @@ rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README
 rundir='mesh'												-- WORKS README
 rundir='sphere-grid'; runfile='run.lua';					-- WORKS README ... runs horribly slow when vec3d = require'vec-ffi.vec3d', runs blazing fast when vec3d = require'vec.vec3'
 rundir='topple'; runfile='topple-glsl.lua';					-- WORKS README
-
-rundir='earth-magnetic-field'								-- TODO change it to use geographic-charts
+rundir='topple'; runfile='topple-gpu-display.lua' but through cl-cpu ... but webgl doesn't support compute kernels or multithreading so it'd be software-driven ... so it'd be way too slow ...
+rundir='topple'; runfile='topple-gpu-3d-display.lua' but through cl-cpu
+rundir='earth-magnetic-field'								-- runs but the colors are messed up and it's slow ... and radio buttons ...
 rundir='VectorFieldDecomposition'							-- TODO doesn't run
 rundir='geo-center-earth'									-- TODO ... ?
 TODO chompman
