@@ -1189,15 +1189,14 @@ function sdl.SDL_GetError() end	-- TODO return a ffiblob / ptr of a string of th
 local canvas
 local eventQueue = vector'SDL_Event'
 
+local mouseMovedSinceLastPoll = true
+local mouseAtLastPollX = 0
+local mouseAtLastPollY = 0
 local mouseX = 0
 local mouseY = 0
-local mouseDX = 0
-local mouseDY = 0
 local mouseButtonFlags = 0	-- SDL_BUTTON_*MASK flags
 
 local function setMousePos(x, y)
-	mouseDX = x - mouseX
-	mouseDY = y - mouseY
 	mouseX = x
 	mouseY = y
 end
@@ -1522,19 +1521,8 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	end)
 
 	window:addEventListener('mousemove', xpwrap(function(jsev)
+		mouseMovedSinceLastPoll = true
 		setMousePos(jsev.pageX, jsev.pageY)
-
-		-- TODO I don't even use this ...
-		local sdlev = eventQueue:emplace_back()
-		sdlev[0].type = sdl.SDL_MOUSEMOTION
-		sdlev[0].motion.timestamp = os.time()
-		sdlev[0].motion.windowID = 0	-- TODO SDL windowID
-		sdlev[0].motion.which = 0
-		sdlev[0].motion.state = mouseButtonFlags
-		sdlev[0].motion.x = mouseX
-		sdlev[0].motion.y = mouseY
-		sdlev[0].motion.xrel = mouseDX
-		sdlev[0].motion.yrel = mouseDY
 	end))
 	window:addEventListener('mousedown', xpwrap(function(jsev)
 		setMousePos(jsev.pageX, jsev.pageY)
@@ -1706,6 +1694,25 @@ end
 -- returns the # of events
 -- either this or SDL_GL_SwapWindow should be our coroutine yield ...
 function sdl.SDL_PollEvent(event)
+
+	-- see if there's any mouse motion
+	if mouseMovedSinceLastPoll then
+		mouseMovedSinceLastPoll = false
+		local sdlev = eventQueue:emplace_back()
+		sdlev[0].type = sdl.SDL_MOUSEMOTION
+		sdlev[0].motion.timestamp = os.time()
+		sdlev[0].motion.windowID = 0	-- TODO SDL windowID
+		sdlev[0].motion.which = 0
+		sdlev[0].motion.state = mouseButtonFlags
+		sdlev[0].motion.x = mouseX
+		sdlev[0].motion.y = mouseY
+		sdlev[0].motion.xrel = mouseX - mouseAtLastPollX
+		sdlev[0].motion.yrel = mouseY - mouseAtLastPollY
+
+		mouseAtLastPollX = mouseX
+		mouseAtLastPollY = mouseY
+	end
+
 	-- return our events
 	if #eventQueue > 0 then
 		local srcEvent = eventQueue:back()
