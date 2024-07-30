@@ -1092,8 +1092,8 @@ end
 ig.igSliderInt = ig.igInputInt
 
 function ig.igInputText(label, buf, bufsize, flags, callback, user_data)
-	buf = ffi.string(buf, bufsize)
-	local changed = js.imguiInputText(label, buf)
+	local str = ffi.string(buf, bufsize)
+	local changed = js.imguiInputText(label, str)
 	if changed then
 		ffi.copy(buf, js.imguiLastValue(), bufsize)
 	end

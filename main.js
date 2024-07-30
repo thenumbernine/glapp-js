@@ -456,6 +456,7 @@ const imgui = {
 			const ch = this.div.children[i];
 			this.div.removeChild(ch);
 		}
+		this.cache = {};
 	},
 	newFrame : function() {
 		//clear all taggedThisFrame
@@ -471,6 +472,7 @@ const imgui = {
 			const ch = this.div.children[i];
 			if (!ch.taggedThisFrame) {
 				this.div.removeChild(ch);
+				this.cache[ch.id] = undefined;
 			}
 		}
 	},
@@ -484,8 +486,9 @@ const imgui = {
 			this.lastTouchedDom = dom;
 			return dom;
 		}
-console.log('rebuilding', id);
+//console.log('rebuilding', id);
 		dom = createCB();
+		dom.id = id;
 		this.cache[id] = dom;
 		if (!this.div) throw "imgui.create called before imgui.newFrame...";
 		if (this.lastTouchedDom && this.lastTouchedDom.nextSibling) {
@@ -598,11 +601,12 @@ console.log('rebuilding', id);
 		return changed;
 	},
 
-	inputRadio : function(label, result, radioValue, radioGroup) {
+	inputRadio : function(label, variableValue, radioValue, radioGroup) {
 		const input = this.create(label+'_value', () => Input({
 			type : 'radio',
 			name : radioGroup,
 			value : radioValue,
+			checked : variableValue == radioValue,
 		}));
 		this.create(label, () => Span({
 			innerText : label,
@@ -611,7 +615,7 @@ console.log('rebuilding', id);
 			},
 		}));
 		const inputValue = input.value;
-		const changed = result !== inputValue;
+		const changed = input.checked && variableValue != inputValue;	// value is stored as a string so you gotta coerce
 		this.lastValue = inputValue;
 		this.create(label+'_br', Br);
 		return changed;
