@@ -1493,25 +1493,25 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 
 	window:addEventListener('keyup', xpwrap(function(jsev)
 		local sdlev = eventQueue:emplace_back()
-		sdlev[0].type = sdl.SDL_KEYUP
-		sdlev[0].key.timestamp = os.time()
-		sdlev[0].key.windowID = 0	-- TODO SDL windowID
-		sdlev[0].key.state = 0
-		sdlev[0].key['repeat'] = jsev['repeat'] and 1 or 0
-		sdlev[0].key.keysym.scancode = jsev.keyCode
-		sdlev[0].key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.code] or sdl.SDLK_UNKNOWN
-		sdlev[0].key.keysym.mod = jsKeyEventMod(jsev)
+		sdlev.type = sdl.SDL_KEYUP
+		sdlev.key.timestamp = os.time()
+		sdlev.key.windowID = 0	-- TODO SDL windowID
+		sdlev.key.state = 0
+		sdlev.key['repeat'] = jsev['repeat'] and 1 or 0
+		sdlev.key.keysym.scancode = jsev.keyCode
+		sdlev.key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.code] or sdl.SDLK_UNKNOWN
+		sdlev.key.keysym.mod = jsKeyEventMod(jsev)
 	end))
 	window:addEventListener('keydown', xpwrap(function(jsev)
 		local sdlev = eventQueue:emplace_back()
-		sdlev[0].type = sdl.SDL_KEYDOWN
-		sdlev[0].key.timestamp = os.time()
-		sdlev[0].key.windowID = 0	-- TODO SDL windowID
-		sdlev[0].key.state = 1
-		sdlev[0].key['repeat'] = jsev['repeat'] and 1 or 0
-		sdlev[0].key.keysym.scancode = jsev.keyCode
-		sdlev[0].key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.code] or sdl.SDLK_UNKNOWN
-		sdlev[0].key.keysym.mod = jsKeyEventMod(jsev)
+		sdlev.type = sdl.SDL_KEYDOWN
+		sdlev.key.timestamp = os.time()
+		sdlev.key.windowID = 0	-- TODO SDL windowID
+		sdlev.key.state = 1
+		sdlev.key['repeat'] = jsev['repeat'] and 1 or 0
+		sdlev.key.keysym.scancode = jsev.keyCode
+		sdlev.key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.code] or sdl.SDLK_UNKNOWN
+		sdlev.key.keysym.mod = jsKeyEventMod(jsev)
 	end))
 
 	-- i'm not capturing right-clicks, and idk why ...
@@ -1540,30 +1540,30 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		end
 
 		local sdlev = eventQueue:emplace_back()
-		sdlev[0].type = sdl.SDL_MOUSEBUTTONDOWN
-		sdlev[0].button.timestamp = os.time()
-		sdlev[0].button.windowID = 0
-		sdlev[0].button.which = 0
-		sdlev[0].button.button = sdlbutton
-		sdlev[0].button.state = 1	--mouseButtonFlags
-		sdlev[0].button.clicks = 1
-		sdlev[0].button.x = mouseX
-		sdlev[0].button.y = mouseY
+		sdlev.type = sdl.SDL_MOUSEBUTTONDOWN
+		sdlev.button.timestamp = os.time()
+		sdlev.button.windowID = 0
+		sdlev.button.which = 0
+		sdlev.button.button = sdlbutton
+		sdlev.button.state = 1	--mouseButtonFlags
+		sdlev.button.clicks = 1
+		sdlev.button.x = mouseX
+		sdlev.button.y = mouseY
 	end))
 	window:addEventListener('mouseup', xpwrap(function(jsev)
 		setMousePos(jsev.pageX, jsev.pageY)
 		setMouseFlags(jsev.buttons)
 
 		local sdlev = eventQueue:emplace_back()
-		sdlev[0].type = sdl.SDL_MOUSEBUTTONUP
-		sdlev[0].button.timestamp = os.time()
-		sdlev[0].button.windowID = 0
-		sdlev[0].button.which = 0
-		sdlev[0].button.button = sdlbutton
-		sdlev[0].button.state = 0	--mouseButtonFlags
-		sdlev[0].button.clicks = 1
-		sdlev[0].button.x = mouseX
-		sdlev[0].button.y = mouseY
+		sdlev.type = sdl.SDL_MOUSEBUTTONUP
+		sdlev.button.timestamp = os.time()
+		sdlev.button.windowID = 0
+		sdlev.button.which = 0
+		sdlev.button.button = sdlbutton
+		sdlev.button.state = 0	--mouseButtonFlags
+		sdlev.button.clicks = 1
+		sdlev.button.x = mouseX
+		sdlev.button.y = mouseY
 	end))
 	--[[
 	window:addEventListener('click', function(jsev)
@@ -1649,9 +1649,9 @@ function sdl.SDL_GL_SetAttribute(key, value) return 0 end
 function sdl.SDL_GL_SetSwapInterval(enable) return 0 end
 
 function sdl.SDL_GetVersion(version)
-	version[0].major = 2
-	version[0].minor = 0
-	version[0].patch = 0
+	version.major = 2
+	version.minor = 0
+	version.patch = 0
 end
 
 function sdl.SDL_GetMouseState(x, y)
@@ -1681,12 +1681,12 @@ function sdl.SDL_GL_SwapWindow(window)
 
 			-- push resize event
 			local sdlev = eventQueue:emplace_back()
-			sdlev[0].type = sdl.SDL_WINDOWEVENT
-			sdlev[0].window.timestamp = os.time()
-			sdlev[0].window.windowID = 0	-- TODO SDL windowID
-			sdlev[0].window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
-			sdlev[0].window.data1 = width
-			sdlev[0].window.data2 = height
+			sdlev.type = sdl.SDL_WINDOWEVENT
+			sdlev.window.timestamp = os.time()
+			sdlev.window.windowID = 0	-- TODO SDL windowID
+			sdlev.window.event = sdl.SDL_WINDOWEVENT_SIZE_CHANGED
+			sdlev.window.data1 = width
+			sdlev.window.data2 = height
 		end
 	end
 end
