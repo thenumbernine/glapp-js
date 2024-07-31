@@ -1649,9 +1649,9 @@ function sdl.SDL_GL_SetAttribute(key, value) return 0 end
 function sdl.SDL_GL_SetSwapInterval(enable) return 0 end
 
 function sdl.SDL_GetVersion(version)
-	version.major = 2
-	version.minor = 0
-	version.patch = 0
+	version[0].major = 2
+	version[0].minor = 0
+	version[0].patch = 0
 end
 
 function sdl.SDL_GetMouseState(x, y)
