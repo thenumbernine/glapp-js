@@ -1664,7 +1664,9 @@ end
 function sdl.SDL_GL_SwapWindow(window)
 	-- give up control to the browser again
 	coroutine.yield(sdl.mainthread)
-	-- and a new frame loop starts ...
+	-- TODO this operates smootheset in browser here at the end of the frame
+	-- if you move it to SDL_PollEvent then mouse movement event-generation runs slow / stalls while the mouse is moving
+	--- however, while this is here, sdlapp's will never yield in loop and will stall forever.
 
 	-- jump through webgl bs
 	webgl:colorMask(false, false, false, true)
