@@ -1216,7 +1216,7 @@ local function jsKeyEventMod(jsev)
 	if jsev.shiftKey then mod = mod | sdl.KMOD_SHIFT end
 	if jsev.ctrlKey then mod = mod | sdl.KMOD_CTRL end
 	if jsev.altKey then mod = mod | sdl.KMOD_ALT end
-	if jsev.metaKey then mod = mod | sdl.KMOD_META end
+	if jsev.metaKey then mod = mod | sdl.KMOD_GUI end
 	return mod
 end
 
