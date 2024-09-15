@@ -307,6 +307,7 @@ const mountFile = (filePath, luaPath) => {
 }
 
 const addFromToDir = (fromPath, toPath, files) =>
+	// TODO use Promise.allSettled, but that means first flatten all the promises into one Promise.all ... shudders ... javascript is so retarded ...
 	Promise.all(files.map(f => mountFile(
 		(fromPath+'/'+f).replace('+', '%2b'),	//TODO full url escape? but not for /'s
 		toPath+'/'+f
