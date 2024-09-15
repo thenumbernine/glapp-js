@@ -753,7 +753,7 @@ end
 
 
 
--- spare emulated lua some needless parsing 
+-- spare emulated lua some needless parsing
 function ffi.enum(ks)
 	local lastvalue = 0
 	for _,k in ipairs(ks) do
@@ -1057,6 +1057,23 @@ assert(baseFieldType.size, "ctype "..tostring(name).." has no size!")
 				end
 
 				assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest "..tostring(token))
+
+				if token == '__attribute__' then
+					str, token, tokentype = consume(str)
+					assert(token == '(', "expected __attribute(, found "..tostring(token)..", rest "..tostring(token))
+					str, token, tokentype = consume(str)
+					assert(token == '(', "expected __attribute((, found "..tostring(token)..", rest "..tostring(token))
+					str, token, tokentype = consume(str)
+					assert(token == 'packed', "expected __attribute((packed, found "..tostring(token)..", rest "..tostring(token))
+					str, token, tokentype = consume(str)
+					assert(token == ')', "expected __attribute((packed), found "..tostring(token)..", rest "..tostring(token))
+					str, token, tokentype = consume(str)
+					assert(token == ')', "expected __attribute((packed)), found "..tostring(token)..", rest "..tostring(token))
+
+					str, token, tokentype = consume(str)
+					assert(tokentype == 'name', "expected field name, found "..tostring(token)..", rest "..tostring(token))
+				end
+
 				local fieldname = token
 				local field = Field{
 					name = fieldname,
