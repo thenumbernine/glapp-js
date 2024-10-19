@@ -253,7 +253,8 @@ const fetchBytes = src => {
 		req.onload = ev => {
 			resolve(new Uint8Array(req.response));
 		};
-		req.onerror = function () {
+		req.onerror = function() {
+console.log("failed on", src);
 			reject({
 				status: this.status,
 				statusText: req.statusText

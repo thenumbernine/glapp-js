@@ -709,9 +709,9 @@ function gl.glGetString(name)
 	elseif name == gl.GL_VERSION then
 		return ffi.stringBuffer(webgl:getParameter(webgl.VERSION))
 	elseif name == gl.GL_MAJOR_VERSION then
-		return ffi.stringBuffer''
+		return ffi.stringBuffer'3'	-- TODO what version should I return?  the GLES-equivalent version of 3.0?  or the GL-equivalent version of the GLES version?
 	elseif name == gl.GL_MINOR_VERSION then
-		return ffi.stringBuffer''
+		return ffi.stringBuffer'0'
 	elseif name == gl.GL_SHADING_LANGUAGE_VERSION then
 		-- TODO tempted to send something else since this string has so much extra crap in it
 		local version = webgl:getParameter(webgl.SHADING_LANGUAGE_VERSION)
