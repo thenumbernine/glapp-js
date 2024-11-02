@@ -1569,6 +1569,8 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		// wait does this say to just overwrite _G.print?  like you can't do that in a single line of "print=function..."
 		// no, I want to override all output, including the stack traces that Lua prints when an error happens ... smh everyone ...
 		redirectPrint : s => { stdoutPrint(s); },
+
+		pako : window.pako,
 	});
 
 	imgui.clear();
