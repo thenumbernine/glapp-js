@@ -328,7 +328,7 @@ import { luaPackages } from '/js/lua-packages.js';
 	//push local glapp-js package
 	pkgs.push([
 		{from : '.', to : '.', files : ['ffi.lua']},
-		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua']},
+		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua', 'zlib.lua']},
 		{from : './ffi/c', to : 'ffi/c', files : ['errno.lua', 'stdlib.lua', 'string.lua']},
 		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua']},
 		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
