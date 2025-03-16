@@ -1734,11 +1734,13 @@ function CData.__add(a,b)
 		end
 	end
 
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
 	local na = type(a) == 'number'
 	local nb = type(b) == 'number'
-	if pa and nb then
+	if ptra and nb then
 		return CData.add(a, b)
-	elseif pb and na then
+	elseif ptrb and na then
 		return CData.add(b, a)
 	else
 		error("don't know how to add "..tostring(ma.type)..' and '..tostring(mb.type))
@@ -1758,14 +1760,19 @@ function CData.__sub(a,b)
 		end
 	end
 
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
 	local na = type(a) == 'number'
 	local nb = type(b) == 'number'
-	if pa and nb then
+	if ptra and nb then
 		return CData.add(a, -b)
-	elseif pb and na then
+	elseif ptrb and na then
 		return CData.add(b, -a)
+	elseif ptra and ptrb and ma.type.baseType == mb.type.baseType then
+		-- pointer-subtraction
+		return math.floor((getAddr(a) - getAddr(b)) / mt.type.size)
 	else
-		error("don't know how to sub")
+		error("don't know how to sub "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
 end
 
@@ -1781,7 +1788,7 @@ function CData.__mul(a,b)
 			return h(a,b)
 		end
 	end
-	error("don't know how to mul")
+	error("don't know how to mul "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__concat(a,b)
@@ -1796,7 +1803,7 @@ function CData.__concat(a,b)
 			return h(a,b)
 		end
 	end
-	error("don't know how to concat")
+	error("don't know how to concat "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__div(a,b)
@@ -1811,7 +1818,7 @@ function CData.__div(a,b)
 			return h(a,b)
 		end
 	end
-	error("don't know how to div")
+	error("don't know how to div "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__pow(a,b)
@@ -1826,7 +1833,7 @@ function CData.__pow(a,b)
 			return h(a,b)
 		end
 	end
-	error("don't know how to pow")
+	error("don't know how to pow "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__mod(a,b)
@@ -1841,7 +1848,7 @@ function CData.__mod(a,b)
 			return h(a,b)
 		end
 	end
-	error("don't know how to mod")
+	error("don't know how to mod "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 
