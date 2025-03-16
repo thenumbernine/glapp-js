@@ -185,7 +185,7 @@ end
 
 -- x = cdata
 -- if x's type is an array or prim then return x's addr
--- if x's type is a pointer hten return x's value
+-- if x's type is a pointer then return x's value
 local function getAddr(x)
 	local t, mt = getTypeAndMT(x)
 	if not (t == 'cdata' and mt.isCData) then error("expected cdata, got type="..t.." mt.type="..tostring(mt and mt.type or '')) end
@@ -2128,10 +2128,10 @@ function CData.__eq(a,b)
 	local primb = mb and mb.isCData and mb.type.isPrimitive
 	local ptra = pa and ma.type.isPointer
 	local ptrb = pb and ma.type.isPointer
-	if prima or ptra then a = ma.type.get(ma.addr) end
-	if primb or ptrb then b = mb.type.get(mb.addr) end
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
 
-	if (prima or ptra or na) and (primb or ptrb or nb) then
+	if (prima or na) and (primb or nb) then
 		return a == b
 	end
 
@@ -2157,10 +2157,10 @@ function CData.__ne(a,b)
 	local primb = mb and mb.isCData and mb.type.isPrimitive
 	local ptra = pa and ma.type.isPointer
 	local ptrb = pb and ma.type.isPointer
-	if prima or ptra then a = ma.type.get(ma.addr) end
-	if primb or ptrb then b = mb.type.get(mb.addr) end
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
 
-	if (prima or ptra or na) and (primb or ptrb or nb) then
+	if (prima or na) and (primb or nb) then
 		return a ~= b
 	end
 
@@ -2186,10 +2186,10 @@ function CData.__lt(a,b)
 	local primb = mb and mb.isCData and mb.type.isPrimitive
 	local ptra = pa and ma.type.isPointer
 	local ptrb = pb and ma.type.isPointer
-	if prima or ptra then a = ma.type.get(ma.addr) end
-	if primb or ptrb then b = mb.type.get(mb.addr) end
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
 
-	if (prima or ptra or na) and (primb or ptrb or nb) then
+	if (prima or na) and (primb or nb) then
 		return a < b
 	end
 
@@ -2215,10 +2215,10 @@ function CData.__le(a,b)
 	local primb = mb and mb.isCData and mb.type.isPrimitive
 	local ptra = pa and ma.type.isPointer
 	local ptrb = pb and ma.type.isPointer
-	if prima or ptra then a = ma.type.get(ma.addr) end
-	if primb or ptrb then b = mb.type.get(mb.addr) end
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
 
-	if (prima or ptra or na) and (primb or ptrb or nb) then
+	if (prima or na) and (primb or nb) then
 		return a <= b
 	end
 
@@ -2244,10 +2244,10 @@ function CData.__gt(a,b)
 	local primb = mb and mb.isCData and mb.type.isPrimitive
 	local ptra = pa and ma.type.isPointer
 	local ptrb = pb and ma.type.isPointer
-	if prima or ptra then a = ma.type.get(ma.addr) end
-	if primb or ptrb then b = mb.type.get(mb.addr) end
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
 
-	if (prima or ptra or na) and (primb or ptrb or nb) then
+	if (prima or na) and (primb or nb) then
 		return a > b
 	end
 
@@ -2273,10 +2273,10 @@ function CData.__ge(a,b)
 	local primb = mb and mb.isCData and mb.type.isPrimitive
 	local ptra = pa and ma.type.isPointer
 	local ptrb = pb and ma.type.isPointer
-	if prima or ptra then a = ma.type.get(ma.addr) end
-	if primb or ptrb then b = mb.type.get(mb.addr) end
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
 
-	if (prima or ptra or na) and (primb or ptrb or nb) then
+	if (prima or na) and (primb or nb) then
 		return a >= b
 	end
 
