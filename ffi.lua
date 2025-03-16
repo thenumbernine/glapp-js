@@ -1619,15 +1619,23 @@ function CData:__newindex(key, value)
 			if fieldType.isPrimitive then
 				fieldType.set(fieldAddr, value)
 				return
-			elseif valuetype == 'cdata' and valuemt.type == fieldType then
-				memcpyAddr(fieldAddr, getAddr(value), fieldType.size)
-				return
-			elseif valuetype == 'cdata' and valuemt.type.isPointer then
+			elseif valuetype == 'cdata'
+			and valuemt.type.isPointer
+			and fieldType.isPointer
+			then
 				memSetPtr(fieldAddr, getAddr(value))
 				return
-			elseif valuetype == 'nil' and fieldType.isPointer then
+			elseif valuetype == 'nil'
+			and fieldType.isPointer
+			then
 				-- should only pointers be allowed to assign nil?  or should I allow it for everything?
 				memSetPtr(fieldAddr, 0)
+				return
+			elseif valuetype == 'cdata'
+			and valuemt.type == fieldType
+			then
+				memcpyAddr(fieldAddr, getAddr(value), fieldType.size)
+				return
 			else
 				error("cannot convert '"..valuetype.."'"
 					..(valuemt and valuemt.type and (' ctype='..valuemt.type.name) or '')
@@ -1980,7 +1988,7 @@ function CData.__idiv(a,b)
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a // b)
 	end
-	
+
 	error("don't know how to idiv "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
@@ -2003,7 +2011,7 @@ function CData.__band(a,b)
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a & b)
 	end
-	
+
 	error("don't know how to band "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
@@ -2025,7 +2033,7 @@ function CData.__bor(a,b)
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a | b)
 	end
-	
+
 	error("don't know how to bor "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
@@ -2047,7 +2055,7 @@ function CData.__bxor(a,b)
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a ~ b)
 	end
-	
+
 	error("don't know how to bxor "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
@@ -2058,7 +2066,7 @@ function CData.__bnot(a)
 	if prima then
 		return ffi.new(ma.type, ~ma.type.get(ma.addr))
 	end
-	
+
 	error("don't know how to bnot "..tostring(ma.type))
 end
 
@@ -2080,7 +2088,7 @@ function CData.__shl(a,b)
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a << b)
 	end
-	
+
 	error("don't know how to shl "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
@@ -2102,7 +2110,7 @@ function CData.__shr(a,b)
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a >> b)
 	end
-	
+
 	error("don't know how to shr "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
