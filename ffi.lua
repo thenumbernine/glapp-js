@@ -1770,7 +1770,7 @@ function CData.__sub(a,b)
 		return CData.add(b, -a)
 	elseif ptra and ptrb and ma.type.baseType == mb.type.baseType then
 		-- pointer-subtraction
-		return math.floor((getAddr(a) - getAddr(b)) / mt.type.size)
+		return math.floor((getAddr(a) - getAddr(b)) / ma.type.baseType.size)
 	else
 		error("don't know how to sub "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
