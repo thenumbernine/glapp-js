@@ -1619,13 +1619,16 @@ function CData:__newindex(key, value)
 			if fieldType.isPrimitive then
 				fieldType.set(fieldAddr, value)
 				return
-			elseif valuetype == 'cdata' and valuemt.type == field.type then
-				memcpyAddr(fieldAddr, getAddr(value), field.type.size)
+			elseif valuetype == 'cdata' and valuemt.type == fieldType then
+				memcpyAddr(fieldAddr, getAddr(value), fieldType.size)
 				return
+			elseif valuetype == 'nil' and fieldType.isPointer then
+				-- only for pointers ... ?  or should I allow it for everything?
+				fieldType.set(fieldAddr, 0)
 			else
 				error("cannot convert '"..valuetype.."'"
 					..(valuemt and valuemt.type and (' ctype='..valuemt.type.name) or '')
-					.." to '"..field.type.name.."'")
+					.." to '"..fieldType.name.."'")
 			end
 		end
 	else
