@@ -207,7 +207,7 @@ end
 ffi.gc = gc
 
 local function freeAddr(addr)
-	local d = assert(dictForAddr[mt.addr], "can't free that address, it was never allocated")
+	local d = assert(dictForAddr[addr], "can't free that address, it was never allocated")
 print("freeing", ('0x%x'):format(d.addr), ('0x%x'):format(d.size))
 	d.free = true
 end
@@ -1621,6 +1621,9 @@ function CData:__newindex(key, value)
 				return
 			elseif valuetype == 'cdata' and valuemt.type == fieldType then
 				memcpyAddr(fieldAddr, getAddr(value), fieldType.size)
+				return
+			elseif valuetype == 'cdata' and valuemt.type.isPointer then
+				memSetPtr(fieldAddr, getAddr(value))
 				return
 			elseif valuetype == 'nil' and fieldType.isPointer then
 				-- should only pointers be allowed to assign nil?  or should I allow it for everything?
