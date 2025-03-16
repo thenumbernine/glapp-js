@@ -1764,7 +1764,7 @@ function CData.__add(a,b)
 		return a + b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a + b)
-	else
+	end
 
 	error("don't know how to add "..tostring(ma.type)..' and '..tostring(mb.type))
 end
@@ -1807,7 +1807,7 @@ function CData.__sub(a,b)
 		return a - b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a - b)
-	else
+	end
 
 	error("don't know how to sub "..tostring(ma.type)..' and '..tostring(mb.type))
 end
@@ -1839,7 +1839,7 @@ function CData.__mul(a,b)
 		return a + b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a + b)
-	else
+	end
 
 	error("don't know how to mul "..tostring(ma.type)..' and '..tostring(mb.type))
 end
@@ -1886,7 +1886,7 @@ function CData.__div(a,b)
 		return a + b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a + b)
-	else
+	end
 
 	error("don't know how to div "..tostring(ma.type)..' and '..tostring(mb.type))
 end
@@ -1918,7 +1918,7 @@ function CData.__pow(a,b)
 		return a + b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a + b)
-	else
+	end
 
 	error("don't know how to pow "..tostring(ma.type)..' and '..tostring(mb.type))
 end
@@ -1950,7 +1950,7 @@ function CData.__mod(a,b)
 		return a + b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a + b)
-	else
+	end
 
 	error("don't know how to mod "..tostring(ma.type)..' and '..tostring(mb.type))
 end
@@ -1979,9 +1979,9 @@ function CData.__idiv(a,b)
 		return a // b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a // b)
-	else
-		error("don't know how to idiv "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
+	
+	error("don't know how to idiv "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__band(a,b)
@@ -2002,9 +2002,9 @@ function CData.__band(a,b)
 		return a & b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a & b)
-	else
-		error("don't know how to band "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
+	
+	error("don't know how to band "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__bor(a,b)
@@ -2024,9 +2024,9 @@ function CData.__bor(a,b)
 		return a | b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a | b)
-	else
-		error("don't know how to bor "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
+	
+	error("don't know how to bor "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__bxor(a,b)
@@ -2046,9 +2046,9 @@ function CData.__bxor(a,b)
 		return a ~ b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a ~ b)
-	else
-		error("don't know how to bxor "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
+	
+	error("don't know how to bxor "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__bnot(a)
@@ -2057,9 +2057,9 @@ function CData.__bnot(a)
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	if prima then
 		return ffi.new(ma.type, ~ma.type.get(ma.addr))
-	else
-		error("don't know how to bnot "..tostring(ma.type))
 	end
+	
+	error("don't know how to bnot "..tostring(ma.type))
 end
 
 function CData.__shl(a,b)
@@ -2079,9 +2079,9 @@ function CData.__shl(a,b)
 		return a << b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a << b)
-	else
-		error("don't know how to shl "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
+	
+	error("don't know how to shl "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__shr(a,b)
@@ -2101,9 +2101,9 @@ function CData.__shr(a,b)
 		return a >> b
 	elseif prima and (nb or primb) then
 		return ffi.new(ma.type, a >> b)
-	else
-		error("don't know how to shr "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
+	
+	error("don't know how to shr "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 ------ ]] END Lua 5.4 Metatable Block
