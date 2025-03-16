@@ -521,6 +521,10 @@ local CTypeProxy = setmetatable({}, {
 
 		return setmetatable({}, omt)
 	end,
+	__tostring = function(mt)
+		local ctype = mt.type
+		return 'ctype<'..tostring(ctype.name)..'>'
+	end,
 })
 
 CTypeProxy.__metatable = 'ffi'
@@ -1733,7 +1737,7 @@ function CData.__unm(a)
 		end
 	end
 
-	error("don't know how to unm "..tostring(m.type))
+	error("don't know how to unm "..tostring(m))
 end
 
 
@@ -1774,7 +1778,7 @@ function CData.__add(a,b)
 		return ffi.new(ma.type, a + b)
 	end
 
-	error("don't know how to add "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to add "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__sub(a,b)
@@ -1817,7 +1821,7 @@ function CData.__sub(a,b)
 		return ffi.new(ma.type, a - b)
 	end
 
-	error("don't know how to sub "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to sub "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__mul(a,b)
@@ -1849,7 +1853,7 @@ function CData.__mul(a,b)
 		return ffi.new(ma.type, a + b)
 	end
 
-	error("don't know how to mul "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to mul "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__concat(a,b)
@@ -1864,7 +1868,7 @@ function CData.__concat(a,b)
 			return h(a,b)
 		end
 	end
-	error("don't know how to concat "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to concat "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__div(a,b)
@@ -1896,7 +1900,7 @@ function CData.__div(a,b)
 		return ffi.new(ma.type, a + b)
 	end
 
-	error("don't know how to div "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to div "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__pow(a,b)
@@ -1928,7 +1932,7 @@ function CData.__pow(a,b)
 		return ffi.new(ma.type, a + b)
 	end
 
-	error("don't know how to pow "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to pow "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__mod(a,b)
@@ -1960,7 +1964,7 @@ function CData.__mod(a,b)
 		return ffi.new(ma.type, a + b)
 	end
 
-	error("don't know how to mod "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to mod "..tostring(ma)..' and '..tostring(mb))
 end
 
 ------ [[ BEGIN Lua 5.4 Metatable Block
@@ -1989,7 +1993,7 @@ function CData.__idiv(a,b)
 		return ffi.new(ma.type, a // b)
 	end
 
-	error("don't know how to idiv "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to idiv "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__band(a,b)
@@ -2012,7 +2016,7 @@ function CData.__band(a,b)
 		return ffi.new(ma.type, a & b)
 	end
 
-	error("don't know how to band "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to band "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__bor(a,b)
@@ -2034,7 +2038,7 @@ function CData.__bor(a,b)
 		return ffi.new(ma.type, a | b)
 	end
 
-	error("don't know how to bor "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to bor "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__bxor(a,b)
@@ -2056,7 +2060,7 @@ function CData.__bxor(a,b)
 		return ffi.new(ma.type, a ~ b)
 	end
 
-	error("don't know how to bxor "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to bxor "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__bnot(a)
@@ -2067,7 +2071,7 @@ function CData.__bnot(a)
 		return ffi.new(ma.type, ~ma.type.get(ma.addr))
 	end
 
-	error("don't know how to bnot "..tostring(ma.type))
+	error("don't know how to bnot "..tostring(ma))
 end
 
 function CData.__shl(a,b)
@@ -2089,7 +2093,7 @@ function CData.__shl(a,b)
 		return ffi.new(ma.type, a << b)
 	end
 
-	error("don't know how to shl "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to shl "..tostring(ma)..' and '..tostring(mb))
 end
 
 function CData.__shr(a,b)
@@ -2111,7 +2115,7 @@ function CData.__shr(a,b)
 		return ffi.new(ma.type, a >> b)
 	end
 
-	error("don't know how to shr "..tostring(ma.type)..' and '..tostring(mb.type))
+	error("don't know how to shr "..tostring(ma)..' and '..tostring(mb))
 end
 
 ------ ]] END Lua 5.4 Metatable Block
