@@ -1859,15 +1859,138 @@ function CData.__mod(a,b)
 	error("don't know how to mod "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
---[[ TODO for primitives, provide behavior for ...
-function CData.__idiv
-function CData.__band
-function CData.__bor
-function CData.__bxor
-function CData.__bnot
-function CData.__shl
-function CData.__shr
---]]
+------ [[ BEGIN Lua 5.4 Metatable Block
+-- I'm using the fact that my js lua impl is 5.4 to override behavior of bitwise operators (which my bit.lua library is using)
+-- to handle bitwise operators between boxed ffi primitive types.
+-- I'm *not* calling out to these operators in the cdata metatables, so my behavior will still be on par with Lua 5.1 i.e. LuaJIT.
+-- Who knows, maybe I'll change that later.
+
+function CData.__idiv(a,b)
+	-- result is a's type
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	if na and primb then
+		return a // mb.type.get(mb.addr)
+	elseif prima and nb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) // b)
+	elseif prima and primb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) // mb.type.get(mb.addr))
+	else
+		error("don't know how to idiv "..tostring(ma.type)..' and '..tostring(mb.type))
+	end
+end
+
+function CData.__band(a,b)
+	-- result is a's type
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	if na and primb then
+		return a & mb.type.get(mb.addr)
+	elseif prima and nb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) & b)
+	elseif prima and primb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) & mb.type.get(mb.addr))
+	else
+		error("don't know how to band "..tostring(ma.type)..' and '..tostring(mb.type))
+	end
+end
+
+function CData.__bor(a,b)
+	-- result is a's type
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	if na and primb then
+		return a | mb.type.get(mb.addr)
+	elseif prima and nb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) | b)
+	elseif prima and primb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) | mb.type.get(mb.addr))
+	else
+		error("don't know how to bor "..tostring(ma.type)..' and '..tostring(mb.type))
+	end
+end
+
+function CData.__bxor(a,b)
+	-- result is a's type
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	if na and primb then
+		return a ~ mb.type.get(mb.addr)
+	elseif prima and nb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) ~ b)
+	elseif prima and primb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) ~ mb.type.get(mb.addr))
+	else
+		error("don't know how to bxor "..tostring(ma.type)..' and '..tostring(mb.type))
+	end
+end
+
+function CData.__bnot(a)
+	local na = type(a) == 'number'
+	local ma = debug.getmetatable(a)
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	if primb then
+		return ffi.new(ma.type, ~ma.type.get(ma.addr))
+	else
+		error("don't know how to bnot "..tostring(ma.type))
+	end
+end
+
+function CData.__shl(a,b)
+	-- result is a's type
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	if na and primb then
+		return a << mb.type.get(mb.addr)
+	elseif prima and nb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) << b)
+	elseif prima and primb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) << mb.type.get(mb.addr))
+	else
+		error("don't know how to shl "..tostring(ma.type)..' and '..tostring(mb.type))
+	end
+end
+
+function CData.__shr(a,b)
+	-- result is a's type
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local ma = debug.getmetatable(a)
+	local mb = debug.getmetatable(b)
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	if na and primb then
+		return a >> mb.type.get(mb.addr)
+	elseif prima and nb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) >> b)
+	elseif prima and primb then
+		return ffi.new(ma.type, ma.type.get(ma.addr) >> mb.type.get(mb.addr))
+	else
+		error("don't know how to shr "..tostring(ma.type)..' and '..tostring(mb.type))
+	end
+end
+
+------ ]] END Lua 5.4 Metatable Block
 
 -- TODO is this too flexible?  should i equals numbers and cdata ptrs?
 function CData.__eq(a,b)
