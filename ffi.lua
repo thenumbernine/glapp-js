@@ -1742,17 +1742,31 @@ function CData.__add(a,b)
 		end
 	end
 
-	local ptra = pa and ma.type.isPointer
-	local ptrb = pb and ma.type.isPointer
 	local na = type(a) == 'number'
 	local nb = type(b) == 'number'
-	if ptra and nb then
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
+	if ptra and (nb or primb) then
 		return CData.add(a, b)
 	elseif ptrb and na then
 		return CData.add(b, a)
-	else
-		error("don't know how to add "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
+
+	-- 'na and nb' condition will never hit the metamethod
+	if na and primb then
+		return a + b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a + b)
+	else
+
+	error("don't know how to add "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__sub(a,b)
@@ -1768,10 +1782,17 @@ function CData.__sub(a,b)
 		end
 	end
 
-	local ptra = pa and ma.type.isPointer
-	local ptrb = pb and ma.type.isPointer
 	local na = type(a) == 'number'
 	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
 	if ptra and nb then
 		return CData.add(a, -b)
 	elseif ptrb and na then
@@ -1779,9 +1800,16 @@ function CData.__sub(a,b)
 	elseif ptra and ptrb and ma.type.baseType == mb.type.baseType then
 		-- pointer-subtraction
 		return math.floor((getAddr(a) - getAddr(b)) / ma.type.baseType.size)
-	else
-		error("don't know how to sub "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
+
+	-- 'na and nb' condition will never hit the metamethod
+	if na and primb then
+		return a - b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a - b)
+	else
+
+	error("don't know how to sub "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
 function CData.__mul(a,b)
@@ -1796,6 +1824,23 @@ function CData.__mul(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
+	-- 'na and nb' condition will never hit the metamethod
+	if na and primb then
+		return a + b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a + b)
+	else
+
 	error("don't know how to mul "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
@@ -1826,6 +1871,23 @@ function CData.__div(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
+	-- 'na and nb' condition will never hit the metamethod
+	if na and primb then
+		return a + b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a + b)
+	else
+
 	error("don't know how to div "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
@@ -1841,6 +1903,23 @@ function CData.__pow(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
+	-- 'na and nb' condition will never hit the metamethod
+	if na and primb then
+		return a + b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a + b)
+	else
+
 	error("don't know how to pow "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
@@ -1856,6 +1935,23 @@ function CData.__mod(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
+	-- 'na and nb' condition will never hit the metamethod
+	if na and primb then
+		return a + b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a + b)
+	else
+
 	error("don't know how to mod "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
@@ -1867,18 +1963,22 @@ end
 
 function CData.__idiv(a,b)
 	-- result is a's type
-	local na = type(a) == 'number'
-	local nb = type(b) == 'number'
 	local ma = debug.getmetatable(a)
 	local mb = debug.getmetatable(b)
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
+	-- 'na and nb' condition will never hit the metamethod
 	if na and primb then
-		return a // mb.type.get(mb.addr)
-	elseif prima and nb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) // b)
-	elseif prima and primb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) // mb.type.get(mb.addr))
+		return a // b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a // b)
 	else
 		error("don't know how to idiv "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
@@ -1886,18 +1986,22 @@ end
 
 function CData.__band(a,b)
 	-- result is a's type
-	local na = type(a) == 'number'
-	local nb = type(b) == 'number'
 	local ma = debug.getmetatable(a)
 	local mb = debug.getmetatable(b)
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
+	-- 'na and nb' condition will never hit the metamethod
 	if na and primb then
-		return a & mb.type.get(mb.addr)
-	elseif prima and nb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) & b)
-	elseif prima and primb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) & mb.type.get(mb.addr))
+		return a & b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a & b)
 	else
 		error("don't know how to band "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
@@ -1905,18 +2009,21 @@ end
 
 function CData.__bor(a,b)
 	-- result is a's type
-	local na = type(a) == 'number'
-	local nb = type(b) == 'number'
 	local ma = debug.getmetatable(a)
 	local mb = debug.getmetatable(b)
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
 	if na and primb then
-		return a | mb.type.get(mb.addr)
-	elseif prima and nb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) | b)
-	elseif prima and primb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) | mb.type.get(mb.addr))
+		return a | b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a | b)
 	else
 		error("don't know how to bor "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
@@ -1924,28 +2031,31 @@ end
 
 function CData.__bxor(a,b)
 	-- result is a's type
-	local na = type(a) == 'number'
-	local nb = type(b) == 'number'
 	local ma = debug.getmetatable(a)
 	local mb = debug.getmetatable(b)
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
 	if na and primb then
-		return a ~ mb.type.get(mb.addr)
-	elseif prima and nb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) ~ b)
-	elseif prima and primb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) ~ mb.type.get(mb.addr))
+		return a ~ b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a ~ b)
 	else
 		error("don't know how to bxor "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
 end
 
 function CData.__bnot(a)
-	local na = type(a) == 'number'
 	local ma = debug.getmetatable(a)
+	local na = type(a) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
-	if primb then
+	if prima then
 		return ffi.new(ma.type, ~ma.type.get(ma.addr))
 	else
 		error("don't know how to bnot "..tostring(ma.type))
@@ -1954,18 +2064,21 @@ end
 
 function CData.__shl(a,b)
 	-- result is a's type
-	local na = type(a) == 'number'
-	local nb = type(b) == 'number'
 	local ma = debug.getmetatable(a)
 	local mb = debug.getmetatable(b)
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
 	if na and primb then
-		return a << mb.type.get(mb.addr)
-	elseif prima and nb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) << b)
-	elseif prima and primb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) << mb.type.get(mb.addr))
+		return a << b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a << b)
 	else
 		error("don't know how to shl "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
@@ -1973,18 +2086,21 @@ end
 
 function CData.__shr(a,b)
 	-- result is a's type
-	local na = type(a) == 'number'
-	local nb = type(b) == 'number'
 	local ma = debug.getmetatable(a)
 	local mb = debug.getmetatable(b)
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
+
+	-- from here on replace a & b's value with numbers if it was a primitive boxed type
+	if prima then a = ma.type.get(ma.addr) end
+	if primb then b = mb.type.get(mb.addr) end
+
 	if na and primb then
-		return a >> mb.type.get(mb.addr)
-	elseif prima and nb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) >> b)
-	elseif prima and primb then
-		return ffi.new(ma.type, ma.type.get(ma.addr) >> mb.type.get(mb.addr))
+		return a >> b
+	elseif prima and (nb or primb) then
+		return ffi.new(ma.type, a >> b)
 	else
 		error("don't know how to shr "..tostring(ma.type)..' and '..tostring(mb.type))
 	end
@@ -2005,6 +2121,20 @@ function CData.__eq(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
+	if prima or ptra then a = ma.type.get(ma.addr) end
+	if primb or ptrb then b = mb.type.get(mb.addr) end
+
+	if (prima or ptra or na) and (primb or ptrb or nb) then
+		return a == b
+	end
+
 	return getAddr(a) == getAddr(b)
 end
 
@@ -2020,6 +2150,20 @@ function CData.__ne(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
+	if prima or ptra then a = ma.type.get(ma.addr) end
+	if primb or ptrb then b = mb.type.get(mb.addr) end
+
+	if (prima or ptra or na) and (primb or ptrb or nb) then
+		return a ~= b
+	end
+
 	return getAddr(a) ~= getAddr(b)
 end
 
@@ -2035,6 +2179,20 @@ function CData.__lt(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
+	if prima or ptra then a = ma.type.get(ma.addr) end
+	if primb or ptrb then b = mb.type.get(mb.addr) end
+
+	if (prima or ptra or na) and (primb or ptrb or nb) then
+		return a < b
+	end
+
 	return getAddr(a) < getAddr(b)
 end
 
@@ -2050,6 +2208,20 @@ function CData.__le(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
+	if prima or ptra then a = ma.type.get(ma.addr) end
+	if primb or ptrb then b = mb.type.get(mb.addr) end
+
+	if (prima or ptra or na) and (primb or ptrb or nb) then
+		return a <= b
+	end
+
 	return getAddr(a) <= getAddr(b)
 end
 
@@ -2065,6 +2237,20 @@ function CData.__gt(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
+	if prima or ptra then a = ma.type.get(ma.addr) end
+	if primb or ptrb then b = mb.type.get(mb.addr) end
+
+	if (prima or ptra or na) and (primb or ptrb or nb) then
+		return a > b
+	end
+
 	return getAddr(a) > getAddr(b)
 end
 
@@ -2080,6 +2266,20 @@ function CData.__ge(a,b)
 			return h(a,b)
 		end
 	end
+
+	local na = type(a) == 'number'
+	local nb = type(b) == 'number'
+	local prima = ma and ma.isCData and ma.type.isPrimitive
+	local primb = mb and mb.isCData and mb.type.isPrimitive
+	local ptra = pa and ma.type.isPointer
+	local ptrb = pb and ma.type.isPointer
+	if prima or ptra then a = ma.type.get(ma.addr) end
+	if primb or ptrb then b = mb.type.get(mb.addr) end
+
+	if (prima or ptra or na) and (primb or ptrb or nb) then
+		return a >= b
+	end
+
 	return getAddr(a) >= getAddr(b)
 end
 
