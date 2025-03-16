@@ -10,6 +10,7 @@ This does depend on my lua-ext project.
 local ffi = require 'ffi'
 local class = require 'ext.class'
 local range = require 'ext.range'
+local assert = require 'ext.assert'
 
 -- [=[
 --[[
@@ -108,8 +109,8 @@ function vector:reserve(newcap)
 	if newcap <= self.capacity then return end
 	-- so self.capacity < newcap
 	local newv = self:alloc(self.type, newcap)
-	assert(self.size <= self.capacity)
-	if self.v then ffi.copy(newv, self.v, ffi.sizeof(self.type) * self.size) end
+	assert.le(self.size, self.capacity)
+	if self.v then ffi.copy(newv, self.v, self:getNumBytes()) end
 	self.v = newv
 	self.capacity = newcap
 end
@@ -143,7 +144,7 @@ end
 
 -- returns a ptr to the last element
 function vector:back()
-	assert(self.size > 0)
+	assert.gt(self.size, 0)
 	return self.v + self.size - 1
 end
 
@@ -177,10 +178,11 @@ function vector:insert(...)
 
 		local numToCopy = last - first
 		if numToCopy == 0 then return end
-		assert(numToCopy > 0)
+		assert.gt(numToCopy, 0)
 
 		local offset = where - self.v
-		assert(offset >= 0 and offset <= self.size)
+		assert.le(0, offset)
+		assert.le(offset, self.size)
 
 		local origSize = self.size
 		self:resize(self.size + numToCopy)
@@ -191,7 +193,8 @@ function vector:insert(...)
 	elseif n == 2 then
 		local where, value = ...
 		local offset = where - self.v
-		assert(0 <= offset and offset <= self.size)
+		assert.le(0, offset)
+		assert.le(offset, self.size)
 		self:resize(self.size + 1)
 		for i=self.size-1,offset+1,-1 do
 			self.v[i] = self.v[i-1]
@@ -207,8 +210,10 @@ last = ptr into v, exclusive
 function vector:erase(first, last)
 	if first >= last then return end
 	local iend = self:iend()
-	assert(first >= self.v and first <= iend)
-	assert(last >= self.v and last <= iend)
+	assert.le(self.v, first)
+	assert.le(first, iend)
+	assert.le(self.v, last)
+	assert.le(last, iend)
 	local change = last - first
 	-- [[
 	while last < iend do
@@ -240,6 +245,7 @@ function vector:empty()
 	return self.size == 0
 end
 
+-- hmm idk if this should be default
 function vector:__tostring()
 	local s = '['
 	local sep = ''
@@ -248,6 +254,15 @@ function vector:__tostring()
 		sep = ', '
 	end
 	return s .. ']'
+end
+
+-- TODO rename .size to .length and then :getSize() where 'length' refers to # elements and 'size' refers to #bytes
+function vector:getNumBytes()
+	return ffi.sizeof(self.type) * self.size
+end
+
+function vector:dataToStr()
+	return ffi.string(self.v, self:getNumBytes())
 end
 
 --[[
