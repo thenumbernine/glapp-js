@@ -1663,6 +1663,11 @@ function CData:__tostring()
 		assert(ctype ~= ctypes.void, "how did you get a void type?")
 		value = ctype.get(mt.addr)
 --DEBUG:print('...prim value', value)
+		if ctype == ctypes.int64_t then
+			return value..'LL'
+		elseif ctype == ctypes.uint64_t then
+			return value..'ULL'
+		end
 	elseif ctype.isPointer then
 --DEBUG:print('...ptr value')
 		if mt.addr == 0 then
@@ -1854,6 +1859,15 @@ function CData.__mod(a,b)
 	error("don't know how to mod "..tostring(ma.type)..' and '..tostring(mb.type))
 end
 
+--[[ TODO for primitives, provide behavior for ...
+function CData.__idiv
+function CData.__band
+function CData.__bor
+function CData.__bxor
+function CData.__bnot
+function CData.__shl
+function CData.__shr
+--]]
 
 -- TODO is this too flexible?  should i equals numbers and cdata ptrs?
 function CData.__eq(a,b)
