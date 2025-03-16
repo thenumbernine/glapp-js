@@ -1623,8 +1623,8 @@ function CData:__newindex(key, value)
 				memcpyAddr(fieldAddr, getAddr(value), fieldType.size)
 				return
 			elseif valuetype == 'nil' and fieldType.isPointer then
-				-- only for pointers ... ?  or should I allow it for everything?
-				fieldType.set(fieldAddr, 0)
+				-- should only pointers be allowed to assign nil?  or should I allow it for everything?
+				memSetPtr(fieldAddr, 0)
 			else
 				error("cannot convert '"..valuetype.."'"
 					..(valuemt and valuemt.type and (' ctype='..valuemt.type.name) or '')
