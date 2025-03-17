@@ -208,7 +208,7 @@ ffi.gc = gc
 
 local function freeAddr(addr)
 	local d = assert(dictForAddr[addr], "can't free that address, it was never allocated")
-print("freeing", ('0x%x'):format(d.addr), ('0x%x'):format(d.size))
+--DEBUG:print("freeing", ('0x%x'):format(d.addr), ('0x%x'):format(d.size))
 	d.free = true
 end
 
@@ -1763,8 +1763,8 @@ function CData.__add(a,b)
 	if prima then a = ma.type.get(ma.addr) end
 	if primb then b = mb.type.get(mb.addr) end
 
-	local ptra = pa and ma.type.isPointer or ma.type.arrayCount
-	local ptrb = pb and mb.type.isPointer or mb.type.arrayCount
+	local ptra = pa and (ma.type.isPointer or ma.type.arrayCount)
+	local ptrb = pb and (mb.type.isPointer or mb.type.arrayCount)
 	if ptra and (nb or primb) then
 		return CData.add(a, b)
 	elseif ptrb and na then
@@ -1803,8 +1803,8 @@ function CData.__sub(a,b)
 	if prima then a = ma.type.get(ma.addr) end
 	if primb then b = mb.type.get(mb.addr) end
 
-	local ptra = pa and ma.type.isPointer or ma.type.arrayCount
-	local ptrb = pb and mb.type.isPointer or mb.type.arrayCount
+	local ptra = pa and (ma.type.isPointer or ma.type.arrayCount)
+	local ptrb = pb and (mb.type.isPointer or mb.type.arrayCount)
 	if ptra and nb then
 		return CData.add(a, -b)
 	elseif ptrb and na then
@@ -2138,8 +2138,8 @@ function CData.__eq(a,b)
 	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
-	local ptra = pa and ma.type.isPointer or ma.type.arrayCount
-	local ptrb = pb and mb.type.isPointer or mb.type.arrayCount
+	local ptra = pa and (ma.type.isPointer or ma.type.arrayCount)
+	local ptrb = pb and (mb.type.isPointer or mb.type.arrayCount)
 	if prima then a = ma.type.get(ma.addr) end
 	if primb then b = mb.type.get(mb.addr) end
 
@@ -2167,8 +2167,8 @@ function CData.__ne(a,b)
 	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
-	local ptra = pa and ma.type.isPointer or ma.type.arrayCount
-	local ptrb = pb and mb.type.isPointer or mb.type.arrayCount
+	local ptra = pa and (ma.type.isPointer or ma.type.arrayCount)
+	local ptrb = pb and (mb.type.isPointer or mb.type.arrayCount)
 	if prima then a = ma.type.get(ma.addr) end
 	if primb then b = mb.type.get(mb.addr) end
 
@@ -2196,8 +2196,8 @@ function CData.__lt(a,b)
 	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
-	local ptra = pa and ma.type.isPointer or ma.type.arrayCount
-	local ptrb = pb and mb.type.isPointer or mb.type.arrayCount
+	local ptra = pa and (ma.type.isPointer or ma.type.arrayCount)
+	local ptrb = pb and (mb.type.isPointer or mb.type.arrayCount)
 	if prima then a = ma.type.get(ma.addr) end
 	if primb then b = mb.type.get(mb.addr) end
 
@@ -2225,8 +2225,8 @@ function CData.__le(a,b)
 	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
-	local ptra = pa and ma.type.isPointer or ma.type.arrayCount
-	local ptrb = pb and mb.type.isPointer or mb.type.arrayCount
+	local ptra = pa and (ma.type.isPointer or ma.type.arrayCount)
+	local ptrb = pb and (mb.type.isPointer or mb.type.arrayCount)
 	if prima then a = ma.type.get(ma.addr) end
 	if primb then b = mb.type.get(mb.addr) end
 
@@ -2254,8 +2254,8 @@ function CData.__gt(a,b)
 	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
-	local ptra = pa and ma.type.isPointer or ma.type.arrayCount
-	local ptrb = pb and mb.type.isPointer or mb.type.arrayCount
+	local ptra = pa and (ma.type.isPointer or ma.type.arrayCount)
+	local ptrb = pb and (mb.type.isPointer or mb.type.arrayCount)
 	if prima then a = ma.type.get(ma.addr) end
 	if primb then b = mb.type.get(mb.addr) end
 
@@ -2283,8 +2283,8 @@ function CData.__ge(a,b)
 	local nb = type(b) == 'number'
 	local prima = ma and ma.isCData and ma.type.isPrimitive
 	local primb = mb and mb.isCData and mb.type.isPrimitive
-	local ptra = pa and ma.type.isPointer or ma.type.arrayCount
-	local ptrb = pb and mb.type.isPointer or mb.type.arrayCount
+	local ptra = pa and (ma.type.isPointer or ma.type.arrayCount)
+	local ptrb = pb and (mb.type.isPointer or mb.type.arrayCount)
 	if prima then a = ma.type.get(ma.addr) end
 	if primb then b = mb.type.get(mb.addr) end
 

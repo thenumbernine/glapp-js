@@ -1693,11 +1693,7 @@ function sdl.SDL_GL_SwapWindow(window)
 	end
 end
 
--- returns the # of events
--- either this or SDL_GL_SwapWindow should be our coroutine yield ...
-function sdl.SDL_PollEvent(event)
-
-	-- see if there's any mouse motion
+local function updateMouseMoveEvent()
 	if mouseMovedSinceLastPoll then
 		mouseMovedSinceLastPoll = false
 		local sdlev = eventQueue:emplace_back()
@@ -1714,15 +1710,57 @@ function sdl.SDL_PollEvent(event)
 		mouseAtLastPollX = mouseX
 		mouseAtLastPollY = mouseY
 	end
+end
+
+-- returns the # of events
+-- writes one event at a time
+-- either this or SDL_GL_SwapWindow should be our coroutine yield ...
+function sdl.SDL_PollEvent(event)
+
+	-- see if there's any mouse motion
+	updateMouseMoveEvent()
 
 	-- return our events
 	if #eventQueue > 0 then
-		local srcEvent = eventQueue:back()
-		eventQueue:resize(#eventQueue-1)	-- pop_back function?
-		ffi.copy(event, srcEvent, ffi.sizeof'SDL_Event')
+		if event ~= nil then
+			local srcEvent = eventQueue:back()
+			eventQueue:resize(#eventQueue-1)	-- pop_back function?
+			ffi.copy(event, srcEvent, ffi.sizeof'SDL_Event')
+		end
 		return 1
 	end
 	return 0
+end
+
+-- https://wiki.libsdl.org/SDL2/SDL_PumpEvents
+function sdl.SDL_PumpEvents()
+	-- "gather events from input devices"
+	-- I guess I'm already automatically doing that with the js callbacks ...
+	-- I could separate the event queue before PumpEvents and after but then that's adding one more event buffer ...
+	-- so much bloat to the SDL event API ...
+	updateMouseMoveEvent()
+end
+
+-- https://wiki.libsdl.org/SDL2/SDL_PeepEvents
+function sdl.SDL_PeepEvents(events, numEvents, action, minType, maxType)
+	if action == sdl.SDL_ADDEVENT then
+		-- sdl docs don't specify if the # events is before or after modifying the event queue...
+		eventQueue:insert(eventQueue:iend(), events, events + numEvents)
+		return #eventQueue
+	elseif action == sdl.SDL_PEEKEVENT then
+		-- TODO respect minType/maxType
+		ffi.copy(events, eventQueue.v, ffi.sizeof'SDL_Event' * math.min(numEvents, #eventQueue))
+		return #eventQueue
+	elseif action == sdl.SDL_GETEVENT then
+		-- TODO respect minType/maxType
+		local numRet = math.min(numEvents, #eventQueue)
+		ffi.copy(events, eventQueue.v, ffi.sizeof'SDL_Event' * numRet)
+		eventQueue:erase(eventQueue.v, eventQueue.v + numRet)
+		return numRet
+	else
+		-- error
+		return -1
+	end
 end
 
 return sdl
