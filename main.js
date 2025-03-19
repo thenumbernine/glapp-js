@@ -1,4 +1,4 @@
-import { lua } from './lua-interop.js';
+import { lua } from '/js/lua-interop.js';
 
 const urlparams = new URLSearchParams(location.search);
 
@@ -318,7 +318,6 @@ FS.writeFile('audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
 
 FS.writeFile('image/luajit/jscanvas.lua', `
 local ffi = require 'ffi'
-ffi.null = ffi.NULL
 local class = require 'ext.class'
 local path = require 'ext.path'
 
@@ -1515,13 +1514,13 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		imgui : imgui,
 
 		pako : window.pako,
-	
+
 		// TODO find where in FS stdout to do this and get rid of this function
 		redirectPrint : (s) => {
 			lua.stdoutPrint(s);
 		},
 	});
-	
+
 	imgui.clear();
 	stdoutTA.value = '';
 
@@ -1535,7 +1534,6 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		console.log('failed to parse args as JSON:', e);
 	}
 	lua.doString(`
-
 -- redirect Lua's print to my textarea
 -- TODO find where in FS stdout to do this and get rid of this function
 print = function(...)
@@ -1551,7 +1549,24 @@ end
 -- this is only for redirecting errors to output
 -- TODO find where in FS stderr to do this and get rid of this function
 xpcall(function()
+
 	local ffi = require 'ffi'
+	function ffi.stringBuffer(s)
+		local ptr = ffi.new('char[?]', #s+1)
+		ffi.copy(ptr, s, #s)
+		ptr[#s] = 0
+		return s
+	end
+	
+	-- TODO this in luaffifb
+	ffi.null = ffi.NULL
+
+	-- TODO this in luaffifb
+	local oldffistring = ffi.string
+	ffi.string = function(ptr, ...)
+		if ptr == nil then return '(null)' end
+		return oldffistring(ptr, ...)
+	end
 
 	-- override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
 	package.loaded['ext.gcmem'] = {

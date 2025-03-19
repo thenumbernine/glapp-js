@@ -1327,7 +1327,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	local document = window.document
 	document.title = title
 
-	canvas = js:createCanvas()
+	canvas = assert(js:createCanvas(), 'js:createCanvas failed')
 
 	window:addEventListener('keyup', function(jsev)
 		local sdlev = eventQueue:emplace_back()
@@ -1443,14 +1443,14 @@ function sdl.SDL_GL_CreateContext(sdlWindow)
 	}
 	for i,name in ipairs(webGLNames) do
 		xpcall(function()
---DEBUG:print('trying to init gl context of type', name)
+print('trying to init gl context of type', name, 'canvas', canvas)
 			webgl = canvas:getContext(name)
 			contextName = name
 		end, function(err)
 			print('canvas:getContext('..name..') failed with exception '..err)
 		end)
 		if webgl then
---DEBUG:print('...got gl')
+print('...got gl')
 			break
 		end
 	end
