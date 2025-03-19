@@ -237,7 +237,7 @@ const lua_to_js = (L, i) => {
 		i += M._lua_gettop(L)+1;
 	}
 	const t = M._lua_type(L, i);
-//console.log('lua_to_js type', t);
+console.log('lua_to_js type', t);
 	switch (t) {
 	case M.LUA_TNONE:
 		return undefined;
@@ -262,22 +262,22 @@ const lua_to_js = (L, i) => {
 		return M.UTF8ToString(s, len);
 	case M.LUA_TTABLE:
 	case M.LUA_TFUNCTION:
-//console.log('lua_to_js top=', M._lua_gettop(L));
-//console.log('lua_to_js got table/function, checking cache...');
+console.log('lua_to_js top=', M._lua_gettop(L));
+console.log('lua_to_js got table/function, checking cache...');
 		M._lua_getglobal(L, M.stringToNewUTF8('luaToJs'));	// stack = luaToJs
 		M._lua_pushvalue(L, i);			// stack = luaToJs, luaValue
 		M._lua_gettable(L, -2);			// stack = luaToJs, luaToJs[luaValue]
 		if (!M._lua_isnil(L, -1)) {
 			const jsObjID = M._lua_tointeger(L, -1);
-//console.log('lua_to_js got key', typeof(jsObjID), jsObjID);
+console.log('lua_to_js got key', typeof(jsObjID), jsObjID);
 			M._lua_pop(L, 2);
-//console.log('lua_to_js top=', M._lua_gettop(L));
-//console.log('lua_to_js returning', luaToJs.get(jsObjID));
+console.log('lua_to_js top=', M._lua_gettop(L));
+console.log('lua_to_js returning', luaToJs.get(jsObjID));
 			return luaToJs.get(jsObjID);
 		} else {
-//console.log('lua_to_js building wrapper...');
+console.log('lua_to_js building wrapper...');
 			M._lua_pop(L, 1);			// stack = luaToJs
-//console.log('lua_to_js top=', M._lua_gettop(L));
+console.log('lua_to_js top=', M._lua_gettop(L));
 
 			let ret;
 			if (t == M.LUA_TTABLE) {
@@ -306,11 +306,11 @@ const lua_to_js = (L, i) => {
 					return ret;
 				};
 			}
-//console.log('lua_to_js built wrapper', ret);
-//console.log('lua_to_js top=', M._lua_gettop(L));
+console.log('lua_to_js built wrapper', ret);
+console.log('lua_to_js top=', M._lua_gettop(L));
 
 			const jsObjID = BigInt(jsToLua.size);	// consistent with push_js below
-//console.log('lua_to_js setting cache key', jsObjID);
+console.log('lua_to_js setting cache key', jsObjID);
 			luaToJs.set(jsObjID, ret);
 			jsToLua.set(ret, jsObjID);
 
@@ -323,7 +323,7 @@ const lua_to_js = (L, i) => {
 			M._lua_seti(L, -2, jsObjID);		// stack = jsToLua; jsToLua[jsObjID] = luaValue
 			M._lua_pop(L, 1);
 
-//console.log('lua_to_js returning');
+console.log('lua_to_js returning');
 			return ret;
 		}
 	default:
@@ -332,7 +332,7 @@ const lua_to_js = (L, i) => {
 };
 
 const push_js = (L, jsValue) => {
-//console.log('push_js begin top', M._lua_gettop(L));
+console.log('push_js begin top', M._lua_gettop(L));
 	const t = typeof(jsValue);
 	switch (t) {
 	case 'undefined':
@@ -355,41 +355,41 @@ const push_js = (L, jsValue) => {
 			M._lua_pushnil(L);
 			return 1;
 		}
-//console.log('push_js checking cache for', jsValue);
+console.log('push_js checking cache for', jsValue);
 		// see if it's already there
 		let jsObjID = jsToLua.get(jsValue);
 		if (jsObjID !== undefined) {
-//console.log('push_js found in entry', jsObjID);
+console.log('push_js found in entry', jsObjID);
 			M._lua_getglobal(L, M.stringToNewUTF8('jsToLua'));
 			M._lua_geti(L, -1, BigInt(jsObjID));
-//console.log('push_js returning');
+console.log('push_js returning');
 			return 1;
 		} else {
 			jsObjID = BigInt(jsToLua.size);
-//console.log("push_js didn't find any entry, using new key", jsObjID);
+console.log("push_js didn't find any entry, using new key", jsObjID);
 			if (t == 'function') {
-//console.log('push_js pushing function');
+console.log('push_js pushing function');
 				// tempted to push a Lua object with __call, not that it makes a difference
 				M._lua_pushcfunction(L, M.addFunction(L => {
 					// convert args to js
 					const n = M._lua_gettop(L);
-//console.log('lua->js call converting this arg 1...');
+console.log('lua->js call converting this arg 1...');
 					const _this = lua_to_js(L, 1);
 					const args = [];
 					for (let i = 2; i <= n; ++i) {
-//console.log('lua->js call converting arg ', i, '...');
+console.log('lua->js call converting arg ', i, '...');
 						args.push(lua_to_js(L, i));
 					}
 					// call jsValue
-//console.log('lua->js calling func=', jsValue, 'arg1=this', _this, 'args=', args);
+console.log('lua->js calling func=', jsValue, 'arg1=this', _this, 'args=', args);
 					const ret = jsValue.apply(_this, args);
 					// convert results to lua
 					// only supports single-return for now
-//console.log('... pushing ret', ret);
+console.log('... pushing ret', ret);
 					return push_js(L, ret);
 				}, 'ip'));		// luaWrapper
 			} else if (t == 'object') {
-//console.log('push_js pushing object');
+console.log('push_js pushing object');
 				// convert to a Lua table and push that table
 				// or push a table with metamethods that read into this table
 				M._lua_newtable(L);	// t={}
@@ -408,15 +408,16 @@ const push_js = (L, jsValue) => {
 					// t, indexKey
 					// should I even re-get the js table?  or just use closure?
 					const indexKey = lua_to_js(L, 2);
-//console.log('wrapper for jsToLua key', jsObjID, 'index key', indexKey, 'returning value', jsValue[indexKey]);
+console.log('wrapper for jsToLua key', jsObjID, 'index key', indexKey, 'returning value', jsValue[indexKey]);
 					return push_js(L, jsValue[indexKey]);
 				}, 'ip'));	// t, mt, luaWrapper
 				M._lua_setfield(L, -2, M.stringToNewUTF8('__index'));
 				M._lua_pushcfunction(L, M.addFunction(L => {
-					M._lua_error(L, "js wrapped objs are read-only for now");
 					// t, newindexKey, newindexValue
+					// TODO instead of relying on closures, we can define this function once and read the jsObjID from the table
 					const newindexKey = lua_to_js(L, 2);
 					const newindexValue = lua_to_js(L, 3);
+console.log('wrapper for jsValue=', jsValue, ' jsObjID=', jsObjID, 'newindexKey=', newindexKey, 'newindexValue=', newindexValue);
 					jsValue[newindexKey] = newindexValue;
 					return 0;
 				}, 'ip')); // t, mt, luaWrapper
@@ -429,7 +430,7 @@ const push_js = (L, jsValue) => {
 				M._lua_setmetatable(L, -2);	// t, mt
 			}
 			// keep up with the lua<->js map
-//console.log('push_js setting relation with key', jsObjID);
+console.log('push_js setting relation with key', jsObjID);
 			jsToLua.set(jsValue, jsObjID);
 			luaToJs.set(jsObjID, jsValue);
 			M._lua_getglobal(L, M.stringToNewUTF8('jsToLua'));	// stack = luaWrapper, jsToLua
@@ -441,13 +442,13 @@ const push_js = (L, jsValue) => {
 			M._lua_pushinteger(L, jsObjID);						// stack = luaWrapper, luaToJs, luaWrapper, jsObjID
 			M._lua_settable(L, -3);								// stack = luaWrapper, luaToJs; luaToJs[luaWrapper] = jsObjID
 			M._lua_pop(L, 1);									// stack = luaWrapper
-//console.log('push_js returning');
+console.log('push_js returning');
 			return 1;
 		}
 	default:
 		throw "push_js unknown js type "+t;
 	}
-//console.log('push_js end top', M._lua_gettop(L));
+console.log('push_js end top', M._lua_gettop(L));
 };
 
 let L;
@@ -1838,6 +1839,37 @@ throw 'done';
 	}
 	*/
 
+/* test setInterval */
+	let counter = 0;
+	lua.global.set('js', {
+		global:window,
+		intervalCB : function() {
+			++counter;
+			console.log('counter', counter);
+			if (counter > 3) {
+				console.log('done');
+				clearInterval(window.myInterval);
+			}
+		},
+	});
+lua.doString(`
+local window = js.global
+--[[
+local counter = 0
+local interval = window:setInterval(function()
+	counter = counter + 1
+	print('counter', counter)
+	if counter > 3 then
+		print'done'
+		window:clearInterval(interval)
+	end
+end, 1000)
+--]]
+window.myInterval = window:setInterval(js.intervalCB, 1000)
+print'finished setInterval test'
+`);
+throw 'done';
+/**/
 	lua.global.set('js', {
 		//null : jsNullToken,	// special hack with the lua<->js to ensure null is returned
 
@@ -1909,6 +1941,7 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		console.log('failed to parse args as JSON:', e);
 	}
 	lua.doString(`
+
 local ffi = require 'ffi'
 
 -- override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
