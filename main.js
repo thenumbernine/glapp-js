@@ -162,11 +162,19 @@ window.FS = FS;
 lua.newState();
 window.lua = lua;
 
-/* testing * /
+/* testing */
+lua.global.set('js', {global:window});
 lua.doString(`
---error'here' -- works
---print'hi'	-- works
+
+-- js calling js passed through lua is having trouble ...
+js.global.mycb = function()
+	js.global:alert('test')
+end
+
+--js.global.mycb() -- works from here
 `);
+console.log('mycb', window.mycb);
+window.mycb();
 throw 'done';
 /**/
 
@@ -752,7 +760,7 @@ let stdoutTA;
 let stdinTA;
 // store as pixel <=> smoother scrolling when resizing divider, store as fraction <=> smoother when resizing window ... shrug
 
-const stdoutPrint = s => {
+lua.stdoutPrint = function(s) {
 	stdoutTA.value += s + '\n';
 	console.log('> '+s);	//log here too?
 };

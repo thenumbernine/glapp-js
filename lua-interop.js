@@ -107,41 +107,50 @@ console.log('lua_to_js returning', luaToJs.get(jsObjID));
 console.log('lua_to_js building wrapper...');
 			M._lua_pop(L, 1);			// stack = luaToJs
 console.log('lua_to_js top=', M._lua_gettop(L));
+			
+			const jsObjID = BigInt(jsToLua.size);	// consistent with push_js below
+console.log('lua_to_js cache key=', jsObjID);
 
-			let ret;
+			let jsValue;
 			if (t == M.LUA_TTABLE) {
-				ret = {};	// do I want JS objects or JS maps?  maps are more like Lua, but don't have syntax support in JS ...
+				jsValue = {};	// do I want JS objects or JS maps?  maps are more like Lua, but don't have syntax support in JS ...
 				M._lua_pushnil(L);  // first key
 				while (M._lua_next(L, t) != 0) {
-				   ret[lua_to_js(L, -2)] = lua_to_js(L, -1);
+				   jsValue[lua_to_js(L, -2)] = lua_to_js(L, -1);
 				   lua_pop(L, 1);
 				}
 			} else if (t == M.LUA_TFUNCTION) {
-				const f = M._lua_tocfunction(L, i);
 				// create proxy obj
-				ret = (...args) => {
+				jsValue = (...args) => {
+console.log('lua_to_js proxy function being called with args', ...args);					
 					M._lua_pushcfunction(L, errHandler);	// msgh
-					M._lua_pushcfunction(L, f);				// msgh, f
+					
+					// get back the function from the cache key
+					M._lua_getglobal(L, M.stringToNewUTF8('jsToLua'));	// msgh, jsToLua
+					M._lua_geti(L, -1, jsObjID);						// msgh, jsToLua, jsToLua[jsObjID]
+					M._lua_remove(L, -2);								// msgh, jsToLua[jsObjID]
+					
 					const n = args.length;
 					for (let i = 0; i < n; ++i) {
 						push_js(L, args[i]);
 					}										// msgh, f, args...
+console.log('lua_to_js proxy function pcall...');					
 					const numret = M._lua_pcall(L, n, M.LUA_MULTRET, 1);
+console.log('lua_to_js proxy function got back #return=', numret);					
 					// results ... always an array?  coerce to prim for size <= 1?
 					const ret = [];
 					for (let i = 0; i < numret; ++i) {
 						ret.push(lua_to_js(L, -numret+i));
 					}
+console.log('lua_to_proxy function got results', ret);					
 					return ret;
 				};
 			}
-console.log('lua_to_js built wrapper', ret);
+console.log('lua_to_js built wrapper', jsValue);
 console.log('lua_to_js top=', M._lua_gettop(L));
 
-			const jsObjID = BigInt(jsToLua.size);	// consistent with push_js below
-console.log('lua_to_js setting cache key', jsObjID);
-			luaToJs.set(jsObjID, ret);
-			jsToLua.set(ret, jsObjID);
+			luaToJs.set(jsObjID, jsValue);
+			jsToLua.set(jsValue, jsObjID);
 
 			M._lua_pushvalue(L, i);				// stack = luaToJs, luaValue
 			M._lua_pushinteger(L, jsObjID);		// stack = luaToJs, luaValue, jsObjID
@@ -152,8 +161,8 @@ console.log('lua_to_js setting cache key', jsObjID);
 			M._lua_seti(L, -2, jsObjID);		// stack = jsToLua; jsToLua[jsObjID] = luaValue
 			M._lua_pop(L, 1);
 
-console.log('lua_to_js returning');
-			return ret;
+console.log('lua_to_js returning', jsValue);
+			return jsValue;
 		}
 	default:
 		throw 'lua_to_js unknown lua type '+t;
@@ -243,10 +252,11 @@ console.log('wrapper for jsToLua key', jsObjID, 'index key', indexKey, 'returnin
 				M._lua_setfield(L, -2, M.stringToNewUTF8('__index'));
 				M._lua_pushcfunction(L, M.addFunction(L => {
 					// t, newindexKey, newindexValue
+					const jsValue = lua_to_js(L, 1);	// optional line or just use the closure variable
 					// TODO instead of relying on closures, we can define this function once and read the jsObjID from the table
 					const newindexKey = lua_to_js(L, 2);
 					const newindexValue = lua_to_js(L, 3);
-console.log('wrapper for jsValue=', jsValue, ' jsObjID=', jsObjID, 'newindexKey=', newindexKey, 'newindexValue=', newindexValue);
+console.log('wrapper for jsValue=', jsValue, 'newindexKey=', newindexKey, 'newindexValue=', newindexValue);
 					jsValue[newindexKey] = newindexValue;
 					return 0;
 				}, 'ip')); // t, mt, luaWrapper
@@ -314,13 +324,13 @@ window.luaToJs = luaToJs;
 			return 1;
 		}, 'ip');
 	},
-	doString : s => {
+	doString : function(s) {
 		M._lua_pushcfunction(L, errHandler);
 		const result = M._luaL_loadstring(L, M.stringToNewUTF8(s));	// throw on error?
 		if (result != M.LUA_OK) {
 			// TODO get stack trace and error message
 			const msg = M.UTF8ToString(M._lua_tostring(L, -1));
-			stdoutPrint('syntax error: '+msg);
+			this.stdoutPrint('syntax error: '+msg);
 			throw 'syntax error: '+msg;
 		}
 		//console.log('luaL_loadstring', result);	// no syntax errors
@@ -329,7 +339,7 @@ window.luaToJs = luaToJs;
 		//console.log('lua_pcall', ret);
 		if (ret != 0) {
 			const msg = M.UTF8ToString(M._lua_tostring(L, -1));
-			stdoutPrint(msg);
+			this.stdoutPrint(msg);
 			//throw msg; // return? idk?
 		}
 	},
@@ -347,6 +357,10 @@ window.luaToJs = luaToJs;
 			M._lua_setglobal(L, M.stringToNewUTF8(name));
 			/**/
 		},
+	},
+	// feel free to override this
+	stdoutPrint : function(s) {
+		console.log('> '+s);
 	},
 };
 
