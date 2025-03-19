@@ -1085,7 +1085,9 @@ for n=1,4 do
 			local glname = 'glUniform'..n..t..'v'
 			local webglname = 'uniform'..n..t..'v'
 			local len = n	-- js typed arrays use # elements, not byte size ...
-			local jsarrayctor = t == 'f' and 'Float32Array' or 'Int32Array'
+			local jsarrayctor = t == 'f' and 'Float32Array' or (
+				t == 'i' and 'Int32Array' or 'Uint32Array'
+			)
 			gl[glname] = function(location, count, value)
 				--assert(count == 1, "TODO")
 				value = ffi.dataToArray(jsarrayctor, value, len * count)

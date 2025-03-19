@@ -1519,9 +1519,26 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		redirectPrint : (s) => {
 			lua.stdoutPrint(s);
 		},
-		dataToArray : (arrayType, ...args) => {
-			const ar = window[arrayType]
-			return new ar(...args);
+		dataToArray : (jsArrayClassName, data, count) => {
+			if (data == null) return null;
+
+			const jsElemSizeForTypedArrayName = {
+				Float64Array : 8,
+				Float32Array : 4,
+				Int32Array : 4,
+				Uint32Array : 4,
+				Int16Array : 2,
+				Uint16Array : 2,
+			};
+
+			const jsarrayElemSize = jsElemSizeForTypedArrayName[jsArrayClassName] || 1;
+			if (count === null || count === undefined) {
+				throw "dataToArray expected count";
+       		}
+
+			const cl = window[jsArrayClassName];
+			const result = new cl(M.HEAPU8.buffer, data, count);
+			return result;
 		},
 	});
 
@@ -1563,8 +1580,8 @@ xpcall(function()
 	end
 
 	-- TODO just call js directly
-	function ffi.dataToArray(arrayType, ...)
-		return js:dataToArray(arrayType, ...)
+	function ffi.dataToArray(...)
+		return js:dataToArray(...)
 	end
 	
 	-- TODO this in luaffifb
