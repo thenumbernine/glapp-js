@@ -1,4 +1,5 @@
 local js = require 'js'
+local window = js.global
 local ffi = require 'ffi'
 local table = require 'ext.table'
 local class = require 'ext.class'
@@ -1115,7 +1116,7 @@ for n=1,4 do
 		end
 	end
 
-	do
+	if n > 1 then
 		local glname = 'glUniformMatrix'..n..'fv'
 		local webglname = 'uniformMatrix'..n..'fv'
 		local len = n * n
@@ -1565,8 +1566,8 @@ function gl.glUnmapBuffer(target) error'not supported' end	-- webgl equivalent?
 function gl.glGetBufferPointerv(target, pname, params) error'not supported' end
 
 function gl.glDrawBuffers(n, bufs)
-	local ar = js.global:Array()
-	for i=0,n do
+	local ar = window:Array()
+	for i=0,n-1 do
 		ar[i] = bufs[i]
 	end
 	return webgl:drawBuffers(ar)

@@ -1527,7 +1527,7 @@ function sdl.SDL_GL_SwapWindow(window)
 
 	-- test for resize events based on canvas size
 	if canvas then
-		local width =  canvas.offsetWidth
+		local width = canvas.offsetWidth
 		local height = canvas.offsetHeight
 		if width ~= lastWindowWidth or height ~= lastWindowHeight then
 			lastWindowWidth = width

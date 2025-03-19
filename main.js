@@ -53,7 +53,7 @@ TODO tetris-attack
 TODO zeta2d/dumpworld
 TODO farmgame
 TODO imgui library <-> html shim layer
-TODO hydro-cl
+TODO hydro-cl ... haha with opencl ...
 TODO zeta3d / zetatron 3d metroidvania voxel
 TODO nbody-gpu
 TODO waves-in-curved space ... ?
@@ -155,8 +155,9 @@ const Span = DomTag('span');
 const TextArea = DomTag('textarea');
 
 const M = lua.lib;
-window.M = M;
 const FS = M.FS;
+//debugging ... or it's also in the js<->lua interop using js.global (TODO a better way to talk between them?)
+window.M = M;
 window.FS = FS;
 
 lua.newState();
