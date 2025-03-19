@@ -1448,21 +1448,28 @@ const doRun = async () => {
 	// make a new state
 	lua.newState();
 
-	/* special hack ... make sure luaToJs for jsNullToken returns null
-	{
-		const jsNullToken = {};
-		push_js(jsNullToken);
-		M._lua_pop(L, 1);
-		const k = jsToLua.get(jsNullToken);
-		luaToJs.set(k, null);
-	}
-	*/
+
+
+/* make sure null is null */
+	window.f = (x) => {
+		console.log('js.f', x);
+		return null;
+	};
+	lua.doString(`
+local js = require 'js'
+print('in lua: js.null', js.null)
+local x = js.global:f(js.null)
+print('lua got back', x)	-- should be js.null which should have a tostring of (js:null) or something
+`);
+throw 'done';
+/**/
 
 	lua.global.set('js', {
 		//null : jsNullToken,	// special hack with the lua<->js to ensure null is returned
 		// or just make js.null <-> nil <-> undefined?
 
 		global : window,
+		['null'] : jsNullToken,
 
 		FS : FS,
 
@@ -1583,7 +1590,7 @@ xpcall(function()
 	function ffi.dataToArray(...)
 		return js:dataToArray(...)
 	end
-	
+
 	-- TODO this in luaffifb
 	ffi.null = ffi.NULL
 
@@ -1656,7 +1663,7 @@ xpcall(function()
 		if coroutine.status(sdl.mainthread) == 'dead' then return false, 'dead' end
 		local res, err = coroutine.resume(sdl.mainthread)
 		if not res then
-			print('coroutine.resume failed')
+			print('mainthread coroutine.resume failed.')
 			print(err)
 			print(debug.traceback(sdl.mainthread))
 			js:setMainInterval(nil)
