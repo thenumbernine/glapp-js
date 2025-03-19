@@ -1458,11 +1458,15 @@ const doRun = async () => {
 		return img;
 	};
 
-	window.Canvas = Canvas;
 	window.resize = resize;
+	window.Canvas = Canvas;
+	
 	window.closeCanvas = closeCanvas;
+	window.setCanvas = (canvas_) => { canvas = canvas_; };
+	
 	window.closeGL = closeGL;
 	window.setGL = (gl_) => { gl = gl_; };
+	
 	window.imgui = imgui;
 
 	window.dataToArray = (jsArrayClassName, data, count) => {

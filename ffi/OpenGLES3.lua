@@ -693,6 +693,9 @@ function gl.setWebGLContext(webgl_)
 	webgl = webgl_
 end
 
+local glEmuMajorVersion = 3
+local glEmuMinorVersion = 0
+
 function gl.glGetString(name)
 	-- TODO initialize upon any dereference?
 	if name == gl.GL_VENDOR then
@@ -702,9 +705,9 @@ function gl.glGetString(name)
 	elseif name == gl.GL_VERSION then
 		return ffi.stringBuffer(webgl:getParameter(webgl.VERSION))
 	elseif name == gl.GL_MAJOR_VERSION then
-		return ffi.stringBuffer'3'	-- TODO what version should I return?  the GLES-equivalent version of 3.0?  or the GL-equivalent version of the GLES version?
+		return ffi.stringBuffer(tostring(glEmuMajorVersion))	-- TODO what version should I return?  the GLES-equivalent version of 3.0?  or the GL-equivalent version of the GLES version?
 	elseif name == gl.GL_MINOR_VERSION then
-		return ffi.stringBuffer'0'
+		return ffi.stringBuffer(tostring(glEmuMinorVersion))
 	elseif name == gl.GL_SHADING_LANGUAGE_VERSION then
 		-- TODO tempted to send something else since this string has so much extra crap in it
 		local version = webgl:getParameter(webgl.SHADING_LANGUAGE_VERSION)
@@ -954,9 +957,9 @@ local getParameterInfo = {
 local getParameterGetter = makeGetter(getParameterInfo, function(pname)
 	-- not webgl api
 	if pname == gl.GL_MAJOR_VERSION then
-		return 3
+		return glEmuMajorVersion
 	elseif pname == gl.GL_MINOR_VERSION then
-		return 0
+		return glEmuMinorVersion
 	else
 	-- in webgl api:
 		return webgl:getParameter(pname)

@@ -1337,6 +1337,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		},
 		prependTo = document.body,
 	}
+	window:setCanvas(canvas)
 	sdl.canvas = canvas		-- assign here for cimgui to find later
 	window.canvas = canvas	-- here for debugging
 	window:resize()			-- set our initial size
