@@ -1311,7 +1311,6 @@ function gl.glBindBuffer(target, buffer)
 end
 
 function gl.glBufferData(target, size, data, usage)
-print('glBufferData', data)
 	-- if we don't cast first then, for the case of arrays-of-types-with-ffi-metatypes, luaffifb calls the metatype __eq with the ffi.null object and it usually goes bad
 	-- so to get around that ,cast to void* first:
 	data = ffi.cast('void*', data)
