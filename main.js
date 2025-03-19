@@ -331,7 +331,7 @@ local Image = require 'image'	-- don't require until after setting image.luajit.
 function CanvasImageLoader:save(args) error("save not supported") end
 
 function CanvasImageLoader:load(fn)
-	local jssrc = js:loadImage(path(fn).path)
+	local jssrc = window:loadImage(path(fn).path)
 	local len = jssrc.buffer.byteLength
 	-- copy from javascript Uint8Array to our ffi memory
 	local dstbuf = ffi.new('char[?]', len)
@@ -1476,26 +1476,14 @@ const doRun = async () => {
 	
 	window.imgui = imgui;
 
-	const jsElemBitsForTypedArrayName = {
-		Float64Array : 3,
-		Float32Array : 2,
-		Int32Array : 2,
-		Uint32Array : 2,
-		Int16Array : 1,
-		Uint16Array : 1,
-	};
 	window.dataToArray = (jsArrayClassName, addr, count) => {
 		if (addr == null) return null;	// ???
-
-		if (count === null || count === undefined) {
-			//const jsarrayElemBits = jsElemBitsForTypedArrayName[jsArrayClassName] || 0;
-			//count = addr.length >> jsarrayElemBits; 
-			throw "dataToArray expected count";
-		}
-
 		const cl = window[jsArrayClassName];
-		const result = new cl(M.HEAPU8.buffer, addr, count);
-		return result;
+		if (count === null || count === undefined) {
+			return new cl(M.HEAPU8.buffer, addr);
+		} else {
+			return new cl(M.HEAPU8.buffer, addr, count);
+		}
 	};
 
 	imgui.clear();
