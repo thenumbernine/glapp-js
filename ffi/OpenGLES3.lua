@@ -952,7 +952,15 @@ local getParameterInfo = {
 }
 
 local getParameterGetter = makeGetter(getParameterInfo, function(pname)
-	return webgl:getParameter(pname)
+	-- not webgl api
+	if pname == gl.GL_MAJOR_VERSION then
+		return 3
+	elseif pname == gl.GL_MINOR_VERSION then
+		return 0
+	else
+	-- in webgl api:
+		return webgl:getParameter(pname)
+	end
 end)
 function gl.glGetFloatv(pname, data)
 	return getParameterGetter(data, pname)	-- data first

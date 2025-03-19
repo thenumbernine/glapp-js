@@ -1475,7 +1475,7 @@ print('...got gl')
 
 	-- close any old webgl context, store the new webgl context.
 	window:closeGL()
-	window.gl = gl
+	window.gl = webgl
 	js.global:setGL(webgl)	-- let main.js know to stop this gl context if we get an error
 
 	for _, ext in ipairs{
