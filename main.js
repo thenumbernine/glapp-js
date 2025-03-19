@@ -1413,14 +1413,14 @@ const closeCanvas = () => {
 	resize(); // refresh split
 };
 
-let mainInterval;
+window.glappMainInterval = undefined;
 const doRun = async () => {
 
 	// we need to make sure the old setInterval is dead before starting the new one ...
 	// ... or else the next update could kill us ...
-	if (mainInterval) {
-		clearInterval(mainInterval);
-		mainInterval = undefined;
+	if (window.glappMainInterval) {
+		clearInterval(window.glappMainInterval);
+		window.glappMainInterval = undefined;
 	}
 
 	imgui.init();	// make the imgui div
@@ -1448,106 +1448,68 @@ const doRun = async () => {
 	// make a new state
 	lua.newState();
 
-
-
-/* make sure null is null */
-	window.f = (x) => {
-		console.log('js.f', x);
-		return null;
+	window.loadImage = fn => {
+		if (fn.substr(0,1) != '/') {
+			fn = FS.cwd() + '/' + fn;
+			if (fn.substr(0,1) == '/') fn = fn.substr(1);
+		}
+		const img = imageCache[fn];
+		if (!img) throw "you need to decode up front file "+fn;
+		return img;
 	};
-	lua.doString(`
-local js = require 'js'
-print('in lua: js.null', js.null)
-local x = js.global:f(js.null)
-print('lua got back', x)	-- should be js.null which should have a tostring of (js:null) or something
-`);
-throw 'done';
-/**/
 
-	lua.global.set('js', {
-		//null : jsNullToken,	// special hack with the lua<->js to ensure null is returned
-		// or just make js.null <-> nil <-> undefined?
-
-		global : window,
-		['null'] : jsNullToken,
-
-		FS : FS,
-
-		// TODO remove what's no longer needed since no more vanilla lua ffi
-		dateNow : () => Date.now(),
-		loadImage : fn => {
-			if (fn.substr(0,1) != '/') {
-				fn = FS.cwd() + '/' + fn;
-				if (fn.substr(0,1) == '/') fn = fn.substr(1);
-			}
-			const img = imageCache[fn];
-			if (!img) throw "you need to decode up front file "+fn;
-			return img;
-		},
-
-		setMainInterval : (interval) => {
-			mainInterval = interval;
-		},
-
-		createCanvas : () => {
-			closeCanvas();
-			canvas = Canvas({
-				style : {
-					position : 'absolute',
-					userSelect : 'none',
-				},
-				prependTo : document.body,
-			});
+	window.createCanvas = () => {
+		closeCanvas();
+		canvas = Canvas({
+			style : {
+				position : 'absolute',
+				userSelect : 'none',
+			},
+			prependTo : document.body,
+		});
 window.canvas = canvas;			// global?  do I really need it? debugging?  used in ffi.cimgui right now
-			resize();	// set our initial size
-			return canvas;
-		},
+		resize();	// set our initial size
+		return canvas;
+	};
 
-		// TODO FIXME no more wasmoon
-		webglInit : (gl_) => {
-			closeGL();
-			gl = gl_;
-			window.gl = gl;
-		},
+	// TODO FIXME no more wasmoon
+	window.webglInit = (gl_) => {
+		closeGL();
+		gl = gl_;
+		window.gl = gl;
+	};
 
-		safecall : (f, ...args) => {
-			try {
-				return [true, f.call(...args)];
-			} catch (e) {
-				return [false, ''+e];
-			}
-		},
+	window.safecall = (f, ...args) => {
+		try {
+			return [true, f.call(...args)];
+		} catch (e) {
+			return [false, ''+e];
+		}
+	};
 
-		imgui : imgui,
+	window.imgui = imgui;
 
-		pako : window.pako,
+	window.dataToArray = (jsArrayClassName, data, count) => {
+		if (data == null) return null;
 
-		// TODO find where in FS stdout to do this and get rid of this function
-		redirectPrint : (s) => {
-			lua.stdoutPrint(s);
-		},
-		dataToArray : (jsArrayClassName, data, count) => {
-			if (data == null) return null;
+		const jsElemSizeForTypedArrayName = {
+			Float64Array : 8,
+			Float32Array : 4,
+			Int32Array : 4,
+			Uint32Array : 4,
+			Int16Array : 2,
+			Uint16Array : 2,
+		};
 
-			const jsElemSizeForTypedArrayName = {
-				Float64Array : 8,
-				Float32Array : 4,
-				Int32Array : 4,
-				Uint32Array : 4,
-				Int16Array : 2,
-				Uint16Array : 2,
-			};
+		const jsarrayElemSize = jsElemSizeForTypedArrayName[jsArrayClassName] || 1;
+		if (count === null || count === undefined) {
+			throw "dataToArray expected count";
+		}
 
-			const jsarrayElemSize = jsElemSizeForTypedArrayName[jsArrayClassName] || 1;
-			if (count === null || count === undefined) {
-				throw "dataToArray expected count";
-       		}
-
-			const cl = window[jsArrayClassName];
-			const result = new cl(M.HEAPU8.buffer, data, count);
-			return result;
-		},
-	});
+		const cl = window[jsArrayClassName];
+		const result = new cl(M.HEAPU8.buffer, data, count);
+		return result;
+	};
 
 	imgui.clear();
 	stdoutTA.value = '';
@@ -1562,6 +1524,7 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		console.log('failed to parse args as JSON:', e);
 	}
 	lua.doString(`
+local js = require 'js'
 -- redirect Lua's print to my textarea
 -- TODO find where in FS stdout to do this and get rid of this function
 print = function(...)
@@ -1571,7 +1534,9 @@ print = function(...)
 		s = s .. sep .. tostring((select(i, ...)))
 		sep = '\t'
 	end
-	js:redirectPrint(s)
+
+	-- TODO find where in FS stdout to do this and get rid of this function
+	js.global.lua:stdoutPrint(s)
 end
 
 -- this is only for redirecting errors to output
@@ -1588,7 +1553,7 @@ xpcall(function()
 
 	-- TODO just call js directly
 	function ffi.dataToArray(...)
-		return js:dataToArray(...)
+		return js.global:dataToArray(...)
 	end
 
 	-- TODO this in luaffifb
@@ -1666,7 +1631,7 @@ xpcall(function()
 			print('mainthread coroutine.resume failed.')
 			print(err)
 			print(debug.traceback(sdl.mainthread))
-			js:setMainInterval(nil)
+			js.global.glappMainInterval = nil
 			window:clearInterval(interval)
 		end
 	end
@@ -1680,7 +1645,7 @@ xpcall(function()
 		tryToResume()
 	end, 10)
 
-	js:setMainInterval(interval)
+	js.global.glappMainInterval = interval
 
 end, function(err)
 	print(err)

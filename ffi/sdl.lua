@@ -1,4 +1,6 @@
 local ffi = require 'ffi'
+local js = require 'js'
+local window = js.global
 local table = require 'ext.table'
 
 ffi.cdef[[
@@ -1322,13 +1324,12 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 --DEBUG:print('SDL_CreateWindow', title, x, y, w, h, flags)
 	lastWindowWidth = nil
 	lastWindowHeight = nil
-	local window = js.global
 	window:scrollTo(0,1)
 
 	local document = window.document
 	document.title = title
 
-	canvas = assert(js:createCanvas(), 'js:createCanvas failed')
+	canvas = assert(js.global:createCanvas(), 'js.global:createCanvas failed')
 
 	window:addEventListener('keyup', function(jsev)
 		local sdlev = eventQueue:emplace_back()
@@ -1430,7 +1431,7 @@ function sdl.SDL_DestroyWindow(sdlWindow) return 0 end
 function sdl.SDL_SetWindowSize(sdlWindow, width, height) end
 
 function sdl.SDL_SetWindowTitle(sdlWindow, title)
-	js.global.document.title = title
+	window.document.title = title
 end
 
 local webgl
@@ -1463,7 +1464,7 @@ print('...got gl')
 	require 'gl'.setWebGLContext(webgl)
 
 	-- close any old webgl context, store the new webgl context.
-	js:webglInit(webgl)
+	js.global:webglInit(webgl)
 
 	-- if you request a webgl extension that's not there then it throws an exception
 	-- and if wasmoon lua->js calls throw exceptions, wasmoon gives you a nonsense error and stops
@@ -1475,7 +1476,7 @@ print('...got gl')
 		'OES_texture_float_linear',
 		'EXT_color_buffer_float',	-- needed for webgl2 framebuffer+rgba32f
 	} do
-		print(ext, js:safecall(webgl.getExtension, webgl, ext))
+		print(ext, js.global:safecall(webgl.getExtension, webgl, ext))
 	end
 
 	coroutine.yield(sdl.mainthread)

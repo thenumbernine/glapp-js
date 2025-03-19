@@ -1,4 +1,7 @@
+local js = require 'js'
+local jsimgui = js.global.imgui
 local ffi = require 'ffi'
+
 require 'ffi.c.string'	-- strlen
 
 ffi.cdef[[
@@ -1061,20 +1064,20 @@ local ig = setmetatable({}, {
 function ig.ImGui_ImplOpenGL3_NewFrame() end
 function ig.ImGui_ImplSDL2_NewFrame() end
 function ig.igNewFrame()
-	js.imgui:newFrame()
+	jsimgui:newFrame()
 end
 
 -- end of frame in order
 function ig.igRender()
-	js.imgui:render()
+	jsimgui:render()
 end
 
 function ig.igText(...)
-	return js:imgui:text(...)
+	return jsimgui:text(...)
 end
 
 function ig.igButton(...)
-	return js.imgui:button(...)
+	return jsimgui:button(...)
 end
 
 ig.igColorButton = ig.igButton
@@ -1082,11 +1085,11 @@ ig.igColorButton = ig.igButton
 function ig.igInputFloat(label, v, ...)
 	-- 'v' is cdata, it is where things get written upon succes ...
 	--local v = ffi.dataToArray('Float32Array', v, 1);
-	local changed = js.imgui:inputFloat(label, v[0], ...)
+	local changed = jsimgui:inputFloat(label, v[0], ...)
 	if changed then
 		-- before I was fasting the v ptr through to the js functions, and within that writing to v[0] ... which must've done some js magic under the hood? to be able to invoke the lua metamethod ... bad idea I guess?  i can't tell ...
 		-- reading/writing lua numbers and reading js callback single-value returns is muuuch faster than the alternatives
-		v[0] = js.imgui:lastValue()
+		v[0] = jsimgui:lastValue()
 	end
 	return changed
 end
@@ -1095,9 +1098,9 @@ ig.igSliderFloat = ig.igInputFloat
 function ig.igInputInt(label, v, ...)
 	-- 'v' is cdata, it is where things get written upon succes ...
 	--local v = ffi.dataToArray('Int32Array', v, 1);
-	local changed = js.imgui:inputInt(label, v[0], ...)
+	local changed = jsimgui:inputInt(label, v[0], ...)
 	if changed then
-		v[0] = js.imgui:lastValue()
+		v[0] = jsimgui:lastValue()
 	end
 	return changed
 end
@@ -1105,9 +1108,9 @@ ig.igSliderInt = ig.igInputInt
 
 function ig.igInputText(label, buf, bufsize, flags, callback, user_data)
 	local str = ffi.string(buf, bufsize)
-	local changed = js.imgui:inputText(label, str)
+	local changed = jsimgui:inputText(label, str)
 	if changed then
-		ffi.copy(buf, js.imgui:lastValue(), bufsize)
+		ffi.copy(buf, jsimgui:lastValue(), bufsize)
 	end
 	return changed
 end
@@ -1115,7 +1118,7 @@ end
 --(const char* label,int* v,int v_button);
 function ig.igRadioButton_IntPtr(label, result, radioValue)
 	local radioGroup = tostring(result)	-- if a unique result determines our radio group ... then use the result's address ...
-	local changed = js.imgui:inputRadio(label, result[0], radioValue, radioGroup)
+	local changed = jsimgui:inputRadio(label, result[0], radioValue, radioGroup)
 	if changed then
 		result[0] = radioValue
 	end
@@ -1128,9 +1131,9 @@ function ig.igCombo_Str_arr(label, currentItem, items, itemCount, popupMaxHeight
 	for i=1,itemCount do
 		items[i] = ffi.string(items[i])
 	end
-	local changed = js.imgui:inputCombo(label, currentItem[0], items)
+	local changed = jsimgui:inputCombo(label, currentItem[0], items)
 	if changed then
-		currentItem[0] = js.imgui:lastValue()
+		currentItem[0] = jsimgui:lastValue()
 	end
 	return changed
 end
@@ -1143,9 +1146,9 @@ function ig.igCombo_Str(label, currentItem, itemsZeroSep, popupMaxHeight)
 		table.insert(items, ffi.string(p))
 		p = p + ffi.C.strlen(p) + 1
 	end
-	local changed = js.imgui:inputCombo(label, currentItem[0], items)
+	local changed = jsimgui:inputCombo(label, currentItem[0], items)
 	if changed then
-		currentItem[0] = js.imgui:lastValue()
+		currentItem[0] = jsimgui:lastValue()
 	end
 	return changed
 end
@@ -1156,9 +1159,9 @@ function ig.igCombo_FnBoolPtr(label, currentItem, getter, userData, itemsCount, 
 	for i=0,itemsCount-1 do
 		table.insert(items, ffi.string(getter(userData, i)))
 	end
-	local changed = js.imgui:inputCombo(label, currentItem[0], items)
+	local changed = jsimgui:inputCombo(label, currentItem[0], items)
 	if changed then
-		currentItem[0] = js.imgui:lastValue()
+		currentItem[0] = jsimgui:lastValue()
 	end
 	return changed
 end

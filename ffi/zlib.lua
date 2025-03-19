@@ -1,7 +1,8 @@
+local js = require 'js'
 return {
 	compressLua = function(s)
 		return ffi.stringBuffer(
-			js.pako:deflate(
+			js.global.pako:deflate(
 				ffi.dataToArray(
 					'Uint8Array',
 					ffi.cast('void*', s)
@@ -11,7 +12,7 @@ return {
 	end,
 	uncompressLua = function(s)
 		return ffi.stringBuffer(
-			js.pako:inflate(
+			js.global.pako:inflate(
 				ffi.dataToArray(
 					'Uint8Array',
 					ffi.cast('void*', s)

@@ -2,13 +2,16 @@ local M = {}
 
 -- https://emscripten.org/docs/api_reference/Filesystem-API.html
 
+-- hmm another way to communicate lua<->js other than through window ?
+local FS = require 'js'.global.FS
+
 function M.setmode(path, mode)
 	FS:chmod(path, mode)
 end
 
 function M.link(old, new, sym)
 	if sym then
-		js.FS:symlink(old, new)
+		FS:symlink(old, new)
 	else
 		error('not supported?')
 	end
@@ -17,17 +20,17 @@ end
 function M.dir(path)
 	return coroutine.wrap(function()
 		-- how well can wasmoon iterate over js array elements?
-		for _,f in ipairs(js.FS:readdir(path)) do
+		for _,f in ipairs(FS:readdir(path)) do
 			-- good of emscripten readdir() to provide . and .. for lfs compat
 			coroutine.yield(f)
 		end
 	end)
 end
 
-function M.currentdir() return js.FS:cwd() end
-function M.chdir(path) js.FS:chdir(path) end	-- what happens upon fail?
-function M.mkdir(path, mode) js.FS:mkdir(path, mode) end
-function M.rmdir(path) js.FS:rmdir(path) end
+function M.currentdir() return FS:cwd() end
+function M.chdir(path) FS:chdir(path) end	-- what happens upon fail?
+function M.mkdir(path, mode) FS:mkdir(path, mode) end
+function M.rmdir(path) FS:rmdir(path) end
 
 local has_table_new, new_tab = pcall(require, "table.new")
 if not has_table_new or type(new_tab) ~= "function" then
@@ -92,10 +95,10 @@ local function getattr(src)
 end
 
 function M.attributes(path, attr)
-	return getattr(js.FS:stat(path))
+	return getattr(FS:stat(path))
 end
 function M.symlinkattributes(path, attr)
-	return getattr(js.FS:lstat(path))
+	return getattr(FS:lstat(path))
 end
 
 function M.touch(path, actime, modtime) end

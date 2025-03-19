@@ -1,3 +1,4 @@
+local js = require 'js'
 local ffi = require 'ffi'
 local table = require 'ext.table'
 local class = require 'ext.class'
@@ -1063,7 +1064,7 @@ function gl.glGetUniformLocation(program, name)
 	-- [[ Because js is retarded, it throws an exception if the uniform isn't available.
 	-- This apathetic design mentality of WebGL/JS is why my native run LuaJIT GLES bindings run 2x or more faster than WebGL+JS
 	-- Sad I have to emulate it to get it to work in-browser ...
-	local success, res = table.unpack(js:safecall(webgl.getUniformLocation, webgl, getObj(program), ffi.string(name)))
+	local success, res = table.unpack(js.global:safecall(webgl.getUniformLocation, webgl, getObj(program), ffi.string(name)))
 	if not success then return nil end
 	return res
 	--]]
