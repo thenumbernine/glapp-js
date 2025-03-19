@@ -1,9 +1,11 @@
 local ffi = require 'ffi'
 
-function ffi.C.strerror(errno)
-	return 'error '..tostring(errno)
-end
+return {
+	strerror = function(errno)
+		return 'error '..tostring(errno)
+	end,
 
-function ffi.C.strlen(p)
-	return ffi.strlenAddr(ffi.getAddr(p))
-end
+	strlen = function(p)
+		return ffi.strlenAddr(ffi.getAddr(p))
+	end,
+}

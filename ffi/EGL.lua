@@ -1,18 +1,18 @@
 local ffi = require 'ffi'
 
-ffi.enum{
-	{EGL_DEFAULT_DISPLAY = 0},
-	{EGL_CLIENT_APIS = 12429},
-	{EGL_VENDOR = 12371},
-	{EGL_VERSION = 12372},
-	{EGL_CLIENT_APIS = 12429},
-	{EGL_EXTENSIONS = 12373},
-	{EGL_BLUE_SIZE = 12322},
-	{EGL_GREEN_SIZE = 12323},
-	{EGL_RED_SIZE = 12324},
-}
-
 ffi.cdef[[
+enum{
+	EGL_DEFAULT_DISPLAY = 0,
+	EGL_CLIENT_APIS = 12429,
+	EGL_VENDOR = 12371,
+	EGL_VERSION = 12372,
+	EGL_CLIENT_APIS = 12429,
+	EGL_EXTENSIONS = 12373,
+	EGL_BLUE_SIZE = 12322,
+	EGL_GREEN_SIZE = 12323,
+	EGL_RED_SIZE = 12324,
+};
+
 typedef intptr_t EGLDisplay;	-- void*
 typedef intptr_t EGLConfig;	-- void*
 typedef intptr_t EGLContext;	-- void*
