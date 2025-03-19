@@ -1069,17 +1069,6 @@ local function jsKeyEventMod(jsev)
 	return mod
 end
 
--- I like fengari so much
--- wasmoon doesn't give you stack traces for errors within JS callbacks
-local function xpwrap(cb)
-	return function(...)
-		assert(xpcall(cb, function(err)
-			print(err)
-			print(debug.traceback())
-		end, ...))
-	end
-end
-
 local jsKeyCodeToSDLKeySym = {
 	Enter = sdl.SDLK_RETURN,
 	Escape = sdl.SDLK_ESCAPE,
@@ -1338,9 +1327,9 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	local document = window.document
 	document.title = title
 
-	canvas = js.createCanvas()
+	canvas = js:createCanvas()
 
-	window:addEventListener('keyup', xpwrap(function(jsev)
+	window:addEventListener('keyup', function(jsev)
 		local sdlev = eventQueue:emplace_back()
 		sdlev.type = sdl.SDL_KEYUP
 		sdlev.key.timestamp = os.time()
@@ -1350,8 +1339,8 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		sdlev.key.keysym.scancode = jsev.keyCode
 		sdlev.key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.code] or sdl.SDLK_UNKNOWN
 		sdlev.key.keysym.mod = jsKeyEventMod(jsev)
-	end))
-	window:addEventListener('keydown', xpwrap(function(jsev)
+	end)
+	window:addEventListener('keydown', function(jsev)
 		local sdlev = eventQueue:emplace_back()
 		sdlev.type = sdl.SDL_KEYDOWN
 		sdlev.key.timestamp = os.time()
@@ -1361,7 +1350,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		sdlev.key.keysym.scancode = jsev.keyCode
 		sdlev.key.keysym.sym = jsKeyCodeToSDLKeySym[jsev.code] or sdl.SDLK_UNKNOWN
 		sdlev.key.keysym.mod = jsKeyEventMod(jsev)
-	end))
+	end)
 
 	-- i'm not capturing right-clicks, and idk why ...
 	window:addEventListener('contextmenu', function(jsev)
@@ -1369,11 +1358,11 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		return false
 	end)
 
-	window:addEventListener('mousemove', xpwrap(function(jsev)
+	window:addEventListener('mousemove', function(jsev)
 		mouseMovedSinceLastPoll = true
 		setMousePos(jsev.pageX, jsev.pageY)
-	end))
-	window:addEventListener('mousedown', xpwrap(function(jsev)
+	end)
+	window:addEventListener('mousedown', function(jsev)
 		setMousePos(jsev.pageX, jsev.pageY)
 		setMouseFlags(jsev.buttons)
 
@@ -1398,8 +1387,8 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		sdlev.button.clicks = 1
 		sdlev.button.x = mouseX
 		sdlev.button.y = mouseY
-	end))
-	window:addEventListener('mouseup', xpwrap(function(jsev)
+	end)
+	window:addEventListener('mouseup', function(jsev)
 		setMousePos(jsev.pageX, jsev.pageY)
 		setMouseFlags(jsev.buttons)
 
@@ -1413,7 +1402,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 		sdlev.button.clicks = 1
 		sdlev.button.x = mouseX
 		sdlev.button.y = mouseY
-	end))
+	end)
 	--[[
 	window:addEventListener('click', function(jsev)
 	end)
@@ -1473,7 +1462,7 @@ function sdl.SDL_GL_CreateContext(sdlWindow)
 	require 'gl'.setWebGLContext(webgl)
 
 	-- close any old webgl context, store the new webgl context.
-	js.webglInit(webgl)
+	js:webglInit(webgl)
 
 	-- if you request a webgl extension that's not there then it throws an exception
 	-- and if wasmoon lua->js calls throw exceptions, wasmoon gives you a nonsense error and stops
@@ -1485,7 +1474,7 @@ function sdl.SDL_GL_CreateContext(sdlWindow)
 		'OES_texture_float_linear',
 		'EXT_color_buffer_float',	-- needed for webgl2 framebuffer+rgba32f
 	} do
-		print(ext, js.safecall(webgl.getExtension, webgl, ext))
+		print(ext, js:safecall(webgl.getExtension, webgl, ext))
 	end
 
 	coroutine.yield(sdl.mainthread)

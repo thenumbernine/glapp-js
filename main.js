@@ -205,20 +205,39 @@ M._lua_tonumber = (L,i) => M._lua_tonumberx(L,i,null);
 M._lua_tointeger = (L,i) => M._lua_tointegerx(L,i,null);
 M._lua_pop = (L,n) => M._lua_settop(L, -n-1);
 M._lua_newtable = (L) => M._lua_createtable(L, 0, 0);
-
-M._lua_pcall = (L, nargs, nret, msgh) => M._lua_pcallk(L, nargs, nret, msgh, 0, 0);
+M._lua_register = (L,n,f) => { M._lua_pushcfunction(L, f); M._lua_setglobal(L, n); };
 M._lua_pushcfunction = (L, f) => M._lua_pushcclosure(L, f, 0);
+
+M._lua_isfunction = (L,n) => M._lua_type(L, n) == M.LUA_TFUNCTION;
+M._lua_istable = (L,n) => M._lua_type(L, n) == M.LUA_TTABLE;
+M._lua_islightuserdata = (L,n) => M._lua_type(L, n) == M.LUA_TLIGHTUSERDATA;
+M._lua_isnil = (L,n) => M._lua_type(L, n) == M.LUA_TNIL;
+M._lua_isboolean = (L,n) => M._lua_type(L, n) == M.LUA_TBOOLEAN;
+M._lua_isthread = (L,n) => M._lua_type(L, n) == M.LUA_TTHREAD;
+M._lua_isnone = (L,n) => M._lua_type(L, n) == M.LUA_TNONE;
+M._lua_isnoneornil = (L, n) => M._lua_type(L, n) <= 0;
+
+M._lua_pushglobaltable = (L) => M._lua_rawgeti(L, M.LUA_REGISTRYINDEX, BigInt(M.LUA_RIDX_GLOBALS));
 M._lua_tostring = (L, i) => M._lua_tolstring(L, i, 0);
-M._luaL_typename = (L,i) => M._lua_typename(L, M._lua_type(L,i));
+M._lua_insert = (L,idx) => { M._lua_rotate(L, idx, 1); };
 M._lua_remove = (L,idx) => { M._lua_rotate(L, idx, -1); M._lua_pop(L, 1); };
 M._lua_replace = (L,idx) => { M._lua_copy(L, -1, idx); M._lua_pop(L, 1); };
-M._lua_pushglobaltable = (L) => M._lua_rawgeti(L, M.LUA_REGISTRYINDEX, BigInt(M.LUA_RIDX_GLOBALS));
+
+M._lua_pcall = (L, nargs, nret, msgh) => M._lua_pcallk(L, nargs, nret, msgh, 0, 0);
+M._luaL_typename = (L,i) => M._lua_typename(L, M._lua_type(L,i));
 
 let errHandler;
 
+// maps from js objects to some kind of index to look up lua object in lua table
+// meanwhile we have a jsToLua table in Lua that maps these indexes to tables
+let jsToLua, luaToJs;
+
 const lua_to_js = (L, i) => {
+	if (i < 0) {
+		i += M._lua_gettop(L)+1;
+	}
 	const t = M._lua_type(L, i);
-//console.log('lua_to_js type', t);	
+//console.log('lua_to_js type', t);
 	switch (t) {
 	case M.LUA_TNONE:
 		return undefined;
@@ -242,139 +261,210 @@ const lua_to_js = (L, i) => {
 		const len = M.getValue(lenp, 'i32');
 		return M.UTF8ToString(s, len);
 	case M.LUA_TTABLE:
-		//if luaToJSObjs.get(v) then return it
-		const ret = {};
-		// table is in the stack at index 't' 
-		M._lua_pushnil(L);  // first key
-		while (M._lua_next(L, t) != 0) {
-		   // uses 'key' (at index -2) and 'value' (at index -1)
-		   ret[lua_to_js(L, -2)] = lua_to_js(L, -1);
-		   // removes 'value'; keeps 'key' for next iteration
-		   lua_pop(L, 1);
-		}
-		//luaToJSObjs.set(v, ret);
-		//jsToLuaObjs.set(ret, v);
-		return ret;
 	case M.LUA_TFUNCTION:
-		const f = M._lua_tocfunction(L, i);
-		//if luaToJSObjs.get(v) then return it
-		if (f == 0) {
-			return undefined;//null?
+//console.log('lua_to_js top=', M._lua_gettop(L));
+//console.log('lua_to_js got table/function, checking cache...');
+		M._lua_getglobal(L, M.stringToNewUTF8('luaToJs'));	// stack = luaToJs
+		M._lua_pushvalue(L, i);			// stack = luaToJs, luaValue
+		M._lua_gettable(L, -2);			// stack = luaToJs, luaToJs[luaValue]
+		if (!M._lua_isnil(L, -1)) {
+			const jsObjID = M._lua_tointeger(L, -1);
+//console.log('lua_to_js got key', typeof(jsObjID), jsObjID);
+			M._lua_pop(L, 2);
+//console.log('lua_to_js top=', M._lua_gettop(L));
+//console.log('lua_to_js returning', luaToJs.get(jsObjID));
+			return luaToJs.get(jsObjID);
 		} else {
-			// create proxy obj
-			return (...args) => {
-				M._lua_pushcfunction(L, errHandler);	// msgh 
-				M._lua_pushcfunction(L, f);				// msgh, f
-				const n = args.length;
-				for (let i = 0; i < n; ++i) {
-					push_js(L, args[i]);
-				}										// msgh, f, args...
-				const numret = M._lua_pcall(L, n, M.LUA_MULTRET, 1);
-				// results ... always an array?  coerce to prim for size <= 1?
-				const ret = [];
-				for (let i = 0; i < numret; ++i) {
-					ret.push(lua_to_js(L, -numret+i));
+//console.log('lua_to_js building wrapper...');
+			M._lua_pop(L, 1);			// stack = luaToJs
+//console.log('lua_to_js top=', M._lua_gettop(L));
+
+			let ret;
+			if (t == M.LUA_TTABLE) {
+				ret = {};	// do I want JS objects or JS maps?  maps are more like Lua, but don't have syntax support in JS ...
+				M._lua_pushnil(L);  // first key
+				while (M._lua_next(L, t) != 0) {
+				   ret[lua_to_js(L, -2)] = lua_to_js(L, -1);
+				   lua_pop(L, 1);
 				}
-				return ret;
-			};
-		
-			// TODO 
-			//luaToJSObjs.set(v, the proxy obj);
-			//jsToLuaObjs.set(proxy obj, v);
+			} else if (t == M.LUA_TFUNCTION) {
+				const f = M._lua_tocfunction(L, i);
+				// create proxy obj
+				ret = (...args) => {
+					M._lua_pushcfunction(L, errHandler);	// msgh
+					M._lua_pushcfunction(L, f);				// msgh, f
+					const n = args.length;
+					for (let i = 0; i < n; ++i) {
+						push_js(L, args[i]);
+					}										// msgh, f, args...
+					const numret = M._lua_pcall(L, n, M.LUA_MULTRET, 1);
+					// results ... always an array?  coerce to prim for size <= 1?
+					const ret = [];
+					for (let i = 0; i < numret; ++i) {
+						ret.push(lua_to_js(L, -numret+i));
+					}
+					return ret;
+				};
+			}
+//console.log('lua_to_js built wrapper', ret);
+//console.log('lua_to_js top=', M._lua_gettop(L));
+
+			const jsObjID = BigInt(jsToLua.size);	// consistent with push_js below
+//console.log('lua_to_js setting cache key', jsObjID);
+			luaToJs.set(jsObjID, ret);
+			jsToLua.set(ret, jsObjID);
+
+			M._lua_pushvalue(L, i);				// stack = luaToJs, luaValue
+			M._lua_pushinteger(L, jsObjID);		// stack = luaToJs, luaValue, jsObjID
+			M._lua_settable(L, -3);				// stack = luaToJs; luaToJs[luaValue] = jsObjID
+			M._lua_pop(L, 1);
+			M._lua_getglobal(L, M.stringToNewUTF8('jsToLua'));	// stack = jsToLua
+			M._lua_pushvalue(L, i);				// stack = jsToLua, luaValue
+			M._lua_seti(L, -2, jsObjID);		// stack = jsToLua; jsToLua[jsObjID] = luaValue
+			M._lua_pop(L, 1);
+
+//console.log('lua_to_js returning');
+			return ret;
 		}
 	default:
 		throw 'lua_to_js unknown lua type '+t;
 	}
 };
 
-const push_js = (L, v) => {
-//console.log('push_js begin top', M._lua_gettop(L));	
-	const t = typeof(v);
+const push_js = (L, jsValue) => {
+//console.log('push_js begin top', M._lua_gettop(L));
+	const t = typeof(jsValue);
 	switch (t) {
 	case 'undefined':
 		M._lua_pushnil(L);
 		return 1;
 	case 'boolean':
-		M._lua_pushboolean(L, v ? 1 : 0);
+		M._lua_pushboolean(L, jsValue ? 1 : 0);
 		return 1;
 	case 'number':
-		M._lua_pushnumber(L, v);
+		M._lua_pushnumber(L, jsValue);
 		return 1;
 	case 'string':
-		M._lua_pushstring(L, M.stringToNewUTF8(v));
+		M._lua_pushstring(L, M.stringToNewUTF8(jsValue));
 		return 1;
 		break;
 	case 'function':
-		M._lua_pushcfunction(L, M.addFunction(L => {
-			// convert args to js
-			const n = M._lua_gettop(L);
-			const _this = lua_to_js(L, 1);
-			
-			// TODO but here if we passed a js obj into lua then it's wrapped
-			// and if we call lua_to_js then it'll just give us nothing
-			// how to pass a js obj through lua back to js?
-
-			const args = [];
-			for (let i = 2; i <= n; ++i) {
-				args.push(lua_to_js(L, i));
-			}
-			// call v
-			const ret = v.apply(_this, args);
-			// convert results to lua
-			return push_js(L, ret);
-		}, 'ip'));
-		return 1;
 	case 'object':
-		if (v === null) {	// cuz for null, type is 'object' ... smh javascript
+		// cuz for null, type is 'object' ... smh javascript
+		if (jsValue === null) {
 			M._lua_pushnil(L);
 			return 1;
+		}
+//console.log('push_js checking cache for', jsValue);
+		// see if it's already there
+		let jsObjID = jsToLua.get(jsValue);
+		if (jsObjID !== undefined) {
+//console.log('push_js found in entry', jsObjID);
+			M._lua_getglobal(L, M.stringToNewUTF8('jsToLua'));
+			M._lua_geti(L, -1, BigInt(jsObjID));
+//console.log('push_js returning');
+			return 1;
 		} else {
-			// TODO if jsToLuaObjs.get(v) then return it's lua value ... how to store though ...
+			jsObjID = BigInt(jsToLua.size);
+//console.log("push_js didn't find any entry, using new key", jsObjID);
+			if (t == 'function') {
+//console.log('push_js pushing function');
+				// tempted to push a Lua object with __call, not that it makes a difference
+				M._lua_pushcfunction(L, M.addFunction(L => {
+					// convert args to js
+					const n = M._lua_gettop(L);
+//console.log('lua->js call converting this arg 1...');
+					const _this = lua_to_js(L, 1);
+					const args = [];
+					for (let i = 2; i <= n; ++i) {
+//console.log('lua->js call converting arg ', i, '...');
+						args.push(lua_to_js(L, i));
+					}
+					// call jsValue
+//console.log('lua->js calling func=', jsValue, 'arg1=this', _this, 'args=', args);
+					const ret = jsValue.apply(_this, args);
+					// convert results to lua
+					// only supports single-return for now
+//console.log('... pushing ret', ret);
+					return push_js(L, ret);
+				}, 'ip'));		// luaWrapper
+			} else if (t == 'object') {
+//console.log('push_js pushing object');
+				// convert to a Lua table and push that table
+				// or push a table with metamethods that read into this table
+				M._lua_newtable(L);	// t={}
 
-			// convert to a Lua table and push that table
-			// or push a table with metamethods that read into this table
-			M._lua_newtable(L);	// t={}
+				// if it's a js object ...
+				// ... that happens to be wrapping a lua object ...
+				// ... then just push the lua object
+				// ... but where to store th associations?  not in closure anymore...
+				//const tp = M._lua_topointer(L, -1);
+				//jsToLuaObjs.set(jsValue, tp);
+				//luaToJSObjs.set(tp, jsValue);
+				// ... can't use topointer cuz I can't recover it which I'll want to do for 2nd etc dereferences ...
 
-			// if it's a js object ... 
-			// ... that happens to be wrapping a lua object ... 
-			// ... then just push the lua object
-			// ... but where to store th associations?  not in closure anymore...
-			//const tp = M._lua_topointer(L, -1);	
-			//jsToLuaObjs.set(v, tp);
-			//luaToJSObjs.set(tp, v);
-			// ... can't use topointer cuz I can't recover it which I'll want to do for 2nd etc dereferences ...
-
-			M._lua_newtable(L);	// t, mt={}
-			M._lua_pushcfunction(L, M.addFunction(L => {
-				// t, k
-				// should I even re-get the js table?  or just use closure?
-				const k = lua_to_js(L, 2);
-//console.log('wrapper __index top', M._lua_gettop(L), 'key', k, 'returning value', v[k]);	
-				return push_js(L, v[k]);
-			}, 'ip'));	// t, mt, f
-			M._lua_setfield(L, -2, M.stringToNewUTF8('__index'));
-			M._lua_pushcfunction(L, M.addFunction(L => {
-				M._lua_error(L, "js wrapped objs are read-only for now");
-				// t, k, v
-				const k = lua_to_js(L, 2);
-				const v2 = lua_to_js(L, 3);
-				v[k] = v2;
-				return 0;
-			}, 'ip')); // t, mt, f
-			M._lua_setfield(L, -2, M.stringToNewUTF8('__newindex'));	// t, mt
-			M._lua_setmetatable(L, -2);	// t, mt
+				M._lua_newtable(L);	// t, mt={}
+				M._lua_pushcfunction(L, M.addFunction(L => {
+					// t, indexKey
+					// should I even re-get the js table?  or just use closure?
+					const indexKey = lua_to_js(L, 2);
+//console.log('wrapper for jsToLua key', jsObjID, 'index key', indexKey, 'returning value', jsValue[indexKey]);
+					return push_js(L, jsValue[indexKey]);
+				}, 'ip'));	// t, mt, luaWrapper
+				M._lua_setfield(L, -2, M.stringToNewUTF8('__index'));
+				M._lua_pushcfunction(L, M.addFunction(L => {
+					M._lua_error(L, "js wrapped objs are read-only for now");
+					// t, newindexKey, newindexValue
+					const newindexKey = lua_to_js(L, 2);
+					const newindexValue = lua_to_js(L, 3);
+					jsValue[newindexKey] = newindexValue;
+					return 0;
+				}, 'ip')); // t, mt, luaWrapper
+				M._lua_setfield(L, -2, M.stringToNewUTF8('__newindex'));	// t, mt
+				M._lua_pushcfunction(L, M.addFunction(L => {
+					M._lua_pushstring(L, M.stringToNewUTF8(jsValue.toString()));
+					return 1;
+				}, 'ip'));	// t, mt, luaWrapper
+				M._lua_setfield(L, -2, M.stringToNewUTF8('__tostring'));
+				M._lua_setmetatable(L, -2);	// t, mt
+			}
+			// keep up with the lua<->js map
+//console.log('push_js setting relation with key', jsObjID);
+			jsToLua.set(jsValue, jsObjID);
+			luaToJs.set(jsObjID, jsValue);
+			M._lua_getglobal(L, M.stringToNewUTF8('jsToLua'));	// stack = luaWrapper, jsToLua
+			M._lua_pushvalue(L, -2);							// stack = luaWrapper, jsToLua, luaWrapper
+			M._lua_seti(L, -2, jsObjID);						// stack = luaWrapper, jsToLua; jsToLua[jsObjID] = luaWrapper
+			M._lua_pop(L, 1);									// stack = luaWrapper
+			M._lua_getglobal(L, M.stringToNewUTF8('luaToJs'));	// stack = luaWrapper, luaToJs
+			M._lua_pushvalue(L, -2);							// stack = luaWrapper, luaToJs, luaWrapper
+			M._lua_pushinteger(L, jsObjID);						// stack = luaWrapper, luaToJs, luaWrapper, jsObjID
+			M._lua_settable(L, -3);								// stack = luaWrapper, luaToJs; luaToJs[luaWrapper] = jsObjID
+			M._lua_pop(L, 1);									// stack = luaWrapper
+//console.log('push_js returning');
 			return 1;
 		}
 	default:
 		throw "push_js unknown js type "+t;
 	}
-//console.log('push_js end top', M._lua_gettop(L));	
+//console.log('push_js end top', M._lua_gettop(L));
 };
 
 let L;
 const lua = {
 	newState : () => {
 		L = M._luaL_newstate();
+
+		jsToLua = new Map();
+		luaToJs = new Map();
+window.jsToLua = jsToLua;
+window.luaToJs = luaToJs;
+		// TODO use registery instead of this
+		M._lua_newtable(L);
+		M._lua_setglobal(L, M.stringToNewUTF8("jsToLua"));
+		M._lua_newtable(L);
+		M._lua_setglobal(L, M.stringToNewUTF8("luaToJs"));
+
 		M._luaL_openlibs(L);
 		errHandler = M.addFunction(L => {
 			let msg = M._lua_tostring(L, 1);
@@ -393,15 +483,9 @@ const lua = {
 		}, 'ip');
 	},
 	doString : s => {
-/*
-		M._lua_pushstring(L, M.stringToNewUTF8('test'));
-		const pop = M.UTF8ToString(M._lua_tostring(L, -1));
-		console.log('got', pop);
-		M._lua_pop(L, 1);
-*/
 		M._lua_pushcfunction(L, errHandler);
 		const result = M._luaL_loadstring(L, M.stringToNewUTF8(s));	// throw on error?
-		if (result != 0) {
+		if (result != M.LUA_OK) {
 			// TODO get stack trace and error message
 			const msg = M.UTF8ToString(M._lua_tostring(L, -1));
 			stdoutPrint('syntax error: '+msg);
@@ -419,7 +503,7 @@ const lua = {
 	},
 	global : {
 		set : (name, v) => {
-			/* getting memory errors 
+			/* getting memory errors
 			M._lua_pushglobaltable(L);
 			push_js(L, name);
 			push_js(L, v);
@@ -444,9 +528,7 @@ lua.doString(`
 throw 'done';
 /**/
 
-// ok so wasmoon and javascript combined their tardpowers to make image loading at runtime impossible
-// this is thanks to wasmoon callbacks being retarded and not allowing async await, and javascript not allowing await in non-async functions (which is retarded)
-// so I've got to preload ALL IMAGES just in case they're needed.
+// TODO load upon request, no more a need to preload
 const imageCache = {};
 const preloadImage = async (fn, ext) => {
 	try {
@@ -507,7 +589,7 @@ const fetchBytes = src => {
 			resolve(new Uint8Array(req.response));
 		};
 		req.onerror = function() {
-console.log("failed on", src);
+			console.log("failed on", src);
 			reject({
 				status: this.status,
 				statusText: req.statusText
@@ -545,7 +627,7 @@ const mountFile = (filePath, luaPath) => {
 
 		FS.writeFile(luaPath, fileContent, {encoding:'binary'});
 
-		// and now the images separately, because javascript and wasmoon is retarded
+		// TODO no more preloading
 		const ext = luaPath.split('.').pop();
 		if (ext == 'png' ||
 			ext == 'jpg' ||
@@ -602,6 +684,7 @@ FS.writeFile('audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
 
 FS.writeFile('image/luajit/jscanvas.lua', `
 local ffi = require 'ffi'
+ffi.null = ffi.NULL
 local class = require 'ext.class'
 local path = require 'ext.path'
 
@@ -682,7 +765,7 @@ A({
 });
 
 // imgui binding code.
-// i wanted to do this in lua but wasmoon disagrees.
+// TODO do this in lua with the js api
 const imgui = {
 	init : function() {
 		this?.div?.parentNode.removeChild(this.div);
@@ -1732,16 +1815,37 @@ const doRun = async () => {
 	// make a new state
 	lua.newState();
 
+/* debugging: * /
+lua.global.set('js', {global : window});
+//lua.global.set('alert', alert);
+lua.doString(`
+--print('alert', alert) alert(nil, 'test') -- works with null this
+print('window', js.global)
+print('window.alert', js.global.alert)
+--js.global.alert(nil, 'test')	-- works with null this
+js.global:alert('test')
+`);
+throw 'done';
+/* */
+
+	/* special hack ... make sure luaToJs for jsNullToken returns null
+	{
+		const jsNullToken = {};
+		push_js(jsNullToken);
+		M._lua_pop(L, 1);
+		const k = jsToLua.get(jsNullToken);
+		luaToJs.set(k, null);
+	}
+	*/
+
 	lua.global.set('js', {
-		global : window,	//for fengari compat
+		//null : jsNullToken,	// special hack with the lua<->js to ensure null is returned
+
+		global : window,
 
 		FS : FS,
 
-		// welp looks like wasmoon wraps only some builtin classes (ArrayBuffer) into lambdas to treat them all ONLY AS CTORS so i can't access properties of them, because retarded
-		// so I cannot pass them through lua back to js for any kind of operations
-		// so all JS operations now have to be abstracted into a new api
-		// but we're still passing this back to JS ... wasmoon will probably require its own whole different ffi.lua implementation ... trashy.
-		newnamed : (cl, ...args) => new window[cl](...args),
+		// TODO remove what's no longer needed since no more vanilla lua ffi
 		dateNow : () => Date.now(),
 		loadImage : fn => {
 			if (fn.substr(0,1) != '/') {
@@ -1771,51 +1875,27 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 			return canvas;
 		},
 
-		// these functions should have been easy to do in lua ...
-		// ... but wasmoon has some kind of lua-syntax within some internally run code for wrappers to js objects ... bleh
+		// TODO FIXME no more wasmoon
 		webglInit : (gl_) => {
 			closeGL();
 			gl = gl_;
 			window.gl = gl;
 		},
 
-		// if Lua->JS code throws an exception then Wasmoon gives a nonsense error `TypeError: Cannot read properties of null (reading 'then')`
-		// to fix that, wrap any such calls in try/catch blocks
 		safecall : (f, ...args) => {
-			// wait does multret work? https://github.com/ceifa/wasmoon/pull/87
 			try {
 				return [true, f.call(...args)];
 			} catch (e) {
-				return [false, ''+e];	// I think this will always be the nonsense error `TypeError: Cannot read properties of null (reading 'then')`, but I'll return it anyways
+				return [false, ''+e];
 			}
 		},
 
-		// using js proxy in wasmoon is complete trash ... makes me really appreciate how flawless it was in fengari
-		// member object calls sometimes work and sometimes dont
-		// the more i push code back into js the smoother things seem to go, but never 100%
-		// so here's me pushing a lot of the cimgui stuff into js ...
-		imguiNewFrame : () => imgui.newFrame(),
-		imguiRender : () => imgui.render(),
-		imguiText : (...args) => imgui.text(...args),
-		imguiButton : (...args) => imgui.button(...args),
-		imguiInputFloat : (...args) => imgui.inputFloat(...args),
-		imguiInputInt : (...args) => imgui.inputInt(...args),
-		imguiInputText : (...args) => imgui.inputText(...args),
-		imguiInputCombo : (...args) => imgui.inputCombo(...args),
-		imguiInputRadio : (...args) => imgui.inputRadio(...args),
-		imguiLastValue : () => imgui.lastValue,
-
-		// https://devcodef1.com/news/1119293/stdout-stderr-in-webassembly
-		// if only it was this easy
-		// why am I even using wasmoon?
-		// https://github.com/ceifa/wasmoon/issues/21
-		// wait does this say to just overwrite _G.print?  like you can't do that in a single line of "print=function..."
-		// no, I want to override all output, including the stack traces that Lua prints when an error happens ... smh everyone ...
-		redirectPrint : s => { stdoutPrint(s); },
+		imgui : imgui,
 
 		pako : window.pako,
+	
 	});
-
+	
 	imgui.clear();
 	stdoutTA.value = '';
 
@@ -1829,79 +1909,74 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		console.log('failed to parse args as JSON:', e);
 	}
 	lua.doString(`
+local ffi = require 'ffi'
 
-print = function(...)
-	local s = ''
-	local sep = ''
-	for i=1,select('#', ...) do
-		s = s .. sep .. tostring((select(i, ...)))
-		sep = '\t'
+-- override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
+package.loaded['ext.gcmem'] = {
+	new = function(T, n)
+		return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
+	end,
+	free = function(ptr)
+		-- TODO M._free(ptr)
+	end,
+}
+
+
+local rundir = '`+rundir+`'
+local runfile = '`+runfile+`'
+_G.arg = {`+args.map(arg => '"'+arg+'"')+`}
+-- ok this has become the launcer of everything
+-- Lua 5.3
+-- TODO move this into main.js
+
+package.path = table.concat({
+	'./?.lua',
+	'/?.lua',
+	'/?/?.lua',
+}, ';')
+
+bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
+
+-- start it as a new thread ...
+-- TODO can I just wrap the whole dofile() in a main thread?
+-- the tradeoff is I'd lose my ability for main coroutine detection ...
+-- or maybe I should shim that function as well ...
+local sdl = require 'ffi.sdl'
+local function run(path, file, ...)
+	local fn = '/'..path..'/'..file
+	arg[0] = fn
+	--dofile(fn)	-- doesn't handle ...
+	assert(loadfile(fn))(table.unpack(arg))
+end
+sdl.mainthread = coroutine.create(function()
+	run(rundir, runfile)
+end)
+
+local interval
+local window = js.global
+local function tryToResume()
+	--coroutine.assertresume(sdl.mainthread)
+	if coroutine.status(sdl.mainthread) == 'dead' then return false, 'dead' end
+	local res, err = coroutine.resume(sdl.mainthread)
+	if not res then
+		print('coroutine.resume failed')
+		print(err)
+		print(debug.traceback(sdl.mainthread))
+		js:setMainInterval(nil)
+		window:clearInterval(interval)
 	end
-	js.redirectPrint(s)
 end
 
-xpcall(function()	-- wasmoon has no error handling ... just says "ERROR:ERROR"
+tryToResume()
 
-	local rundir = '`+rundir+`'
-	local runfile = '`+runfile+`'
-	_G.arg = {`+args.map(arg => '"'+arg+'"')+`}
-	-- ok this has become the launcer of everything
-	-- Lua 5.3
-	-- TODO move this into main.js
-
-	package.path = table.concat({
-		'./?.lua',
-		'/?.lua',
-		'/?/?.lua',
-	}, ';')
-
-	-- this modifies some of the _G functions so it should go first
-	local ffi = require 'ffi'
-
-	-- start it as a new thread ...
-	-- TODO can I just wrap the whole dofile() in a main thread?
-	-- the tradeoff is I'd lose my ability for main coroutine detection ...
-	-- or maybe I should shim that function as well ...
-	local sdl = require 'ffi.sdl'
-	local function run(path, file, ...)
-		local fn = '/'..path..'/'..file
-		arg[0] = fn
-		--dofile(fn)	-- doesn't handle ...
-		assert(loadfile(fn))(table.unpack(arg))
-	end
-	sdl.mainthread = coroutine.create(function()
-		run(rundir, runfile)
-	end)
-
-	local interval
-	local window = js.global
-	local function tryToResume()
-		--coroutine.assertresume(sdl.mainthread)
-		if coroutine.status(sdl.mainthread) == 'dead' then return false, 'dead' end
-		local res, err = coroutine.resume(sdl.mainthread)
-		if not res then
-			print('coroutine.resume failed')
-			print(err)
-			print(debug.traceback(sdl.mainthread))
-			js.setMainInterval(nil)
-			window:clearInterval(interval)
-		end
-	end
-
+-- set up main loop
+-- TOOD use requestAnimationFrame instead
+interval = window:setInterval(function()
+	-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
 	tryToResume()
+end, 10)
 
-	-- set up main loop
-	-- TOOD use requestAnimationFrame instead
-	interval = window:setInterval(function()
-		-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
-		tryToResume()
-	end, 10)
-	js.setMainInterval(interval)
-
-end, function(err)
-	print(err)
-	print(debug.traceback())
-end)
+js:setMainInterval(interval)
 `);
 };
 
