@@ -970,6 +970,7 @@ function gl.glGetFloatv(pname, data)
 end
 gl.glGetIntegerv = gl.glGetFloatv
 gl.glGetBooleanv = gl.glGetFloatv
+gl.glGetDoublev = gl.glGetFloatv	-- not in webgl
 
 
 gl.glCreateProgram = res:makeCreate'createProgram'
