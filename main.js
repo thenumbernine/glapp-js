@@ -27,28 +27,28 @@ rundir='glapp/tests'; runfile='minimal.lua';
 rundir='glapp/tests'; runfile='pointtest.lua';
 rundir='glapp/tests'; runfile='info.lua';
 rundir='line-integral-convolution'; runfile='run.lua';		-- WORKS README
-rundir='rule110'; runfile='rule110.lua';					-- WORKS README
-rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README
-rundir='n-points'; runfile='run.lua';						-- WORKS README
-rundir='n-points'; runfile='run_orbit.lua';					-- todo ... or not, it's kinda dumb i guess
-rundir='geographic-charts'; runfile='test.lua';				-- WORKS README
-rundir='prime-spiral'; runfile='run.lua';					-- WORKS README
+rundir='rule110'; runfile='rule110.lua';					-- WORKS README ... but mouse click is so-so
+rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README ... but imgui is buggy
+rundir='n-points'; runfile='run.lua';						-- WORKS README ... but mouse click is so-so
+rundir='n-points'; runfile='run_orbit.lua';					-- todo esp. glPointSize ... or not, it's kinda dumb i guess
+rundir='geographic-charts'; runfile='test.lua';				-- used to work ... now errors from ffi/cpp/vector-lua.lua ... due to a luaffifb ptr arith metatable error
+rundir='prime-spiral'; runfile='run.lua';					-- used to work ... now ffi/cpp/vector-lua.lua
 rundir='lambda-cdm'; runfile='run.lua';						-- WORKS README
 rundir='seashell'; runfile='run.lua';						-- WORKS README ... I had to scale down the mesh from 2000x2000 to 200x200 or it ran too slow to finish ... TODO needs menubar support
 rundir='SphericalHarmonicGraphs'; runfile='run.lua';		-- very slow (didn't finish)
-rundir='metric'; runfile='run.lua';
-rundir='sand-attack'; runfile='run.lua';					-- freezes, needs imgui
-rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README
-rundir='mesh'												-- WORKS README
-rundir='sphere-grid'; runfile='run.lua';					-- WORKS README ... runs horribly slow when vec3d = require'vec-ffi.vec3d', runs blazing fast when vec3d = require'vec.vec3'
-rundir='topple'; runfile='topple-glsl.lua';					-- WORKS README
+rundir='metric'; runfile='run.lua';							-- fails, uses GL_TEXTURE_1D
+rundir='sand-attack'; runfile='run.lua';					-- freezes, needs imgui ImFontAtlas_GetTexDataAsRGBA32
+rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README ... but slow
+rundir='mesh'												-- ... used to?  idk?  mesh/view has errors, something about vec metatables
+rundir='sphere-grid'; runfile='run.lua';					-- WORKS README
+rundir='topple'; runfile='topple-glsl.lua';					-- WORKS README ... mouse
 rundir='topple'; runfile='topple-gpu-display.lua' but through cl-cpu ... but webgl doesn't support compute kernels or multithreading so it'd be software-driven ... so it'd be way too slow ...
 rundir='topple'; runfile='topple-gpu-3d-display.lua' but through cl-cpu
-rundir='earth-magnetic-field'								-- runs but the colors are messed up and it's slow ... and radio buttons ...
+rundir='earth-magnetic-field'								-- ... another pointer arith metatable bug
 rundir='VectorFieldDecomposition'							-- TODO doesn't run
 rundir='geo-center-earth'									-- TODO ... ?
 TODO chompman
-TODO chess on manifold
+rundir='chess on manifold'									-- TODO luaffifb C type objs need to access the metatype's __index
 TODO tetris-attack
 TODO zeta2d/dumpworld
 TODO farmgame
@@ -60,7 +60,6 @@ TODO waves-in-curved space ... ?
 TODO celestial-gravitomagnetics ... ?
 TODO seismograph-stations ... ?
 TODO gravitational-waves
-TODO hydro-cl
 TODO cdfmesh
 TODO asteroids3d
 TODO tacticslua
