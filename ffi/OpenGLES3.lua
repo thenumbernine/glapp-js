@@ -903,8 +903,8 @@ local function makeGetter(infos, getter)
 				end
 				return
 			elseif info.res then
-				if v == js.null then 
-					v = 0 
+				if v == js.null then
+					v = 0
 				else
 					local id = findObj(v, info.res)
 					if not id then error("somehow webgl returned a resource that I didn't have") end

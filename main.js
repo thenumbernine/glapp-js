@@ -337,7 +337,7 @@ function CanvasImageLoader:load(fn)
 	local dstbuf = ffi.new('char[?]', len)
 	ffi.dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
 	return {
-		data = dstbuf,
+		buffer = dstbuf,
 		width = jssrc.width,
 		height = jssrc.height,
 		channels = jssrc.channels,
@@ -1455,11 +1455,14 @@ const doRun = async () => {
 	// make a new state
 	lua.newState();
 
-	window.loadImage = fn => {
+	window.loadImage = (fn) => {
 		if (fn.substr(0,1) != '/') {
 			fn = FS.cwd() + '/' + fn;
 			if (fn.substr(0,1) == '/') fn = fn.substr(1);
 		}
+
+		//await preloadImage(fn, fn.split('.').pop());
+
 		const img = imageCache[fn];
 		if (!img) throw "you need to decode up front file "+fn;
 		return img;
@@ -1467,13 +1470,13 @@ const doRun = async () => {
 
 	window.resize = resize;
 	window.Canvas = Canvas;
-	
+
 	window.closeCanvas = closeCanvas;
 	window.setCanvas = (canvas_) => { canvas = canvas_; };
-	
+
 	window.closeGL = closeGL;
 	window.setGL = (gl_) => { gl = gl_; };
-	
+
 	window.imgui = imgui;
 
 	window.dataToArray = (jsArrayClassName, addr, count) => {
