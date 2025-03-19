@@ -747,6 +747,10 @@ lua.stdoutPrint = function(s) {
 	stdoutTA.value += s + '\n';
 	console.log('> '+s);	//log here too?
 };
+lua.stdoutWrite = function(s) {
+	stdoutTA.value += s;
+	console.log('.. '+s);
+};
 
 let aceEditor;
 let editorPath;
@@ -1519,6 +1523,17 @@ print = function(...)
 
 	-- TODO find where in FS stdout to do this and get rid of this function
 	window.lua:stdoutPrint(s)
+end
+
+do
+	local oldiowrite = io.write
+	io.write = function(...)
+		local s = ''
+		for i=1,select('#', ...) do
+			s = s .. tostring((select(i, ...)))
+		end
+		window.lua:stdoutWrite(s)
+	end
 end
 
 -- this is only for redirecting errors to output
