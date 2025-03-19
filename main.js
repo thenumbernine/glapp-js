@@ -1479,14 +1479,6 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		window.gl = gl;
 	};
 
-	window.safecall = (f, ...args) => {
-		try {
-			return [true, f.call(...args)];
-		} catch (e) {
-			return [false, ''+e];
-		}
-	};
-
 	window.imgui = imgui;
 
 	window.dataToArray = (jsArrayClassName, data, count) => {

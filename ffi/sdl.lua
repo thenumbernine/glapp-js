@@ -1466,9 +1466,6 @@ print('...got gl')
 	-- close any old webgl context, store the new webgl context.
 	js.global:webglInit(webgl)
 
-	-- if you request a webgl extension that's not there then it throws an exception
-	-- and if wasmoon lua->js calls throw exceptions, wasmoon gives you a nonsense error and stops
-	-- so "safecall" these
 	for _, ext in ipairs{
 		'OES_element_index_uint',
 		'OES_standard_derivatives',
@@ -1476,7 +1473,9 @@ print('...got gl')
 		'OES_texture_float_linear',
 		'EXT_color_buffer_float',	-- needed for webgl2 framebuffer+rgba32f
 	} do
-		print(ext, js.global:safecall(webgl.getExtension, webgl, ext))
+		print(ext, xpcall(function()
+			return webgl:getExtension(ext)
+		end, function() end))
 	end
 
 	coroutine.yield(sdl.mainthread)
