@@ -162,22 +162,6 @@ window.FS = FS;
 lua.newState();
 window.lua = lua;
 
-/* testing */
-lua.global.set('js', {global:window});
-lua.doString(`
-
--- js calling js passed through lua is having trouble ...
-js.global.mycb = function()
-	js.global:alert('test')
-end
-
---js.global.mycb() -- works from here
-`);
-console.log('mycb', window.mycb);
-window.mycb();
-throw 'done';
-/**/
-
 // TODO load upon request, no more a need to preload
 const imageCache = {};
 const preloadImage = async (fn, ext) => {
@@ -792,7 +776,7 @@ const editorLoad = () => {
 		aceEditor.clearSelection();
 	} catch (e) {		// TODO file went wrong ... what to do
 		e = ''+e;
-		stdoutPrint(e);	// or if this happens at init, is stdoutTA cleared shortly after?
+		lua.stdoutPrint(e);	// or if this happens at init, is stdoutTA cleared shortly after?
 		failed = true;
 	}
 	if (failed && !editmode) {
@@ -1313,7 +1297,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 							if (lua) {
 								lua.doString(txt);
 							} else {
-								stdoutPrint('lua state not present');
+								lua.stdoutPrint('lua state not present');
 							}
 						}
 					},
@@ -1465,19 +1449,6 @@ const doRun = async () => {
 	// make a new state
 	lua.newState();
 
-/* debugging: * /
-lua.global.set('js', {global : window});
-//lua.global.set('alert', alert);
-lua.doString(`
---print('alert', alert) alert(nil, 'test') -- works with null this
-print('window', js.global)
-print('window.alert', js.global.alert)
---js.global.alert(nil, 'test')	-- works with null this
-js.global:alert('test')
-`);
-throw 'done';
-/* */
-
 	/* special hack ... make sure luaToJs for jsNullToken returns null
 	{
 		const jsNullToken = {};
@@ -1488,41 +1459,9 @@ throw 'done';
 	}
 	*/
 
-/* test setInterval */
-	let counter = 0;
-	lua.global.set('js', {
-		global:window,
-		intervalCB : function() {
-			++counter;
-			console.log('counter', counter);
-			if (counter > 3) {
-				console.log('done');
-				clearInterval(window.myInterval);
-			}
-		},
-	});
-lua.doString(`
-local window = js.global
--- [[
-local counter = 0
-local interval = window:setInterval(function()
-	counter = counter + 1
-	print('counter', counter)
-	if counter > 3 then
-		print'done'
-		window:clearInterval(interval)
-	end
-end, 1000)
---]]
---[[
-window.myInterval = window:setInterval(js.intervalCB, 1000)
---]]
-print'finished setInterval test'
-`);
-throw 'done';
-/**/
 	lua.global.set('js', {
 		//null : jsNullToken,	// special hack with the lua<->js to ensure null is returned
+		// or just make js.null <-> nil <-> undefined?
 
 		global : window,
 
@@ -1577,6 +1516,10 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 
 		pako : window.pako,
 	
+		// TODO find where in FS stdout to do this and get rid of this function
+		redirectPrint : (s) => {
+			lua.stdoutPrint(s);
+		},
 	});
 	
 	imgui.clear();
@@ -1593,74 +1536,94 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 	}
 	lua.doString(`
 
-local ffi = require 'ffi'
-
--- override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
-package.loaded['ext.gcmem'] = {
-	new = function(T, n)
-		return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
-	end,
-	free = function(ptr)
-		-- TODO M._free(ptr)
-	end,
-}
-
-
-local rundir = '`+rundir+`'
-local runfile = '`+runfile+`'
-_G.arg = {`+args.map(arg => '"'+arg+'"')+`}
--- ok this has become the launcer of everything
--- Lua 5.3
--- TODO move this into main.js
-
-package.path = table.concat({
-	'./?.lua',
-	'/?.lua',
-	'/?/?.lua',
-}, ';')
-
-bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
-
--- start it as a new thread ...
--- TODO can I just wrap the whole dofile() in a main thread?
--- the tradeoff is I'd lose my ability for main coroutine detection ...
--- or maybe I should shim that function as well ...
-local sdl = require 'ffi.sdl'
-local function run(path, file, ...)
-	local fn = '/'..path..'/'..file
-	arg[0] = fn
-	--dofile(fn)	-- doesn't handle ...
-	assert(loadfile(fn))(table.unpack(arg))
-end
-sdl.mainthread = coroutine.create(function()
-	run(rundir, runfile)
-end)
-
-local interval
-local window = js.global
-local function tryToResume()
-	--coroutine.assertresume(sdl.mainthread)
-	if coroutine.status(sdl.mainthread) == 'dead' then return false, 'dead' end
-	local res, err = coroutine.resume(sdl.mainthread)
-	if not res then
-		print('coroutine.resume failed')
-		print(err)
-		print(debug.traceback(sdl.mainthread))
-		js:setMainInterval(nil)
-		window:clearInterval(interval)
+-- redirect Lua's print to my textarea
+-- TODO find where in FS stdout to do this and get rid of this function
+print = function(...)
+	local s = ''
+	local sep = ''
+	for i=1,select('#', ...) do
+		s = s .. sep .. tostring((select(i, ...)))
+		sep = '\t'
 	end
+	js:redirectPrint(s)
 end
 
-tryToResume()
+-- this is only for redirecting errors to output
+-- TODO find where in FS stderr to do this and get rid of this function
+xpcall(function()
+	local ffi = require 'ffi'
 
--- set up main loop
--- TOOD use requestAnimationFrame instead
-interval = window:setInterval(function()
-	-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
+	-- override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
+	package.loaded['ext.gcmem'] = {
+		new = function(T, n)
+			return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
+		end,
+		free = function(ptr)
+			-- TODO M._free(ptr)
+		end,
+	}
+
+
+	local rundir = '`+rundir+`'
+	local runfile = '`+runfile+`'
+	_G.arg = {`+args.map(arg => '"'+arg+'"')+`}
+	-- ok this has become the launcer of everything
+	-- Lua 5.3
+	-- TODO move this into main.js
+
+	package.path = table.concat({
+		'./?.lua',
+		'/?.lua',
+		'/?/?.lua',
+	}, ';')
+
+	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
+
+	-- start it as a new thread ...
+	-- TODO can I just wrap the whole dofile() in a main thread?
+	-- the tradeoff is I'd lose my ability for main coroutine detection ...
+	-- or maybe I should shim that function as well ...
+	local sdl = require 'ffi.sdl'
+	local function run(path, file, ...)
+		local fn = '/'..path..'/'..file
+		arg[0] = fn
+		--dofile(fn)	-- doesn't handle ...
+		assert(loadfile(fn))(table.unpack(arg))
+	end
+	sdl.mainthread = coroutine.create(function()
+		run(rundir, runfile)
+	end)
+
+	local interval
+	local window = js.global
+	local function tryToResume()
+		--coroutine.assertresume(sdl.mainthread)
+		if coroutine.status(sdl.mainthread) == 'dead' then return false, 'dead' end
+		local res, err = coroutine.resume(sdl.mainthread)
+		if not res then
+			print('coroutine.resume failed')
+			print(err)
+			print(debug.traceback(sdl.mainthread))
+			js:setMainInterval(nil)
+			window:clearInterval(interval)
+		end
+	end
+
 	tryToResume()
-end, 10)
 
-js:setMainInterval(interval)
+	-- set up main loop
+	-- TOOD use requestAnimationFrame instead
+	interval = window:setInterval(function()
+		-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
+		tryToResume()
+	end, 10)
+
+	js:setMainInterval(interval)
+
+end, function(err)
+	print(err)
+	print(debug.traceback())
+end)
 `);
 };
 
