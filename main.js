@@ -335,7 +335,7 @@ function CanvasImageLoader:load(fn)
 	local len = jssrc.buffer.byteLength
 	-- copy from javascript Uint8Array to our ffi memory
 	local dstbuf = ffi.new('char[?]', len)
-	window:dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
+	ffi.dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
 	return {
 		data = dstbuf,
 		width = jssrc.width,
@@ -1513,6 +1513,10 @@ const doRun = async () => {
 	lua.doString(`
 local js = require 'js'
 local window = js.global
+
+ffi.dataToArray = function(ctype, data, ...)
+	return window:dataToArray(ctype, tonumber(ffi.cast('intptr_t', data)), ...)
+end
 
 -- redirect Lua's print to my textarea
 -- TODO find where in FS stdout to do this and get rid of this function

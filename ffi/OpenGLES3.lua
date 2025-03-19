@@ -872,7 +872,7 @@ function gl.glReadPixels(x, y, width, height, format, type, pixels)
 		return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pixels)))
 	else
 		-- otherwise pixels is an address in memory
-		pixels = window:dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
+		pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
 		return webgl:readPixels(x, y, width, height, format, type, pixels)
 	end
 end
@@ -1110,7 +1110,7 @@ for n=1,4 do
 			)
 			gl[glname] = function(location, count, value)
 				--assert(count == 1, "TODO")
-				value = window:dataToArray(jsarrayctor, value, len * count)
+				value = ffi.dataToArray(jsarrayctor, value, len * count)
 				return webgl[webglname](webgl, location, value)
 			end
 		end
@@ -1122,7 +1122,7 @@ for n=1,4 do
 		local len = n * n
 		gl[glname] = function(location, count, transpose, value)
 			--assert(count == 1, "TODO")
-			value = window:dataToArray('Float32Array', value, len * count)
+			value = ffi.dataToArray('Float32Array', value, len * count)
 			return webgl[webglname](webgl, location, jsbool(transpose), value)
 		end
 	end
@@ -1136,7 +1136,7 @@ for n=1,4 do
 		local glname = 'glVertexAttrib'..n..'fv'
 		local webglname = 'vertexAttrib'..n..'fv'
 		gl[glname] = function(index, value)
-			value = window:dataToArray('Float32Array', value, n)
+			value = ffi.dataToArray('Float32Array', value, n)
 			return webgl[webglname](webgl, index, value)
 		end
 	end
@@ -1301,11 +1301,7 @@ function gl.glBufferData(target, size, data, usage)
 	if data == ffi.null or data == nil then
 		return webgl:bufferData(target, size, usage)
 	else
-		-- convert to address ...
-		data = tonumber(tostring(ffi.cast('intptr_t', ffi.cast('void*', data))))
-print('ata adr', data)
-		data = window:dataToArray('Uint8Array', data, size)
-window.console:log('glBufferData', target, data, usage)
+		data = ffi.dataToArray('Uint8Array', data, size)
 		return webgl:bufferData(target, data, usage)
 	end
 end
@@ -1314,7 +1310,7 @@ function gl.glBufferSubData(target, offset, size, data)
 	if data == ffi.null or data == nil then
 		return webgl:bufferSubData(target, offset)
 	else
-		data = window:dataToArray('Uint8Array', data, size)
+		data = ffi.dataToArray('Uint8Array', data, size)
 		return webgl:bufferSubData(target, offset, data)
 	end
 end
@@ -1364,26 +1360,26 @@ function gl.glBindTexture(target, texture)
 end
 
 function gl.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
-	pixels = window:dataToArray(
+	pixels = ffi.dataToArray(
 		type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array',
 		pixels)
 	return webgl:texImage2D(target, level, internalformat, width, height, border, format, type, pixels)
 end
 
 function gl.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
-	pixels = window:dataToArray(
+	pixels = ffi.dataToArray(
 		type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array',
 		pixels)
 	return webgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
 end
 
 function gl.glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data)
-	data = window:dataToArray('Uint8Array', data)	-- will this have the same stupid problem as above, that data needs to be float32 vs uint8 in arbitrary situations?
+	data = ffi.dataToArray('Uint8Array', data)	-- will this have the same stupid problem as above, that data needs to be float32 vs uint8 in arbitrary situations?
 	return webgl:compressedTexImage2D(target, level, internalformat, width, height, border, data)
 end
 
 function gl.glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data)
-	data = window:dataToArray('Uint8Array', data)
+	data = ffi.dataToArray('Uint8Array', data)
 	return webgl:compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, data)
 end
 
@@ -1506,24 +1502,24 @@ end
 function gl.glDrawArraysInstanced(...) return webgl:drawArraysInstanced(...) end
 
 function gl.glTexImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels)
-	pixels = window:dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
+	pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
 	return webgl:texImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels)
 end
 
 function gl.glTexSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, type, pixels)
-	pixels = window:dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
+	pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
 	return webgl:texSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, type, pixels)
 end
 
 function gl.glCopyTexSubImage3D(...) return webgl:copyTexSubImage3D(...) end
 
 function gl.glCompressedTexImage3D(target, level, internalformat, width, height, depth, border, imageSize, data)
-	data = window:dataToArray('Uint8Array', data)	-- will this have the same stupid problem as above, that data needs to be float32 vs uint8 in arbitrary situations?
+	data = ffi.dataToArray('Uint8Array', data)	-- will this have the same stupid problem as above, that data needs to be float32 vs uint8 in arbitrary situations?
 	return webgl:compressedTexImage3D(target, level, internalformat, width, height, depth, border, data)
 end
 
 function gl.glCompressedTexSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, imageSize, data)
-	data = window:dataToArray('Uint8Array', data)
+	data = ffi.dataToArray('Uint8Array', data)
 	return webgl:compressedTexSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, data)
 end
 
