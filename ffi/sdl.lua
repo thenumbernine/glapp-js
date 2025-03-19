@@ -1018,6 +1018,7 @@ typedef union SDL_Event {
 	SDL_DropEvent drop;
 	Uint8 padding[56];	//[sizeof(void *) <= 8 ? 56 : sizeof(void *) == 16 ? 64 : 3 * sizeof(void *)];
 } SDL_Event;
+typedef enum { SDL_ADDEVENT, SDL_PEEKEVENT, SDL_GETEVENT } SDL_eventaction;
 ]]
 
 local vector = require 'ffi.cpp.vector-lua'

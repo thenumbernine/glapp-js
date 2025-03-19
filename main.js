@@ -1519,6 +1519,10 @@ window.canvas = canvas;			// global?  do I really need it? debugging?  used in f
 		redirectPrint : (s) => {
 			lua.stdoutPrint(s);
 		},
+		dataToArray : (arrayType, ...args) => {
+			const ar = window[arrayType]
+			return new ar(...args);
+		},
 	});
 
 	imgui.clear();
@@ -1555,7 +1559,12 @@ xpcall(function()
 		local ptr = ffi.new('char[?]', #s+1)
 		ffi.copy(ptr, s, #s)
 		ptr[#s] = 0
-		return s
+		return ptr
+	end
+
+	-- TODO just call js directly
+	function ffi.dataToArray(arrayType, ...)
+		return js:dataToArray(arrayType, ...)
 	end
 	
 	-- TODO this in luaffifb
@@ -1564,7 +1573,8 @@ xpcall(function()
 	-- TODO this in luaffifb
 	local oldffistring = ffi.string
 	ffi.string = function(ptr, ...)
-		if ptr == nil then return '(null)' end
+		if type(ptr) == 'string' then return ptr end
+		if ptr == nil then return '(null)' end	-- but in vanilla luajit it segfaults ...
 		return oldffistring(ptr, ...)
 	end
 
@@ -1577,7 +1587,6 @@ xpcall(function()
 			-- TODO M._free(ptr)
 		end,
 	}
-
 
 	local rundir = '`+rundir+`'
 	local runfile = '`+runfile+`'
@@ -1593,6 +1602,20 @@ xpcall(function()
 	}, ';')
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
+
+	-- another shim layer for gettimeofday ...
+	do
+		local oldffi = ffi
+		ffi = setmetatable({
+			C = setmetatable({
+				gettimeofday = require 'ffi.c.sys.time'.gettimeofday,
+			}, {__index=oldffi.C}),
+		}, {__index=oldffi})
+		package.loaded.ffi = ffi
+		require 'ext.timer'
+		ffi = oldffi
+		package.loaded.ffi = ffi
+	end
 
 	-- start it as a new thread ...
 	-- TODO can I just wrap the whole dofile() in a main thread?

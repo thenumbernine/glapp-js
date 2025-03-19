@@ -1002,9 +1002,7 @@ end
 
 function gl.glGetProgramiv(programID, pname, params)
 	local programObj = getObj(programID)
-	if pname == gl.GL_ACTIVE_ATOMIC_COUNTER_BUFFERS then
-		setError(gl.GL_INVALID_ENUM)
-	elseif pname == gl.GL_INFO_LOG_LENGTH then
+	if pname == gl.GL_INFO_LOG_LENGTH then
 		params[0] = #webgl:getProgramInfoLog(programObj)
 	elseif pname == gl.GL_ACTIVE_UNIFORM_MAX_LENGTH then
 		-- https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGetActiveUniform.xhtml
@@ -1072,7 +1070,7 @@ function gl.glGetUniformLocation(program, name)
 end
 
 for n=1,4 do
-	for _,t in ipairs{'f', 'i'} do
+	for _,t in ipairs{'f', 'i', 'ui'} do
 		do
 			local glname = 'glUniform'..n..t
 			local webglname = 'uniform'..n..t
