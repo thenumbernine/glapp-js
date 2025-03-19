@@ -328,7 +328,7 @@ local Image = require 'image'	-- don't require until after setting image.luajit.
 function CanvasImageLoader:save(args) error("save not supported") end
 
 function CanvasImageLoader:load(fn)
-	local jssrc = js.loadImage(path(fn).path)
+	local jssrc = js:loadImage(path(fn).path)
 	local len = jssrc.buffer.byteLength
 	-- copy from javascript Uint8Array to our ffi memory
 	local dstbuf = ffi.new('char[?]', len)
@@ -559,7 +559,7 @@ const imgui = {
 				paddingRight : '20px',
 			},
 		}));
-		const sel = this.create(label+'_value', () =>  Select({
+		const sel = this.create(label+'_value', () => Select({
 			children : items.map(item => Option({
 				innerText : item,
 			})),
@@ -1483,7 +1483,7 @@ const doRun = async () => {
 
 		const jsarrayElemSize = jsElemSizeForTypedArrayName[jsArrayClassName] || 1;
 		if (count === null || count === undefined) {
-			throw "dataToArray expected count";
+			count = data.length;//throw "dataToArray expected count";
 		}
 
 		const cl = window[jsArrayClassName];
@@ -1505,6 +1505,8 @@ const doRun = async () => {
 	}
 	lua.doString(`
 local js = require 'js'
+local window = js.global
+
 -- redirect Lua's print to my textarea
 -- TODO find where in FS stdout to do this and get rid of this function
 print = function(...)
@@ -1516,7 +1518,7 @@ print = function(...)
 	end
 
 	-- TODO find where in FS stdout to do this and get rid of this function
-	js.global.lua:stdoutPrint(s)
+	window.lua:stdoutPrint(s)
 end
 
 -- this is only for redirecting errors to output
@@ -1533,7 +1535,7 @@ xpcall(function()
 
 	-- TODO just call js directly
 	function ffi.dataToArray(...)
-		return js.global:dataToArray(...)
+		return window:dataToArray(...)
 	end
 
 	-- TODO this in luaffifb
@@ -1572,17 +1574,15 @@ xpcall(function()
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
 
-	-- another shim layer for gettimeofday ...
+	-- another shim layer for ffi.C now that luaffifb doesn't allow modifying it ...
 	do
 		local oldffi = ffi
 		ffi = setmetatable({
 			C = setmetatable({
 				gettimeofday = require 'ffi.c.sys.time'.gettimeofday,
+				strlen = require 'ffi.c.string'.strlen,
 			}, {__index=oldffi.C}),
 		}, {__index=oldffi})
-		package.loaded.ffi = ffi
-		require 'ext.timer'
-		ffi = oldffi
 		package.loaded.ffi = ffi
 	end
 
@@ -1602,7 +1602,6 @@ xpcall(function()
 	end)
 
 	local interval
-	local window = js.global
 	local function tryToResume()
 		--coroutine.assertresume(sdl.mainthread)
 		if coroutine.status(sdl.mainthread) == 'dead' then return false, 'dead' end
@@ -1611,7 +1610,7 @@ xpcall(function()
 			print('mainthread coroutine.resume failed.')
 			print(err)
 			print(debug.traceback(sdl.mainthread))
-			js.global.glappMainInterval = nil
+			window.glappMainInterval = nil
 			window:clearInterval(interval)
 		end
 	end
@@ -1625,7 +1624,7 @@ xpcall(function()
 		tryToResume()
 	end, 10)
 
-	js.global.glappMainInterval = interval
+	window.glappMainInterval = interval
 
 end, function(err)
 	print(err)

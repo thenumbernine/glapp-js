@@ -6,6 +6,10 @@ return {
 	end,
 
 	strlen = function(p)
-		return ffi.strlenAddr(ffi.getAddr(p))
+		local start = p
+		while p[0] ~= 0 do
+			p = p + 1
+		end
+		return p - start
 	end,
 }

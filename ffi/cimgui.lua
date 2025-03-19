@@ -1,5 +1,6 @@
 local js = require 'js'
-local jsimgui = js.global.imgui
+local window = js.global
+local jsimgui = window.imgui
 local ffi = require 'ffi'
 
 require 'ffi.c.string'	-- strlen
@@ -1127,11 +1128,11 @@ end
 
 --(const char* label, int* current_item, const char* const items[], int itemCount, int popup_max_height_in_items)
 function ig.igCombo_Str_arr(label, currentItem, items, itemCount, popupMaxHeight)
-	local items = {}
+	local jsitems = window:Array()
 	for i=1,itemCount do
-		items[i] = ffi.string(items[i])
+		jsitems[i-1] = ffi.string(items[i])
 	end
-	local changed = jsimgui:inputCombo(label, currentItem[0], items)
+	local changed = jsimgui:inputCombo(label, currentItem[0], jsitems)
 	if changed then
 		currentItem[0] = jsimgui:lastValue()
 	end
@@ -1141,12 +1142,12 @@ end
 --(const char* label, int* current_item, const char* itemsZeroSep, int popup_max_height_in_items)
 function ig.igCombo_Str(label, currentItem, itemsZeroSep, popupMaxHeight)
 	local p = ffi.cast('char*', itemsZeroSep)
-	local items = {}
+	local jsitems = window:Array()
 	while p[0] ~= 0 do
-		table.insert(items, ffi.string(p))
+		jsitems:push(ffi.string(p))
 		p = p + ffi.C.strlen(p) + 1
 	end
-	local changed = jsimgui:inputCombo(label, currentItem[0], items)
+	local changed = jsimgui:inputCombo(label, currentItem[0], jsitems)
 	if changed then
 		currentItem[0] = jsimgui:lastValue()
 	end
@@ -1155,11 +1156,11 @@ end
 
 --(const char* label, int* current_item, const char*(*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items)
 function ig.igCombo_FnBoolPtr(label, currentItem, getter, userData, itemsCount, popupMaxHeight)
-	local items = {}
+	local jsitems = window:Array()
 	for i=0,itemsCount-1 do
-		table.insert(items, ffi.string(getter(userData, i)))
+		jsitems[i] = ffi.string(getter(userData, i))
 	end
-	local changed = jsimgui:inputCombo(label, currentItem[0], items)
+	local changed = jsimgui:inputCombo(label, currentItem[0], jsitems)
 	if changed then
 		currentItem[0] = jsimgui:lastValue()
 	end
