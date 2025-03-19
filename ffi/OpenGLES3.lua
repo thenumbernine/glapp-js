@@ -867,6 +867,7 @@ function gl.glPolygonOffset(...) return webgl:polygonOffset(...) end
 function gl.glReadPixels(x, y, width, height, format, type, pixels)
 	-- if webgl:getParameter(gl.GL_PIXEL_PACK_BUFFER_BINDING) == js.null then	-- ... getting our stupid 'then' error
 	-- TODO if 'pixels' is any kind of pointer ...
+	pixels = ffi.cast('void*', pixels)
 	if pixels == ffi.null or pixels == nil then
 		-- if PIXEL_PACK_BUFFER is bound then we are reading into it, and 'pixels' is an offset
 		return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pixels)))
@@ -1048,9 +1049,11 @@ function gl.glGetProgramInfoLog(program, bufSize, length, infoLog)
 	local log = webgl:getProgramInfoLog(getObj(program))
 	if not log then return  end
 
+	length = ffi.cast('int32_t*', length)
 	if length ~= ffi.null then
 		length[0] = #log
 	end
+	infoLog = ffi.cast('char*', infoLog)
 	if infoLog ~= ffi.null then
 		ffi.copy(infoLog, log, bufSize)
 	end
@@ -1058,15 +1061,19 @@ end
 
 function gl.glGetActiveUniform(program, index, bufSize, length, size, type, name)
 	local uinfo = webgl:getActiveUniform(getObj(program), index)
+	length = ffi.cast('int32_t*', length)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
+	size = ffi.cast('int32_t*', size)
 	if size ~= ffi.null then
 		size[0] = uinfo.size
 	end
+	type = ffi.cast('int32_t*', type)
 	if type ~= ffi.null then
 		type[0] = uinfo.type
 	end
+	name = ffi.cast('char*', name)
 	if name ~= ffi.null then
 		ffi.copy(name, uinfo.name)
 	end
@@ -1157,15 +1164,19 @@ gl.glGetVertexAttribiv = gl.glGetVertexAttribfv
 
 function gl.glGetActiveAttrib(program, index, bufSize, length, size, type, name)
 	local uinfo = webgl:getActiveAttrib(getObj(program), index)
+	length = ffi.cast('int32_t*', length)
 	if length ~= ffi.null then
 		length[0] = #uinfo.name
 	end
+	size = ffi.cast('int32_t*', size)
 	if size ~= ffi.null then
 		size[0] = uinfo.size
 	end
+	type = ffi.cast('int32_t*', type)
 	if type ~= ffi.null then
 		type[0] = uinfo.type
 	end
+	name = ffi.cast('int32_t*', name)
 	if name ~= ffi.null then
 		ffi.copy(name, uinfo.name)
 	end
@@ -1244,9 +1255,11 @@ function gl.glGetShaderInfoLog(shader, bufSize, length, infoLog)
 	local log = webgl:getShaderInfoLog(getObj(shader))
 	if not log then  return end
 
+	length = ffi.cast('int32_t*', length)
 	if length ~= ffi.null then
 		length[0] = #log
 	end
+	infoLog = ffi.cast('int32_t*', infoLog)
 	if infoLog ~= ffi.null then
 		ffi.copy(infoLog, log, math.min(#log+1, bufSize))
 	end
@@ -1298,6 +1311,10 @@ function gl.glBindBuffer(target, buffer)
 end
 
 function gl.glBufferData(target, size, data, usage)
+print('glBufferData', data)
+	-- if we don't cast first then, for the case of arrays-of-types-with-ffi-metatypes, luaffifb calls the metatype __eq with the ffi.null object and it usually goes bad
+	-- so to get around that ,cast to void* first:
+	data = ffi.cast('void*', data)
 	if data == ffi.null or data == nil then
 		return webgl:bufferData(target, size, usage)
 	else
@@ -1307,6 +1324,7 @@ function gl.glBufferData(target, size, data, usage)
 end
 
 function gl.glBufferSubData(target, offset, size, data)
+	data = ffi.cast('void*', data)
 	if data == ffi.null or data == nil then
 		return webgl:bufferSubData(target, offset)
 	else
