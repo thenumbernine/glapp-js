@@ -341,6 +341,7 @@ function CanvasImageLoader:load(fn)
 		width = jssrc.width,
 		height = jssrc.height,
 		channels = jssrc.channels,
+		format = 'uint8_t',
 	}
 end
 
