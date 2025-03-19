@@ -19,8 +19,14 @@ end
 
 function M.dir(path)
 	return coroutine.wrap(function()
-		-- how well can wasmoon iterate over js array elements?
-		for _,f in ipairs(FS:readdir(path)) do
+		--[[ TODO get iterators working with wrappers
+		for _,dir in ipairs(FS:readdir(path)) do
+		--]]
+		-- [[ until then
+		local dir = FS:readdir(path)
+		for i=0,#dir-1 do
+			local f = dir[i]
+		--]]
 			-- good of emscripten readdir() to provide . and .. for lfs compat
 			coroutine.yield(f)
 		end

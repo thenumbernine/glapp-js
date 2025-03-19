@@ -1329,7 +1329,17 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	local document = window.document
 	document.title = title
 
-	canvas = assert(js.global:createCanvas(), 'js.global:createCanvas failed')
+	window:closeCanvas()
+	canvas = window:Canvas{
+		style = {
+			position = 'absolute',
+			userSelect = 'none',
+		},
+		prependTo = document.body,
+	}
+	sdl.canvas = canvas		-- assign here for cimgui to find later
+	window.canvas = canvas	-- here for debugging
+	window:resize()			-- set our initial size
 
 	window:addEventListener('keyup', function(jsev)
 		local sdlev = eventQueue:emplace_back()
@@ -1464,7 +1474,9 @@ print('...got gl')
 	require 'gl'.setWebGLContext(webgl)
 
 	-- close any old webgl context, store the new webgl context.
-	js.global:webglInit(webgl)
+	window:closeGL()
+	window.gl = gl
+	js.global:setGL(webgl)	-- let main.js know to stop this gl context if we get an error
 
 	for _, ext in ipairs{
 		'OES_element_index_uint',

@@ -1458,27 +1458,11 @@ const doRun = async () => {
 		return img;
 	};
 
-	window.createCanvas = () => {
-		closeCanvas();
-		canvas = Canvas({
-			style : {
-				position : 'absolute',
-				userSelect : 'none',
-			},
-			prependTo : document.body,
-		});
-window.canvas = canvas;			// global?  do I really need it? debugging?  used in ffi.cimgui right now
-		resize();	// set our initial size
-		return canvas;
-	};
-
-	// TODO FIXME no more wasmoon
-	window.webglInit = (gl_) => {
-		closeGL();
-		gl = gl_;
-		window.gl = gl;
-	};
-
+	window.Canvas = Canvas;
+	window.resize = resize;
+	window.closeCanvas = closeCanvas;
+	window.closeGL = closeGL;
+	window.setGL = (gl_) => { gl = gl_; };
 	window.imgui = imgui;
 
 	window.dataToArray = (jsArrayClassName, data, count) => {

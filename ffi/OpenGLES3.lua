@@ -893,18 +893,23 @@ local function makeGetter(infos, getter)
 		if info then
 			assert(not info.string, "can't get a string value")
 			if info.array then
-				-- TODO weird GL_VIEWPORT is getting 0 0 0 1042. ..
+				-- what to do here if v == js.null?
 				for i=0,info.array-1 do
-					data[i] = v[i+1]	-- GAAHHHH I THINK WASMOON IS OFFSETTING INDEXES BY 1 TO BE COOL LIKE LUA.  PLEASE PLEASE STOP WASMOON, JUST DO YOUR JOB AND FORWARD JS INTEROP, DONT ADD SHIT TO IT.
+					data[i] = v[i]
 				end
 				return
 			elseif info.res then
-				if v == js.null then return 0 end
-				local id = findObj(v, info.res)
-				if not id then error("somehow webgl returned a resource that I didn't have") end
-				v = id
+				if v == js.null then 
+					v = 0 
+				else
+					local id = findObj(v, info.res)
+					if not id then error("somehow webgl returned a resource that I didn't have") end
+					v = id
+				end
+			else
 			end
 		end
+		if v == js.null then v = 0 end
 		data[0] = v
 	end
 end
@@ -983,7 +988,6 @@ function gl.glGetAttachedShaders(program, maxCount, count, shaders)
 	if count then count[0] = jsshaders.length end
 	if shaders then
 		for i=0,math.min(maxCount, jsshaders.length)-1 do
-			-- TODO is wasmoon gonna f with me and reindex the array access?  i miss fengari...
 			shaders[i] = findObj(jsshaders[i], 'createShader')
 		end
 	end

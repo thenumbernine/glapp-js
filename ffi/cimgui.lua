@@ -1167,7 +1167,8 @@ function ig.igCombo_FnBoolPtr(label, currentItem, getter, userData, itemsCount, 
 end
 
 function ig.igGetMainViewport()
-	local canvas = js.global.canvas	-- assigned in createCanvas right now
+	-- assigned in sdl.SDL_CreateWindow
+	local canvas = require 'sdl'.canvas
 	return {
 		WorkPos = ffi.new('ImVec2', 0, 0),
 		WorkSize = ffi.new('ImVec2', canvas.width, canvas.height),
