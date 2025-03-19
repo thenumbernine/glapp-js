@@ -318,6 +318,8 @@ import { luaPackages } from '/js/lua-packages.js';
 FS.writeFile('audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
 
 FS.writeFile('image/luajit/jscanvas.lua', `
+local js = require 'js'
+local window = js.global
 local ffi = require 'ffi'
 local class = require 'ext.class'
 local path = require 'ext.path'
@@ -333,7 +335,7 @@ function CanvasImageLoader:load(fn)
 	local len = jssrc.buffer.byteLength
 	-- copy from javascript Uint8Array to our ffi memory
 	local dstbuf = ffi.new('char[?]', len)
-	ffi.dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
+	window:dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
 	return {
 		data = dstbuf,
 		width = jssrc.width,
@@ -1474,25 +1476,25 @@ const doRun = async () => {
 	
 	window.imgui = imgui;
 
-	window.dataToArray = (jsArrayClassName, data, count) => {
-		if (data == null) return null;
+	const jsElemBitsForTypedArrayName = {
+		Float64Array : 3,
+		Float32Array : 2,
+		Int32Array : 2,
+		Uint32Array : 2,
+		Int16Array : 1,
+		Uint16Array : 1,
+	};
+	window.dataToArray = (jsArrayClassName, addr, count) => {
+		if (addr == null) return null;	// ???
 
-		const jsElemSizeForTypedArrayName = {
-			Float64Array : 8,
-			Float32Array : 4,
-			Int32Array : 4,
-			Uint32Array : 4,
-			Int16Array : 2,
-			Uint16Array : 2,
-		};
-
-		const jsarrayElemSize = jsElemSizeForTypedArrayName[jsArrayClassName] || 1;
 		if (count === null || count === undefined) {
-			count = data.length;//throw "dataToArray expected count";
+			//const jsarrayElemBits = jsElemBitsForTypedArrayName[jsArrayClassName] || 0;
+			//count = addr.length >> jsarrayElemBits; 
+			throw "dataToArray expected count";
 		}
 
 		const cl = window[jsArrayClassName];
-		const result = new cl(M.HEAPU8.buffer, data, count);
+		const result = new cl(M.HEAPU8.buffer, addr, count);
 		return result;
 	};
 
@@ -1547,11 +1549,6 @@ xpcall(function()
 		ffi.copy(ptr, s, #s)
 		ptr[#s] = 0
 		return ptr
-	end
-
-	-- TODO just call js directly
-	function ffi.dataToArray(...)
-		return window:dataToArray(...)
 	end
 
 	-- TODO this in luaffifb

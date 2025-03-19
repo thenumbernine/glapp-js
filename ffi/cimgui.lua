@@ -1085,7 +1085,7 @@ ig.igColorButton = ig.igButton
 
 function ig.igInputFloat(label, v, ...)
 	-- 'v' is cdata, it is where things get written upon succes ...
-	--local v = ffi.dataToArray('Float32Array', v, 1);
+	--local v = window:dataToArray('Float32Array', v, 1);
 	local changed = jsimgui:inputFloat(label, v[0], ...)
 	if changed then
 		-- before I was fasting the v ptr through to the js functions, and within that writing to v[0] ... which must've done some js magic under the hood? to be able to invoke the lua metamethod ... bad idea I guess?  i can't tell ...
@@ -1098,7 +1098,7 @@ ig.igSliderFloat = ig.igInputFloat
 
 function ig.igInputInt(label, v, ...)
 	-- 'v' is cdata, it is where things get written upon succes ...
-	--local v = ffi.dataToArray('Int32Array', v, 1);
+	--local v = window:dataToArray('Int32Array', v, 1);
 	local changed = jsimgui:inputInt(label, v[0], ...)
 	if changed then
 		v[0] = jsimgui:lastValue()
