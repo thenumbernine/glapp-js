@@ -1500,6 +1500,14 @@ xpcall(function()
 			C = setmetatable({
 				gettimeofday = require 'ffi.c.sys.time'.gettimeofday,
 				strlen = require 'ffi.c.string'.strlen,
+				malloc = function(n)
+					return ffi.cast('void*', ffi.new('uint8_t[?]',
+						-- disheartening that ffi.new needs tonumber
+						-- TODO FIXME in luaffifb
+						tonumber(n)
+					))
+				end,
+				free = function(ptr) end,
 			}, {__index=oldffi.C}),
 		}, {__index=oldffi})
 		package.loaded.ffi = ffi
