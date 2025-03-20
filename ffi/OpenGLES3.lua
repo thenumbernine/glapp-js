@@ -1238,6 +1238,9 @@ end
 function gl.glVertexAttribPointer(index, size, ctype, normalized, stride, pointer)
 	return webgl:vertexAttribPointer(index, size, ctype, jsbool(normalized), stride, tonumber(ffi.cast('intptr_t', pointer)))
 end
+function gl.glVertexAttribIPointer(index, size, ctype, stride, pointer)
+	return webgl:vertexAttribIPointer(index, size, ctype, stride, tonumber(ffi.cast('intptr_t', pointer)))
+end
 
 function gl.glEnableVertexAttribArray(...) return webgl:enableVertexAttribArray(...) end
 function gl.glDisableVertexAttribArray(...) return webgl:disableVertexAttribArray(...) end
