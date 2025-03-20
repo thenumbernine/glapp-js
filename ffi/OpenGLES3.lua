@@ -864,6 +864,17 @@ function gl.glLineWidth(...) return webgl:lineWidth(...) end
 function gl.glPixelStorei(...) return webgl:pixelStorei(...) end
 function gl.glPolygonOffset(...) return webgl:polygonOffset(...) end
 
+local function jsTypeForGLType(type)
+	if type == gl.GL_FLOAT then return 'Float32Array' end
+	if type == gl.GL_UNSIGNED_INT then return 'Uint32Array' end
+	if type == gl.GL_INT then return 'Int32Array' end
+	if type == gl.GL_UNSIGNED_SHORT then return 'Uint16Array' end
+	if type == gl.GL_SHORT then return 'Int16Array' end
+	--if type == gl.GL_UNSIGNED_BYTE then return 'Uint8Array' end
+	if type == gl.GL_BYTE then return 'Int8Array' end
+	return 'Uint8Array'
+end
+
 function gl.glReadPixels(x, y, width, height, format, type, pixels)
 	-- if webgl:getParameter(gl.GL_PIXEL_PACK_BUFFER_BINDING) == js.null then	-- ... getting our stupid 'then' error
 	-- TODO if 'pixels' is any kind of pointer ...
@@ -873,7 +884,7 @@ function gl.glReadPixels(x, y, width, height, format, type, pixels)
 		return webgl:readPixels(x, y, width, height, format, type, tonumber(ffi.cast('intptr_t', pixels)))
 	else
 		-- otherwise pixels is an address in memory
-		pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
+		pixels = ffi.dataToArray(jsTypeForGLType(type), pixels)
 		return webgl:readPixels(x, y, width, height, format, type, pixels)
 	end
 end
@@ -1377,16 +1388,12 @@ function gl.glBindTexture(target, texture)
 end
 
 function gl.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
-	pixels = ffi.dataToArray(
-		type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array',
-		pixels)
+	pixels = ffi.dataToArray(jsTypeForGLType(type), pixels)
 	return webgl:texImage2D(target, level, internalformat, width, height, border, format, type, pixels)
 end
 
 function gl.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
-	pixels = ffi.dataToArray(
-		type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array',
-		pixels)
+	pixels = ffi.dataToArray(jsTypeForGLType(type), pixels)
 	return webgl:texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels)
 end
 
@@ -1519,12 +1526,12 @@ end
 function gl.glDrawArraysInstanced(...) return webgl:drawArraysInstanced(...) end
 
 function gl.glTexImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels)
-	pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
+	pixels = ffi.dataToArray(jsTypeForGLType(type), pixels)
 	return webgl:texImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels)
 end
 
 function gl.glTexSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, type, pixels)
-	pixels = ffi.dataToArray(type == gl.GL_FLOAT and 'Float32Array' or 'Uint8Array', pixels)
+	pixels = ffi.dataToArray(jsTypeForGLType(type), pixels)
 	return webgl:texSubImage3D(target, level, xoffset, yoffset, width, height, depth, format, type, pixels)
 end
 
