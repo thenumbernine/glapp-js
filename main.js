@@ -51,7 +51,7 @@ rundir='earth-magnetic-field'								-- ... another pointer arith metatable bug
 rundir='VectorFieldDecomposition'							-- TODO doesn't run
 rundir='geo-center-earth'									-- TODO ... ?
 TODO chompman
-rundir='chess on manifold'									-- TODO luaffifb C type objs need to access the metatype's __index
+rundir='chess-on-manifold'									-- TODO ptr arith metatable error
 TODO tetris-attack
 TODO zeta2d/dumpworld
 TODO farmgame
@@ -159,11 +159,11 @@ const TextArea = DomTag('textarea');
 let lua = await newLua({
 	print : s => {
 		stdoutTA.value += s + '\n';
-		console.log('> '+s);	//log here too?
+		console.log('>', s);	//log here too?
 	},
 	printErr : s => {
 		stdoutTA.value += s + '\n';
-		console.log('1> '+s);	//log here too?
+		console.log('1>', s);	//log here too?
 	},
 });
 // lua = lua<->js interop layer
@@ -1470,6 +1470,7 @@ xpcall(function()
 	-- override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
 	package.loaded['ext.gcmem'] = {
 		new = function(T, n)
+			n = math.floor(n)					-- get rid of pesky decimals ...
 			return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
 		end,
 		free = function(ptr)
