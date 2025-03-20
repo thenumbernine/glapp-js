@@ -864,15 +864,42 @@ function gl.glLineWidth(...) return webgl:lineWidth(...) end
 function gl.glPixelStorei(...) return webgl:pixelStorei(...) end
 function gl.glPolygonOffset(...) return webgl:polygonOffset(...) end
 
+-- copied from gl/types.lua ctypeForGLType
+-- TODO store the js.global[jstype], and just call it directly instead of ffi.dataToArray
+local op = require 'ext.op'
+local ctypeForGLType = table{
+	-- these types are per-channel
+	GL_UNSIGNED_BYTE = 'Uint8Array',
+	GL_BYTE = 'Int8Array',
+	GL_UNSIGNED_SHORT = 'Uint16Array',
+	GL_SHORT = 'Int16Array',
+	GL_UNSIGNED_INT = 'Uint32Array',
+	GL_INT = 'Int32Array',
+	GL_FLOAT = 'Float32Array',
+	-- these types incorporate all channels
+	GL_HALF_FLOAT = 'Uint16Array',
+	GL_UNSIGNED_BYTE_3_3_2 = 'Uint8Array',
+	GL_UNSIGNED_BYTE_2_3_3_REV = 'Uint8Array',
+	GL_UNSIGNED_SHORT_5_6_5 = 'Uint16Array',
+	GL_UNSIGNED_SHORT_5_6_5_REV = 'Uint16Array',
+	GL_UNSIGNED_SHORT_4_4_4_4 = 'Uint16Array',
+	GL_UNSIGNED_SHORT_4_4_4_4_REV = 'Uint16Array',
+	GL_UNSIGNED_SHORT_5_5_5_1 = 'Uint16Array',
+	GL_UNSIGNED_SHORT_1_5_5_5_REV = 'Uint16Array',
+	GL_UNSIGNED_INT_8_8_8_8 = 'Uint32Array',
+	GL_UNSIGNED_INT_8_8_8_8_REV = 'Uint32Array',
+	GL_UNSIGNED_INT_10_10_10_2 = 'Uint32Array',
+	GL_UNSIGNED_INT_2_10_10_10_REV = 'Uint32Array',
+}:map(function(v,k)
+	-- some of these are not in GLES so ...
+	-- luajit cdata doesn't let you test for existence with a simple nil value
+	k = op.safeindex(gl, k)
+	if not k then return end
+	return v, k
+end):setmetatable(nil)
+
 local function jsTypeForGLType(type)
-	if type == gl.GL_FLOAT then return 'Float32Array' end
-	if type == gl.GL_UNSIGNED_INT then return 'Uint32Array' end
-	if type == gl.GL_INT then return 'Int32Array' end
-	if type == gl.GL_UNSIGNED_SHORT then return 'Uint16Array' end
-	if type == gl.GL_SHORT then return 'Int16Array' end
-	--if type == gl.GL_UNSIGNED_BYTE then return 'Uint8Array' end
-	if type == gl.GL_BYTE then return 'Int8Array' end
-	return 'Uint8Array'
+	return ctypeForGLType[type] or 'Uint8Array'
 end
 
 function gl.glReadPixels(x, y, width, height, format, type, pixels)
