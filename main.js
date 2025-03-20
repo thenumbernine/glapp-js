@@ -45,13 +45,14 @@ rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README ... but sl
 rundir='mesh'; runfile='view.lua'; cmdline=['meshes/cube.obj'];	-- WORKS README
 rundir='sphere-grid'; runfile='run.lua';					-- WORKS README
 rundir='topple'; runfile='topple-glsl.lua';					-- WORKS README ... mouse
-rundir='topple'; runfile='topple-gpu-display.lua' but through cl-cpu ... but webgl doesn't support compute kernels or multithreading so it'd be software-driven ... so it'd be way too slow ...
-rundir='topple'; runfile='topple-gpu-3d-display.lua' but through cl-cpu
-rundir='earth-magnetic-field'								-- TODO running out of memory ...
-rundir='VectorFieldDecomposition'							-- TODO doesn't run
-rundir='geo-center-earth'									-- TODO ... ?
+rundir='topple'; runfile='topple-gpu-display.lua'; but through cl-cpu ... but webgl doesn't support compute kernels or multithreading so it'd be software-driven ... so it'd be way too slow ...
+rundir='topple'; runfile='topple-gpu-3d-display.lua'; but through cl-cpu
+rundir='earth-magnetic-field';								-- TODO running out of memory ...
+rundir='VectorFieldDecomposition';							-- TODO doesn't run
+rundir='geo-center-earth';									-- TODO ... ?
+rundir='chess-on-manifold';									-- TODO running out of memory ...
+rundir='numo9'; runfile='run.lua';							-- "missing declaration for function/global GL_UNSIGNED_SHORT_1_5_5_5_REV"
 TODO chompman
-rundir='chess-on-manifold'									-- TODO running out of memory ...
 TODO tetris-attack
 TODO zeta2d/dumpworld
 TODO farmgame

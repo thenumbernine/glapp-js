@@ -25,7 +25,10 @@ typedef enum { SDL_TOUCH_DEVICE_INVALID = -1, SDL_TOUCH_DEVICE_DIRECT, SDL_TOUCH
 enum{ SDL_TOUCH_MOUSEID = -1 };
 enum{ SDL_MOUSE_TOUCHID = -1 };
 enum{ SDL_INIT_VIDEO = 0x20 };
-enum{ SDL_INIT_JOYSTICK = 0x00000200 };
+
+enum { SDL_INIT_JOYSTICK = 0x00000200 };
+enum { SDL_INIT_AUDIO = 0x00000010u };
+
 enum{ SDL_DISABLE = 0 };
 enum{ SDL_ENABLE = 1 };
 enum{ SDL_WINDOWPOS_CENTERED = 0x2fff0000 };
@@ -1021,6 +1024,26 @@ typedef union SDL_Event {
 	Uint8 padding[56];	//[sizeof(void *) <= 8 ? 56 : sizeof(void *) == 16 ? 64 : 3 * sizeof(void *)];
 } SDL_Event;
 typedef enum { SDL_ADDEVENT, SDL_PEEKEVENT, SDL_GETEVENT } SDL_eventaction;
+
+enum { AUDIO_U8 = 8 };
+enum { AUDIO_S8 = 32776 };
+enum { AUDIO_U16LSB = 16 };
+enum { AUDIO_S16LSB = 32784 };
+enum { AUDIO_U16MSB = 4112 };
+enum { AUDIO_S16MSB = 36880 };
+enum { AUDIO_U16 = 16 };
+enum { AUDIO_S16 = 32784 };
+enum { AUDIO_S32LSB = 32800 };
+enum { AUDIO_S32MSB = 36896 };
+enum { AUDIO_S32 = 32800 };
+enum { AUDIO_F32LSB = 33056 };
+enum { AUDIO_F32MSB = 37152 };
+enum { AUDIO_F32 = 33056 };
+enum { AUDIO_U16SYS = 16 };
+enum { AUDIO_S16SYS = 32784 };
+enum { AUDIO_S32SYS = 32800 };
+enum { AUDIO_F32SYS = 33056 };
+
 ]]
 
 local vector = require 'ffi.cpp.vector-lua'
