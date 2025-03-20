@@ -1502,6 +1502,7 @@ const doRun = async () => {
 		console.log('failed to parse args as JSON:', e);
 	}
 	lua.doString(`
+local ffi = require 'ffi'
 local js = require 'js'
 local window = js.global
 
