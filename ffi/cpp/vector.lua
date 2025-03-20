@@ -6,7 +6,7 @@ local ffi = require 'ffi'
 local assert = require 'ext.assert'
 local range = require 'ext.range'
 local struct = require 'struct'
-local stdlib = require 'ffi.req' 'c.stdlib'	-- malloc, free .. only for emscripten I need to abstract the namespace, because it's dlsym is broken
+require 'ffi.req' 'c.stdlib'	-- malloc, free
 
 -- TODO I want to move functions into one place
 -- but as soon as I switch __index to read the .metatable, struct:isa() stops working ...
@@ -16,7 +16,7 @@ function vectorbase:__gc()
 	-- I could use ffi.new and just trust luajit for the gc
 	-- but then this wouldn't be so compatible with casting std::vector<> memory blobs directly
 	if self.v ~= ffi.null then
-		stdlib.free(self.v)
+		ffi.C.free(self.v)
 	end
 end
 
@@ -32,11 +32,11 @@ function vectorbase:capacity()
 --DEBUG(ffi.cpp.vector): print('ffi.typeof(self) = ', ffi.typeof(self))
 --DEBUG(ffi.cpp.vector): print('(void*)self = ', tostring(ffi.cast('void*', self)))
 -- TODO how come printing pointers is crashing?
---DEBUG(ffi.cpp.vector): -- print('self.start', tostring(self.start))
+--DEBUG(ffi.cpp.vector): print('self.start', tostring(self.start))
 --DEBUG(ffi.cpp.vector): -- print('self.start', ''..self.start)
---DEBUG(ffi.cpp.vector): print('self.start', tostring(ffi.cast('void*', self.start)))
---DEBUG(ffi.cpp.vector): print('self.endOfStorage', tostring(ffi.cast('void*', self.endOfStorage)))
---DEBUG(ffi.cpp.vector): -- print('self.endOfStorage', tostring(self.endOfStorage))
+--DEBUG(ffi.cpp.vector): -- print('self.start', tostring(ffi.cast('void*', self.start)))
+--DEBUG(ffi.cpp.vector): -- print('self.endOfStorage', tostring(ffi.cast('void*', self.endOfStorage)))
+--DEBUG(ffi.cpp.vector): print('self.endOfStorage', tostring(self.endOfStorage))
 --DEBUG(ffi.cpp.vector): print('returning', tostring(self.endOfStorage - self.start))
 	return self.endOfStorage - self.start
 end
@@ -82,7 +82,7 @@ function vectorbase:reserve(newcap)
 	-- TODO realloc?
 	local bytes = ffi.sizeof(self.T) * newcap
 --DEBUG(ffi.cpp.vector): print('allocating '..tostring(bytes)..' bytes')
-	local newv = stdlib.malloc(bytes)
+	local newv = ffi.C.malloc(bytes)
 	if newv == ffi.null then error("malloc failed to allocate "..bytes) end
 	local size = self:size()
 	assert.le(size, oldcap)
@@ -90,7 +90,7 @@ function vectorbase:reserve(newcap)
 	ffi.copy(newv, self.v, ffi.sizeof(self.T) * size)
 	if self.v ~= ffi.null then
 --DEBUG(ffi.cpp.vector): print('freeing', tostring(ffi.cast('void*', self.v)))
-		stdlib.free(self.v)
+		ffi.C.free(self.v)
 	end
 	self.v = newv
 --DEBUG(ffi.cpp.vector): print('new v:', tostring(ffi.cast('void*', self.v)))
@@ -325,7 +325,7 @@ local function makeStdVector(T, name)
 			end,
 		}
 
--- hmmmmmm emscripten is failing this.  in non-64bit-memory-mode it is making void*'s 4 bytes but aligning void* structs to 8 bytes ... WHYYYY
+-- still broken in emscripten
 		-- stl vector in my gcc / linux is 24 bytes
 		-- template type of our vector ... 8 bytes mind you
 --		assert.eq(ffi.sizeof(name), 3*ffi.sizeof'void*')	-- 24
