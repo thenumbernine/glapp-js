@@ -1,4 +1,7 @@
-import { newLua } from '/js/lua-interop.js';
+import {newLua} from '/js/lua-interop.js';
+import {addPackage} from '/js/lua.vm-util.js';
+import {luaPackages} from '/js/lua-packages.js';
+
 
 const urlparams = new URLSearchParams(location.search);
 
@@ -228,82 +231,19 @@ if (imgData.constructor != Uint8Array) throw 'expected Uint8Array';
 	}
 };
 
-const fetchBytes = src => {
-	return new Promise((resolve, reject) => {
-		const req = new XMLHttpRequest();
-		req.open('GET', src, true);
-		req.responseType = 'arraybuffer';
-		req.onload = ev => {
-			resolve(new Uint8Array(req.response));
-		};
-		req.onerror = function() {
-			console.log("failed on", src);
-			reject({
-				status: this.status,
-				statusText: req.statusText
-			});
-		};
-		req.send(null);
-	});
+const loadImageCallback = luaPath => {
+	// TODO no more preloading
+	const ext = luaPath.split('.').pop();
+	if (ext == 'png' ||
+		ext == 'jpg' ||
+		ext == 'jpeg' ||
+		ext == 'gif' ||
+		ext == 'tiff' ||
+		ext == 'bmp'
+	) {
+		preloadImage(luaPath, ext);
+	}
 };
-
-// https://github.com/hellpanderrr/lua-in-browser
-const mountFile = (filePath, luaPath) => {
-	return fetchBytes(filePath)
-	.then(fileContent => {
-
-		const fileSep = luaPath.lastIndexOf('/');
-		const file = luaPath.substring(fileSep + 1);
-		const body = luaPath.substring(0, luaPath.length - file.length - 1);
-
-		if (body.length > 0) {
-			const parts = body.split('/').reverse();
-			let parent = '';
-
-			while (parts.length) {
-				const part = parts.pop();
-				if (!part) continue;
-
-				const current = `${parent}/${part}`;
-				try {
-					FS.mkdir(current);
-				} catch (err) {} // ignore EEXIST
-
-				parent = current;
-			}
-		}
-
-		FS.writeFile(luaPath, fileContent, {encoding:'binary'});
-
-		// TODO no more preloading
-		const ext = luaPath.split('.').pop();
-		if (ext == 'png' ||
-			ext == 'jpg' ||
-			ext == 'jpeg' ||
-			ext == 'gif' ||
-			ext == 'tiff' ||
-			ext == 'bmp'
-		) {
-			return preloadImage(luaPath, ext);
-		}
-	});
-}
-
-const addFromToDir = (fromPath, toPath, files) =>
-	// TODO use Promise.allSettled, but that means first flatten all the promises into one Promise.all ... shudders ... javascript is so retarded ...
-	Promise.all(files.map(f => mountFile(
-		(fromPath+'/'+f).replace('+', '%2b'),	//TODO full url escape? but not for /'s
-		toPath+'/'+f
-	)));
-
-const addPackage = pkg =>
-	Promise.all(
-		pkg.map(fileset =>
-			addFromToDir(fileset.from, fileset.to, fileset.files)
-		)
-	);
-
-import { luaPackages } from '/js/lua-packages.js';
 
 {
 	const pkgs = [];
@@ -320,7 +260,7 @@ import { luaPackages } from '/js/lua-packages.js';
 	//push all other packages
 	for (let k in luaPackages) pkgs.push(luaPackages[k]);
 	// and wait for them all to load
-	await Promise.all(pkgs.map(pkg => addPackage(pkg)))
+	await Promise.all(pkgs.map(pkg => addPackage(FS, pkg, loadImageCallback)))
 	.catch(e => { throw e; });
 }
 // why is this here when it's not down there in FS.readdir'/' ?
@@ -928,18 +868,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 							const newname = filesrc.name;
 							const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
 							FS.writeFile(newpath, new Uint8Array(result), {encoding:'binary'});
-
-							// also in mountFile ... TODO if someone modifies an image file then they will need to regen this as well ... hmm ...
-							const ext = newpath.split('.').pop();
-							if (ext == 'png' ||
-								ext == 'jpg' ||
-								ext == 'jpeg' ||
-								ext == 'gif' ||
-								ext == 'tiff' ||
-								ext == 'bmp'
-							) {
-								preloadImage(newpath, ext);
-							}
+							loadImageCallback(newpath);
 
 							makeFileDiv(newpath, newname, fileInfo);
 							fileInfo.sortChildren();
