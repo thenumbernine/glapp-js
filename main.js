@@ -1494,6 +1494,12 @@ xpcall(function()
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
 
+	-- shim package for numo9
+	package.loaded.clip = {
+		text = function() end,
+		image = function() end,
+	}
+
 	-- another shim layer for ffi.C now that luaffifb doesn't allow modifying it ...
 	do
 		local oldffi = ffi
