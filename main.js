@@ -1,4 +1,4 @@
-import { lua } from '/js/lua-interop.js';
+import { newLua } from '/js/lua-interop.js';
 
 const urlparams = new URLSearchParams(location.search);
 
@@ -153,14 +153,28 @@ const Select = DomTag('select');
 const Span = DomTag('span');
 const TextArea = DomTag('textarea');
 
+let lua = await newLua({
+	print : s => {
+		stdoutTA.value += s + '\n';
+		console.log('> '+s);	//log here too?
+	},
+	printErr : s => {
+		stdoutTA.value += s + '\n';
+		console.log('1> '+s);	//log here too?
+	},
+});
+// lua = lua<->js interop layer
+// lua.M = lua wasm lib
+
 const M = lua.lib;
 const FS = M.FS;
+
 //debugging ... or it's also in the js<->lua interop using js.global (TODO a better way to talk between them?)
+window.lua = lua;
 window.M = M;
 window.FS = FS;
 
 lua.newState();
-window.lua = lua;
 
 // TODO load upon request, no more a need to preload
 const imageCache = {};
@@ -746,15 +760,6 @@ let stdoutTA;
 let stdinTA;
 // store as pixel <=> smoother scrolling when resizing divider, store as fraction <=> smoother when resizing window ... shrug
 
-lua.stdoutPrint = function(s) {
-	stdoutTA.value += s + '\n';
-	console.log('> '+s);	//log here too?
-};
-lua.stdoutWrite = function(s) {
-	stdoutTA.value += s;
-	console.log('.. '+s);
-};
-
 let aceEditor;
 let editorPath;
 let editorFileNameSpan;
@@ -782,7 +787,7 @@ const editorLoad = () => {
 		aceEditor.clearSelection();
 	} catch (e) {		// TODO file went wrong ... what to do
 		e = ''+e;
-		lua.stdoutPrint(e);	// or if this happens at init, is stdoutTA cleared shortly after?
+		M.printErr(e);	// or if this happens at init, is stdoutTA cleared shortly after?
 		failed = true;
 	}
 	if (failed && !editmode) {
@@ -1303,7 +1308,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 							if (lua) {
 								lua.doString(txt);
 							} else {
-								lua.stdoutPrint('lua state not present');
+								M.printErr('lua state not present');
 							}
 						}
 					},
@@ -1508,31 +1513,6 @@ local window = js.global
 
 ffi.dataToArray = function(ctype, data, ...)
 	return window:dataToArray(ctype, tonumber(ffi.cast('intptr_t', data)), ...)
-end
-
--- redirect Lua's print to my textarea
--- TODO find where in FS stdout to do this and get rid of this function
-print = function(...)
-	local s = ''
-	local sep = ''
-	for i=1,select('#', ...) do
-		s = s .. sep .. tostring((select(i, ...)))
-		sep = '\t'
-	end
-
-	-- TODO find where in FS stdout to do this and get rid of this function
-	window.lua:stdoutPrint(s)
-end
-
-do
-	local oldiowrite = io.write
-	io.write = function(...)
-		local s = ''
-		for i=1,select('#', ...) do
-			s = s .. tostring((select(i, ...)))
-		end
-		window.lua:stdoutWrite(s)
-	end
 end
 
 -- this is only for redirecting errors to output
