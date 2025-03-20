@@ -34,7 +34,7 @@ rundir='rule110'; runfile='rule110.lua';					-- WORKS README ... but mouse click
 rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README ... but imgui is buggy
 rundir='n-points'; runfile='run.lua';						-- WORKS README ... but mouse click is so-so
 rundir='n-points'; runfile='run_orbit.lua';					-- todo esp. glPointSize ... or not, it's kinda dumb i guess
-rundir='geographic-charts'; runfile='test.lua';				-- used to work ... now errors from ffi/cpp/vector-lua.lua ... due to a luaffifb ptr arith metatable error
+rundir='geographic-charts'; runfile='test.lua';				-- starts up, but gets some gl error
 rundir='prime-spiral'; runfile='run.lua';					-- used to work ... now ffi/cpp/vector-lua.lua
 rundir='lambda-cdm'; runfile='run.lua';						-- WORKS README
 rundir='seashell'; runfile='run.lua';						-- WORKS README ... I had to scale down the mesh from 2000x2000 to 200x200 or it ran too slow to finish ... TODO needs menubar support
@@ -42,16 +42,16 @@ rundir='SphericalHarmonicGraphs'; runfile='run.lua';		-- very slow (didn't finis
 rundir='metric'; runfile='run.lua';							-- fails, uses GL_TEXTURE_1D
 rundir='sand-attack'; runfile='run.lua';					-- freezes, needs imgui ImFontAtlas_GetTexDataAsRGBA32
 rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README ... but slow
-rundir='mesh'												-- ... used to?  idk?  mesh/view has errors, something about vec metatables
+rundir='mesh'; runfile='view.lua'; cmdline=['meshes/cube.obj'];	-- WORKS README
 rundir='sphere-grid'; runfile='run.lua';					-- WORKS README
 rundir='topple'; runfile='topple-glsl.lua';					-- WORKS README ... mouse
 rundir='topple'; runfile='topple-gpu-display.lua' but through cl-cpu ... but webgl doesn't support compute kernels or multithreading so it'd be software-driven ... so it'd be way too slow ...
 rundir='topple'; runfile='topple-gpu-3d-display.lua' but through cl-cpu
-rundir='earth-magnetic-field'								-- ... another pointer arith metatable bug
+rundir='earth-magnetic-field'								-- TODO running out of memory ...
 rundir='VectorFieldDecomposition'							-- TODO doesn't run
 rundir='geo-center-earth'									-- TODO ... ?
 TODO chompman
-rundir='chess-on-manifold'									-- TODO ptr arith metatable error
+rundir='chess-on-manifold'									-- TODO running out of memory ...
 TODO tetris-attack
 TODO zeta2d/dumpworld
 TODO farmgame
