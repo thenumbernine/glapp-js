@@ -1564,7 +1564,7 @@ xpcall(function()
 			return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
 		end,
 		free = function(ptr)
-			-- TODO M._free(ptr)
+			-- TODO M.free(ptr)
 		end,
 	}
 
