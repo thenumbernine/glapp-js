@@ -1,7 +1,7 @@
 import {newLua} from '/js/lua-interop.js';
 import {addPackage} from '/js/lua.vm-util.js';
 import {luaPackages} from '/js/lua-packages.js';
-
+import {A, Br, Button, Canvas, Div, Img, Input, Option, Select, Span, TextArea} from '/js/dom.js';
 
 const urlparams = new URLSearchParams(location.search);
 
@@ -71,91 +71,6 @@ TODO inspiration engine
 TODO ... solarsystem graph ... takes GBs of data ...
 TODO black-hole-skymap, but the lua ver is in a subdir of the js ver ... but maybe i'll put the js vers on here too ...
 */
-
-const merge = (mergedst, ...mergesrcs) => {
-	mergesrcs.forEach(mergesrc => {
-		for (let k in mergesrc) {
-			mergedst[k] = mergesrc[k];
-		}
-	});
-	return mergedst;
-};
-
-//TODO put this in util.js
-const Dom = args => {
-	const tagName = args.tagName;
-	if (!tagName) throw "can't make a dom without a tagName";
-	const dom = document.createElement(tagName);
-	const reservedFields = {
-		// the following are same name but dif setter
-		tagName : 1,
-		style : 1,
-		attrs : 1,
-		children : 1,
-		// the following are my names
-		events : 1,
-		appendTo : 1,
-		prependTo : 1,
-	};
-	const reserved = {};
-	if (args) {
-		for (let k in args) {
-			if (k in reservedFields) {
-				reserved[k] = args[k];
-			} else {
-				dom[k] = args[k];
-			}
-		}
-	}
-	if (reserved.style !== undefined) {
-		if (typeof(reserved.style) == 'object') {
-			merge(dom.style, reserved.style);
-		} else {
-			dom.style = reserved.style;
-		}
-	}
-	if (reserved.attrs !== undefined) {
-		for (let k in reserved.attrs) {
-			dom.setAttribute(k, reserved.attrs[k]);
-		}
-	}
-	if (reserved.events !== undefined) {
-		for (let k in reserved.events) {
-			dom.addEventListener(k, reserved.events[k]);
-		}
-	}
-
-	//add last for load event's sake
-	if (reserved.appendTo !== undefined) {
-		reserved.appendTo.append(dom);
-	}
-	if (reserved.prependTo !== undefined) {
-		reserved.prependTo.prepend(dom);
-	}
-	if (reserved.children !== undefined) {
-		reserved.children.forEach(child => {
-			dom.append(child);
-		});
-	}
-
-	return dom;
-}
-
-const DomTag = tagName => {
-	return args => Dom(merge({tagName:tagName}, args));
-};
-
-const Canvas = DomTag('canvas');
-const Img = DomTag('img');
-const A = DomTag('a');
-const Br = DomTag('br');
-const Button = DomTag('button');
-const Div = DomTag('div');
-const Input = DomTag('input');
-const Option = DomTag('option');
-const Select = DomTag('select');
-const Span = DomTag('span');
-const TextArea = DomTag('textarea');
 
 let lua = await newLua({
 	print : s => {
