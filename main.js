@@ -1,5 +1,5 @@
+import {addPackage} from '/js/util.js';
 import {newLua} from '/js/lua-interop.js';
-import {addPackage} from '/js/lua.vm-util.js';
 import {luaPackages} from '/js/lua-packages.js';
 import {A, Br, Button, Canvas, Div, Img, Input, Option, Select, Span, TextArea} from '/js/dom.js';
 
