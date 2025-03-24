@@ -555,7 +555,8 @@ typedef enum {
 } SDL_Keymod;
 enum{ SDL_RELEASED = 0 };
 enum{ SDL_PRESSED = 1 };
-enum{
+
+typedef enum {
 	SDL_FIRSTEVENT = 0,
 	SDL_QUIT = 0x100,
 	SDL_APP_TERMINATING,
@@ -596,6 +597,8 @@ enum{
 	SDL_CONTROLLERTOUCHPADMOTION,
 	SDL_CONTROLLERTOUCHPADUP,
 	SDL_CONTROLLERSENSORUPDATE,
+	SDL_CONTROLLERUPDATECOMPLETE_RESERVED_FOR_SDL3,
+	SDL_CONTROLLERSTEAMHANDLEUPDATED,
 	SDL_FINGERDOWN = 0x700,
 	SDL_FINGERUP,
 	SDL_FINGERMOTION,
@@ -615,7 +618,7 @@ enum{
 	SDL_POLLSENTINEL = 0x7F00,
 	SDL_USEREVENT = 0x8000,
 	SDL_LASTEVENT = 0xFFFF
-};
+} SDL_EventType;
 typedef enum { SDL_WINDOW_FULLSCREEN = 0x00000001, SDL_WINDOW_OPENGL = 0x00000002, SDL_WINDOW_SHOWN = 0x00000004, SDL_WINDOW_HIDDEN = 0x00000008, SDL_WINDOW_BORDERLESS = 0x00000010, SDL_WINDOW_RESIZABLE = 0x00000020, SDL_WINDOW_MINIMIZED = 0x00000040, SDL_WINDOW_MAXIMIZED = 0x00000080, SDL_WINDOW_MOUSE_GRABBED = 0x00000100, SDL_WINDOW_INPUT_FOCUS = 0x00000200, SDL_WINDOW_MOUSE_FOCUS = 0x00000400, SDL_WINDOW_FULLSCREEN_DESKTOP = (SDL_WINDOW_FULLSCREEN | 0x00001000), SDL_WINDOW_FOREIGN = 0x00000800, SDL_WINDOW_ALLOW_HIGHDPI = 0x00002000, SDL_WINDOW_MOUSE_CAPTURE = 0x00004000, SDL_WINDOW_ALWAYS_ON_TOP = 0x00008000, SDL_WINDOW_SKIP_TASKBAR = 0x00010000, SDL_WINDOW_UTILITY = 0x00020000, SDL_WINDOW_TOOLTIP = 0x00040000, SDL_WINDOW_POPUP_MENU = 0x00080000, SDL_WINDOW_KEYBOARD_GRABBED = 0x00100000, SDL_WINDOW_VULKAN = 0x10000000, SDL_WINDOW_METAL = 0x20000000, SDL_WINDOW_INPUT_GRABBED = SDL_WINDOW_MOUSE_GRABBED } SDL_WindowFlags;
 
 enum{ SDL_WINDOWPOS_UNDEFINED_MASK = 0x1FFF0000};
@@ -702,7 +705,6 @@ typedef struct SDL_Finger {
 } SDL_Finger;
 
 typedef Sint64 SDL_GestureID;
-typedef enum { SDL_FIRSTEVENT = 0, SDL_QUIT = 0x100, SDL_APP_TERMINATING, SDL_APP_LOWMEMORY, SDL_APP_WILLENTERBACKGROUND, SDL_APP_DIDENTERBACKGROUND, SDL_APP_WILLENTERFOREGROUND, SDL_APP_DIDENTERFOREGROUND, SDL_LOCALECHANGED, SDL_DISPLAYEVENT = 0x150, SDL_WINDOWEVENT = 0x200, SDL_SYSWMEVENT, SDL_KEYDOWN = 0x300, SDL_KEYUP, SDL_TEXTEDITING, SDL_TEXTINPUT, SDL_KEYMAPCHANGED, SDL_TEXTEDITING_EXT, SDL_MOUSEMOTION = 0x400, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEWHEEL, SDL_JOYAXISMOTION = 0x600, SDL_JOYBALLMOTION, SDL_JOYHATMOTION, SDL_JOYBUTTONDOWN, SDL_JOYBUTTONUP, SDL_JOYDEVICEADDED, SDL_JOYDEVICEREMOVED, SDL_JOYBATTERYUPDATED, SDL_CONTROLLERAXISMOTION = 0x650, SDL_CONTROLLERBUTTONDOWN, SDL_CONTROLLERBUTTONUP, SDL_CONTROLLERDEVICEADDED, SDL_CONTROLLERDEVICEREMOVED, SDL_CONTROLLERDEVICEREMAPPED, SDL_CONTROLLERTOUCHPADDOWN, SDL_CONTROLLERTOUCHPADMOTION, SDL_CONTROLLERTOUCHPADUP, SDL_CONTROLLERSENSORUPDATE, SDL_CONTROLLERUPDATECOMPLETE_RESERVED_FOR_SDL3, SDL_CONTROLLERSTEAMHANDLEUPDATED, SDL_FINGERDOWN = 0x700, SDL_FINGERUP, SDL_FINGERMOTION, SDL_DOLLARGESTURE = 0x800, SDL_DOLLARRECORD, SDL_MULTIGESTURE, SDL_CLIPBOARDUPDATE = 0x900, SDL_DROPFILE = 0x1000, SDL_DROPTEXT, SDL_DROPBEGIN, SDL_DROPCOMPLETE, SDL_AUDIODEVICEADDED = 0x1100, SDL_AUDIODEVICEREMOVED, SDL_SENSORUPDATE = 0x1200, SDL_RENDER_TARGETS_RESET = 0x2000, SDL_RENDER_DEVICE_RESET, SDL_POLLSENTINEL = 0x7F00, SDL_USEREVENT = 0x8000, SDL_LASTEVENT = 0xFFFF } SDL_EventType;
 
 typedef struct SDL_Keysym {
 	SDL_Scancode scancode;
@@ -1070,6 +1072,8 @@ local mouseAtLastPollY = 0
 local mouseX = 0
 local mouseY = 0
 local mouseButtonFlags = 0	-- SDL_BUTTON_*MASK flags
+
+local touches = {}
 
 local function setMousePos(x, y)
 	mouseX = x
@@ -1449,12 +1453,90 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	window:addEventListener('DOMMouseScroll', function(jsev)
 	end)
 	--]]
-	--[[ should I pass additional SDL touch events?
+	-- [[ SDL touch events?
 	-- SDL_FINGERDOWN SDL_FINGERUP SDL_FINGERMOTION
-	window:addEventListener('touchstart', function(jsev) end)
-	window:addEventListener('touchmove', function(jsev) end)
-	window:addEventListener('touchend', function(jsev) end)
-	window:addEventListener('touchcancel', function(jsev) end)
+	window:addEventListener('touchstart', function(jsev)
+		local jsts = jsev.touches
+		for i=0,jsts.length-1 do
+			local jst = jsts[i]
+			local fingerId = jst.identifier
+
+			local sdlt = {}
+			touches[fingerId] = sdlt
+
+			local sdlev = eventQueue:emplace_back()
+			sdlev.type = sdl.SDL_FINGERDOWN
+			sdlev.tfinger.timestamp = os.time()
+			sdlev.tfinger.touchID = 0
+			sdlev.tfinger.fingerId = fingerId
+			sdlev.tfinger.x = jst.pageX
+			sdlev.tfinger.y = jst.pageY
+			sdlev.tfinger.dx = 0
+			sdlev.tfinger.dy = 0
+			sdlev.tfinger.pressure = jst.force
+			sdlev.tfinger.windowID = 0
+
+			sdlt.x = jst.pageX
+			sdlt.y = jst.pageY
+		end
+	end)
+	-- TODO accumulate this, like mousemove
+	window:addEventListener('touchmove', function(jsev)
+		local jsts = jsev.touches
+		for i=0,jsts.length-1 do
+			local jst = jsts[i]
+			local fingerId = jst.identifier
+
+			local sdlt = touches[fingerId]
+			if not sdlt then
+				-- what to do if we get a touchmove for something we didn't get a touchstart for?
+			else
+				local sdlev = eventQueue:emplace_back()
+				sdlev.type = sdl.SDL_FINGERDOWN
+				sdlev.tfinger.timestamp = os.time()
+				sdlev.tfinger.touchID = 0
+				sdlev.tfinger.fingerId = fingerId
+				sdlev.tfinger.x = jst.pageX
+				sdlev.tfinger.y = jst.pageY
+				sdlev.tfinger.dx = jst.pageX - sdlt.x
+				sdlev.tfinger.dy = jst.pageY - sdlt.y
+				sdlev.tfinger.pressure = jst.force
+				sdlev.tfinger.windowID = 0
+
+				sdlt.x = jst.pageX
+				sdlt.y = jst.pageY
+			end
+		end
+	end)
+	local touchEndCancel = function(jsev)
+		local jsts = jsev.touches
+		for i=0,jsts.length-1 do
+			local jst = jsts[i]
+			local fingerId = jst.identifier
+
+			local sdlt = touches[fingerId]
+			if not sdlt then
+				-- what to do if we get a touchmove for something we didn't get a touchstart for?
+			else
+
+				local sdlev = eventQueue:emplace_back()
+				sdlev.type = sdl.SDL_FINGERUP
+				sdlev.tfinger.timestamp = os.time()
+				sdlev.tfinger.touchID = 0
+				sdlev.tfinger.fingerId = t.identifier
+				sdlev.tfinger.x = jst.pageX
+				sdlev.tfinger.y = jst.pageY
+				sdlev.tfinger.dx = jst.pageX - sdlt.x
+				sdlev.tfinger.dy = jst.pageY - sdlt.y
+				sdlev.tfinger.pressure = t.force
+				sdlev.tfinger.windowID = 0
+
+				touches[fingerId] = nil
+			end
+		end
+	end
+	window:addEventListener('touchend', touchEndCancel)
+	window:addEventListener('touchcancel', touchEndCancel)
 	--]]
 
 	coroutine.yield(sdl.mainthread)
