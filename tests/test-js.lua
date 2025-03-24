@@ -4,6 +4,7 @@ print sdl/js events while they happen
 --]]
 local table = require 'ext.table'
 local string = require 'ext.string'
+local op = require 'ext.op'
 local sdl = require 'ffi.req' 'sdl'
 
 -- https://wiki.libsdl.org/SDL2/SDL_Event
@@ -81,7 +82,13 @@ for typename,fields in pairs{
 		__tostring = function(self)
 			local s = table()
 			for _,field in ipairs(fields) do
-				s:insert(tostring(field)..'='..self[field])
+				local result, err = op.safeindex(self, field)
+				if err then
+					result = 'error: '..tostring(err)
+				else
+					result = tostring(result)
+				end
+				s:insert(tostring(field)..'='..result)
 			end
 			return s:concat', '
 		end,
