@@ -1453,8 +1453,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	window:addEventListener('DOMMouseScroll', function(jsev)
 	end)
 	--]]
-	-- [[ SDL touch events?
-	-- SDL_FINGERDOWN SDL_FINGERUP SDL_FINGERMOTION
+	-- [[ SDL touch events
 	window:addEventListener('touchstart', function(jsev)
 		local jsts = jsev.touches
 		for i=0,jsts.length-1 do
@@ -1469,8 +1468,8 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 			sdlev.tfinger.timestamp = os.time()
 			sdlev.tfinger.touchID = 0
 			sdlev.tfinger.fingerId = fingerId
-			sdlev.tfinger.x = jst.pageX
-			sdlev.tfinger.y = jst.pageY
+			sdlev.tfinger.x = jst.pageX / canvas.offsetWidth
+			sdlev.tfinger.y = jst.pageY / canvas.offsetHeight
 			sdlev.tfinger.dx = 0
 			sdlev.tfinger.dy = 0
 			sdlev.tfinger.pressure = jst.force
@@ -1496,10 +1495,10 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 				sdlev.tfinger.timestamp = os.time()
 				sdlev.tfinger.touchID = 0
 				sdlev.tfinger.fingerId = fingerId
-				sdlev.tfinger.x = jst.pageX
-				sdlev.tfinger.y = jst.pageY
-				sdlev.tfinger.dx = jst.pageX - sdlt.x
-				sdlev.tfinger.dy = jst.pageY - sdlt.y
+				sdlev.tfinger.x = jst.pageX / canvas.offsetWidth
+				sdlev.tfinger.y = jst.pageY / canvas.offsetHeight
+				sdlev.tfinger.dx = (jst.pageX - sdlt.x) / canvas.offsetWidth
+				sdlev.tfinger.dy = (jst.pageY - sdlt.y) / canvas.offsetHeight
 				sdlev.tfinger.pressure = jst.force
 				sdlev.tfinger.windowID = 0
 
@@ -1524,10 +1523,10 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 				sdlev.tfinger.timestamp = os.time()
 				sdlev.tfinger.touchID = 0
 				sdlev.tfinger.fingerId = t.identifier
-				sdlev.tfinger.x = jst.pageX
-				sdlev.tfinger.y = jst.pageY
-				sdlev.tfinger.dx = jst.pageX - sdlt.x
-				sdlev.tfinger.dy = jst.pageY - sdlt.y
+				sdlev.tfinger.x = jst.pageX / canvas.offsetWidth
+				sdlev.tfinger.y = jst.pageY / canvas.offsetHeight
+				sdlev.tfinger.dx = (jst.pageX - sdlt.x) / canvas.offsetWidth
+				sdlev.tfinger.dy = (jst.pageY - sdlt.y) / canvas.offsetHeight
 				sdlev.tfinger.pressure = t.force
 				sdlev.tfinger.windowID = 0
 
