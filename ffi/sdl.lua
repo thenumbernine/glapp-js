@@ -1492,7 +1492,7 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 				-- what to do if we get a touchmove for something we didn't get a touchstart for?
 			else
 				local sdlev = eventQueue:emplace_back()
-				sdlev.type = sdl.SDL_FINGERDOWN
+				sdlev.type = sdl.SDL_FINGERMOTION
 				sdlev.tfinger.timestamp = os.time()
 				sdlev.tfinger.touchID = 0
 				sdlev.tfinger.fingerId = fingerId
