@@ -1066,9 +1066,11 @@ function sdl.SDL_GetError() end	-- TODO return a ffiblob / ptr of a string of th
 local canvas
 local eventQueue = vector'SDL_Event'
 
+--[[ add mouse motion upon query events
 local mouseMovedSinceLastPoll = true
 local mouseAtLastPollX = 0
 local mouseAtLastPollY = 0
+--]]
 local mouseX = 0
 local mouseY = 0
 local mouseButtonFlags = 0	-- SDL_BUTTON_*MASK flags
@@ -1393,14 +1395,33 @@ function sdl.SDL_CreateWindow(title, x, y, w, h, flags)
 	end)
 
 	-- i'm not capturing right-clicks, and idk why ...
-	window:addEventListener('contextmenu', function(jsev)
-		jsev:preventDefault()
-		return false
-	end)
+	window:eval[[
+window.addEventListener('contextmenu', e => {
+	e.preventDefault();
+	return false;
+});
+]]
 
 	window:addEventListener('mousemove', function(jsev)
+		--[[ add mouse motion upon query events
 		mouseMovedSinceLastPoll = true
 		setMousePos(jsev.pageX, jsev.pageY)
+		--]]
+		-- [[ add mouse motion now
+		local pageX, pageY = jsev.pageX, jsev.pageY
+		setMouseFlags(jsev.buttons)	-- translate mouseButtonFlags
+		local sdlev = eventQueue:emplace_back()
+		sdlev[0].type = sdl.SDL_MOUSEMOTION
+		sdlev[0].motion.timestamp = os.time()
+		sdlev[0].motion.windowID = 0	-- TODO SDL windowID
+		sdlev[0].motion.which = 0
+		sdlev[0].motion.state = mouseButtonFlags
+		sdlev[0].motion.x = pageX
+		sdlev[0].motion.y = pageY
+		sdlev[0].motion.xrel = pageX - mouseX
+		sdlev[0].motion.yrel = pageY - mouseY
+		setMousePos(pageX, pageY) -- now update mouseX, mouseY
+		--]]
 	end)
 	window:addEventListener('mousedown', function(jsev)
 		setMousePos(jsev.pageX, jsev.pageY)
@@ -1649,6 +1670,7 @@ function sdl.SDL_GL_SwapWindow(window)
 	end
 end
 
+--[[ add mouse motion upon query events
 local function updateMouseMoveEvent()
 	if mouseMovedSinceLastPoll then
 		mouseMovedSinceLastPoll = false
@@ -1667,14 +1689,17 @@ local function updateMouseMoveEvent()
 		mouseAtLastPollY = mouseY
 	end
 end
+--]]
 
 -- returns the # of events
 -- writes one event at a time
 -- either this or SDL_GL_SwapWindow should be our coroutine yield ...
 function sdl.SDL_PollEvent(event)
 
+	--[[ add mouse motion upon query events
 	-- see if there's any mouse motion
 	updateMouseMoveEvent()
+	--]]
 
 	-- return our events
 	if #eventQueue > 0 then
@@ -1694,7 +1719,9 @@ function sdl.SDL_PumpEvents()
 	-- I guess I'm already automatically doing that with the js callbacks ...
 	-- I could separate the event queue before PumpEvents and after but then that's adding one more event buffer ...
 	-- so much bloat to the SDL event API ...
+	--[[ add mouse motion upon query events
 	updateMouseMoveEvent()
+	--]]
 end
 
 -- https://wiki.libsdl.org/SDL2/SDL_PeepEvents
