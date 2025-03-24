@@ -172,6 +172,7 @@ const loadImageCallback = luaPath => {
 		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
 		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
 		{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
+		{from : './tests', to : 'glapp/tests', files : ['test-js.lua']},
 	]);
 	//push all other packages
 	for (let k in luaPackages) pkgs.push(luaPackages[k]);
@@ -1113,7 +1114,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 		},
 		appendTo : document.body,
 		children : [
-			stdoutTA = TextArea({
+				window.stdoutTA = stdoutTA = TextArea({
 				readOnly : true,
 				style : {
 					backgroundColor : '#000000',
