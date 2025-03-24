@@ -101,10 +101,28 @@ local function getattr(src)
 end
 
 function M.attributes(path, attr)
-	return getattr(FS:stat(path))
+	local attr, err, code
+	xpcall(function()
+		attr = getattr(FS:stat(path))
+	end, function(e)
+		-- ErrnoError?
+		err = tostring(e.name)
+		code = e.errno
+	end)
+	if not err then return attr end
+	return attr, err, code
 end
 function M.symlinkattributes(path, attr)
-	return getattr(FS:lstat(path))
+	local attr, err, code
+	xpcall(function()
+		attr = getattr(FS:lstat(path))
+	end, function(e)
+		-- ErrnoError?
+		err = tostring(e.name)
+		code = e.errno
+	end)
+	if not err then return attr end
+	return attr, err, code
 end
 
 function M.touch(path, actime, modtime) end
