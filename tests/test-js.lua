@@ -89,6 +89,13 @@ for typename,fields in pairs{
 	})
 end
 
+-- add js callbacks here to match those in ffi.sdl
+local window = require 'js'.global
+window:eval[[
+['keyup', 'keydown', 'contextmenu', 'mousemove', 'mousedown', 'mouseup', 'touchstart', 'touchmove', 'touchend', 'touchcancel']
+.forEach(k => window.addEventListener(k, e => console.log(e)));
+]]
+
 return require 'glapp':subclass{
 	event = function(self, e)
 		local info = eventInfo[e.type]
