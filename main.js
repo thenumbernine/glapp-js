@@ -51,8 +51,8 @@ rundir='earth-magnetic-field';								-- TODO running out of memory ...
 rundir='VectorFieldDecomposition';							-- TODO doesn't run
 rundir='geo-center-earth';									-- TODO ... ?
 rundir='chess-on-manifold';									-- TODO running out of memory ...
-rundir='numo9'; runfile='run.lua';							-- "missing declaration for function/global GL_UNSIGNED_SHORT_1_5_5_5_REV"
-TODO chompman
+rundir='numo9'; runfile='run.lua';							-- "missing declaration for function/global GL_UNSIGNED_SHORT_1_5_5_5_REV" ... ugh GL has standard 1555 ABGR but not 5551 RGBA ... meanwhile 40 years of hardware supports 5551 RGBA and not 1555 ABGR ...
+rundir='chompman'; runfile='run.lua';						-- TODO running out of memory
 TODO tetris-attack
 TODO zeta2d/dumpworld
 TODO farmgame
@@ -74,12 +74,13 @@ TODO black-hole-skymap, but the lua ver is in a subdir of the js ver ... but may
 
 let lua = await newLua({
 	print : s => {
-		stdoutTA.value += s + '\n';
+		if (stdoutTA) stdoutTA.value += s + '\n';
 		console.log('>', s);	//log here too?
 	},
 	printErr : s => {
-		stdoutTA.value += s + '\n';
+		if (stdoutTA) stdoutTA.value += s + '\n';
 		console.log('1>', s);	//log here too?
+		console.log(new Error().stack);
 	},
 });
 // lua = lua<->js interop layer
@@ -1340,6 +1341,9 @@ const doRun = async () => {
 		}
 	};
 
+	window.malloc = size => M._malloc(size);
+	window.free = ptr => M._free(ptr);
+
 	imgui.clear();
 	stdoutTA.value = '';
 
@@ -1424,13 +1428,12 @@ xpcall(function()
 				gettimeofday = require 'ffi.c.sys.time'.gettimeofday,
 				strlen = require 'ffi.c.string'.strlen,
 				malloc = function(n)
-					return ffi.cast('void*', ffi.new('uint8_t[?]',
-						-- disheartening that ffi.new needs tonumber
-						-- TODO FIXME in luaffifb
-						tonumber(n)
-					))
+					return ffi.cast('void*', window:malloc(n))
 				end,
-				free = function(ptr) end,
+				free = function(ptr)
+					-- TODO get past tonumber(ffi.cast('intptr_t', ...))
+					return window:free(tonumber(ffi.cast('intptr_t', ptr)))
+				end,
 			}, {__index=oldffi.C}),
 		}, {__index=oldffi})
 		package.loaded.ffi = ffi
