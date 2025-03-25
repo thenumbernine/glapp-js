@@ -231,6 +231,29 @@ FS.writeFile(
 	FS.readFile('/complex/complex.lua', {encoding:'utf8'}).replace(` = pcall(require, 'ffi')`, ``),
 	{encoding:'binary'});
 
+// override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
+FS.writeFile('ext/gcmem.lua', `
+local ffi = require 'ffi'
+return {
+	new = function(T, n)
+		n = math.floor(n)					-- get rid of pesky decimals ...
+		return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
+	end,
+	free = function(ptr)
+		-- TODO M.free(ptr)
+	end,
+}
+`, {encoding:'utf8'});
+
+// this is usually clip.so
+FS.writeFile('clip.lua', `
+return {
+	text = function() end,
+	image = function() end,
+}
+`, {encoding:'utf8'});
+
+
 const refreshEditMode = () => {
 	if (editmode) {
 		fsDiv.style.display = 'block';
@@ -1341,8 +1364,9 @@ const doRun = async () => {
 		}
 	};
 
-	window.malloc = size => M._malloc(size);
-	window.free = ptr => M._free(ptr);
+	//I need to get dlsym working ...
+	window.malloc = size => M.malloc(size);
+	window.free = ptr => M.free(ptr);
 
 	imgui.clear();
 	stdoutTA.value = '';
@@ -1378,26 +1402,12 @@ xpcall(function()
 	end
 
 	-- TODO this in luaffifb
-	ffi.null = ffi.NULL
-
-	-- TODO this in luaffifb
 	local oldffistring = ffi.string
 	ffi.string = function(ptr, ...)
 		if type(ptr) == 'string' then return ptr end
 		if ptr == nil then return '(null)' end	-- but in vanilla luajit it segfaults ...
 		return oldffistring(ptr, ...)
 	end
-
-	-- override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
-	package.loaded['ext.gcmem'] = {
-		new = function(T, n)
-			n = math.floor(n)					-- get rid of pesky decimals ...
-			return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
-		end,
-		free = function(ptr)
-			-- TODO M.free(ptr)
-		end,
-	}
 
 	local rundir = '`+rundir+`'
 	local runfile = '`+runfile+`'
@@ -1413,12 +1423,6 @@ xpcall(function()
 	}, ';')
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
-
-	-- shim package for numo9
-	package.loaded.clip = {
-		text = function() end,
-		image = function() end,
-	}
 
 	-- another shim layer for ffi.C now that luaffifb doesn't allow modifying it ...
 	do

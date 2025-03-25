@@ -1623,6 +1623,7 @@ end
 
 function sdl.SDL_GL_DeleteContext(ctx) return 0 end
 function sdl.SDL_GL_SetAttribute(key, value) return 0 end
+function sdl.SDL_GL_GetAttribute(key) return 0 end
 function sdl.SDL_GL_SetSwapInterval(enable) return 0 end
 
 function sdl.SDL_GetVersion(version)
