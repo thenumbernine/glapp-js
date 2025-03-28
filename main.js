@@ -72,6 +72,7 @@ TODO ... solarsystem graph ... takes GBs of data ...
 TODO black-hole-skymap, but the lua ver is in a subdir of the js ver ... but maybe i'll put the js vers on here too ...
 */
 
+let stdoutTA;
 let lua = await newLua({
 	print : s => {
 		if (stdoutTA) stdoutTA.value += s + '\n';
@@ -637,7 +638,6 @@ let fsDiv;
 let taDiv;
 let titleBarDiv;
 let outDiv;
-let stdoutTA;
 let stdinTA;
 // store as pixel <=> smoother scrolling when resizing divider, store as fraction <=> smoother when resizing window ... shrug
 
