@@ -168,7 +168,7 @@ const loadImageCallback = luaPath => {
 	//push local glapp-js package
 	pkgs.push([
 		//{from : '.', to : '.', files : ['ffi.lua']},	// now in wasm
-		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl.lua', 'zlib.lua']},
+		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
 		{from : './ffi/c', to : 'ffi/c', files : ['errno.lua', 'stdlib.lua', 'string.lua']},
 		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua']},
 		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
@@ -1447,7 +1447,7 @@ xpcall(function()
 	-- TODO can I just wrap the whole dofile() in a main thread?
 	-- the tradeoff is I'd lose my ability for main coroutine detection ...
 	-- or maybe I should shim that function as well ...
-	local sdl = require 'ffi.sdl'
+	local sdl = require 'ffi.sdl2'
 	local function run(path, file, ...)
 		local fn = '/'..path..'/'..file
 		arg[0] = fn
