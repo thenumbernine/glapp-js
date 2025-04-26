@@ -241,7 +241,7 @@ return {
 		return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
 	end,
 	free = function(ptr)
-		-- TODO M.free(ptr)
+		-- TODO M._free(ptr)
 	end,
 }
 `, {encoding:'utf8'});
@@ -1365,8 +1365,8 @@ const doRun = async () => {
 	};
 
 	//I need to get dlsym working ...
-	window.malloc = size => M.malloc(size);
-	window.free = ptr => M.free(ptr);
+	window.malloc = size => M._malloc(size);
+	window.free = ptr => M._free(ptr);
 
 	imgui.clear();
 	stdoutTA.value = '';
