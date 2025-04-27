@@ -1,7 +1,15 @@
--- copy of the original, though the rest of the ffi/ folder has changed
+--[[
+the number of files here that are solely used for splitting by os/arch is getting out of hand.
+so to fix this ...
+1) lots of tiny files that choose which os/arch to use
+2) I could make a new package.loader that searches through these folders
+3) custom-require (like luarocks does) ...
+proly #3 ... here:
+--]]
 local ffi = require 'ffi'
+local assert = require 'ext.assert'
 return function(req)
-	assert(type(req) == 'string', 'expected string')
+	assert.type(req, 'string')
 	-- first search $os/$arch/$req
 	-- then search $os/$req
 	-- (then search $arch/$req?)

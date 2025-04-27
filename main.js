@@ -97,79 +97,13 @@ window.FS = FS;
 
 lua.newState();
 
-// TODO load upon request, no more a need to preload
-const imageCache = {};
-const preloadImage = async (fn, ext) => {
-	try {
-//console.log('preloadImage', fn);
-		// why is the world so retarded
-		// why can't FS just SIT ON THE BLOB and NOT FUCK WITH IT
-		const fileBlob = FS.readFile(fn, {encoding:'binary'});
-if (fileBlob.constructor != Uint8Array) throw 'expected Uint8Array';
-		// TODO detect mime image type from filename
-		const blobUrl = URL.createObjectURL(new Blob([new Uint8Array(fileBlob)], {'type':'image/'+ext}));
-		const img = Img({
-			src : blobUrl,
-			style : {
-				display : 'none',
-			},
-			prependTo : document.body,
-		});
-		await img.decode();
-		const width = img.width;
-		const height = img.height;
-		const canvas = Canvas({
-			width : width,
-			height : height,
-			style : {
-				display : 'none',
-			},
-			prependTo : document.body,
-		});
-		const ctx = canvas.getContext('2d');
-		ctx.drawImage(img, 0, 0);
-		const imgData = new Uint8Array(ctx.getImageData(0, 0, width, height).data.buffer);
-if (imgData.constructor != Uint8Array) throw 'expected Uint8Array';
-		document.body.removeChild(img);
-		document.body.removeChild(canvas);
-
-		//store with a key relative to root (without the / prefix)
-		if (fn.substr(0, 1) == '/') fn = fn.substr(1);
-		imageCache[fn] = {
-			width : width,
-			height : height,
-			buffer : imgData,
-			channels : 4,	// always?
-			format : 'unsigned char',
-		};
-	} catch (e) {
-		console.log('error loading image');
-		console.log(fn);
-		console.log(e);
-	}
-};
-
-const loadImageCallback = luaPath => {
-	// TODO no more preloading
-	const ext = luaPath.split('.').pop();
-	if (ext == 'png' ||
-		ext == 'jpg' ||
-		ext == 'jpeg' ||
-		ext == 'gif' ||
-		ext == 'tiff' ||
-		ext == 'bmp'
-	) {
-		preloadImage(luaPath, ext);
-	}
-};
-
 {
 	const pkgs = [];
 	//push local glapp-js package
 	pkgs.push([
 		//{from : '.', to : '.', files : ['ffi.lua']},	// now in wasm
-		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
-		{from : './ffi/c', to : 'ffi/c', files : ['errno.lua', 'stdlib.lua', 'string.lua']},
+		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'jpeg.lua', 'load.lua', 'libwrapper.lua', 'png.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
+		{from : './ffi/c', to : 'ffi/c', files : ['errno.lua', 'setjmp.lua', 'stdio.lua', 'stdlib.lua', 'string.lua', 'time.lua']},
 		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua']},
 		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
 		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
@@ -179,7 +113,7 @@ const loadImageCallback = luaPath => {
 	//push all other packages
 	for (let k in luaPackages) pkgs.push(luaPackages[k]);
 	// and wait for them all to load
-	await Promise.all(pkgs.map(pkg => addPackage(FS, pkg, loadImageCallback)))
+	await Promise.all(pkgs.map(pkg => addPackage(FS, pkg)))
 	.catch(e => { throw e; });
 }
 // why is this here when it's not down there in FS.readdir'/' ?
@@ -188,43 +122,6 @@ const loadImageCallback = luaPath => {
 // shim layer filesystem stuff here:
 
 FS.writeFile('audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
-
-FS.writeFile('image/luajit/jscanvas.lua', `
-local js = require 'js'
-local window = js.global
-local ffi = require 'ffi'
-local class = require 'ext.class'
-local path = require 'ext.path'
-
-local CanvasImageLoader = class()
-local Image = require 'image'	-- don't require until after setting image.luajit.png
-
--- ... do browsers support save functionality?
-function CanvasImageLoader:save(args) error("save not supported") end
-
-function CanvasImageLoader:load(fn)
-	local jssrc = window:loadImage(path(fn).path)
-	local len = jssrc.buffer.byteLength
-	-- copy from javascript Uint8Array to our ffi memory
-	local dstbuf = ffi.new('char[?]', len)
-	ffi.dataToArray('Uint8Array', dstbuf, len):set(jssrc.buffer)
-	return {
-		buffer = dstbuf,
-		width = jssrc.width,
-		height = jssrc.height,
-		channels = jssrc.channels,
-		format = 'uint8_t',
-	}
-end
-
-return CanvasImageLoader
-`, {encoding:'binary'});
-FS.writeFile('image/luajit/bmp.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
-//FS.writeFile('image/luajit/fits.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});	// I'm pretty sure canvases can't load FITS files
-FS.writeFile('image/luajit/gif.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
-FS.writeFile('image/luajit/jpeg.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
-FS.writeFile('image/luajit/png.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
-FS.writeFile('image/luajit/tiff.lua', `return require 'image.luajit.jscanvas'\n`, {encoding:'binary'});
 
 // remove ffi check from complex
 FS.writeFile(
@@ -237,7 +134,7 @@ FS.writeFile('ext/gcmem.lua', `
 local ffi = require 'ffi'
 return {
 	new = function(T, n)
-		n = math.floor(n)					-- get rid of pesky decimals ...
+		n = math.floor(tonumber(n))			-- get rid of pesky decimals ...
 		return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
 	end,
 	free = function(ptr)
@@ -809,7 +706,6 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 							const newname = filesrc.name;
 							const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
 							FS.writeFile(newpath, new Uint8Array(result), {encoding:'binary'});
-							loadImageCallback(newpath);
 
 							makeFileDiv(newpath, newname, fileInfo);
 							fileInfo.sortChildren();
@@ -1329,19 +1225,6 @@ const doRun = async () => {
 
 	// make a new state
 	lua.newState();
-
-	window.loadImage = (fn) => {
-		if (fn.substr(0,1) != '/') {
-			fn = FS.cwd() + '/' + fn;
-			if (fn.substr(0,1) == '/') fn = fn.substr(1);
-		}
-
-		//await preloadImage(fn, fn.split('.').pop());
-
-		const img = imageCache[fn];
-		if (!img) throw "you need to decode up front file "+fn;
-		return img;
-	};
 
 	window.resize = resize;
 	window.Canvas = Canvas;
