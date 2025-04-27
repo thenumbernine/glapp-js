@@ -8,7 +8,7 @@ struct timeval {
 };
 
 // always getting a weird memory error with this one ...
-//int gettimeofday(struct timeval * __tv, void * __tz);
+int gettimeofday(struct timeval * __tv, void * __tz);
 ]]
 
 -- [=[
