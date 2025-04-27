@@ -1365,14 +1365,7 @@ const doRun = async () => {
 	};
 
 	//I need to get dlsym working ...
-	window.malloc = size => {
-		// handle any boxed int64_t types
-		// TODO THIS ONLY HANDLES int64_t! ADD SUPPORT FOR OTHER CDATA TYPES!!!
-		//if (typeof(size) === 'object' && size.userdata !== undefined) {
-		//	return BigInt(M._malloc(M.getValue(Number(size.userdata), 'i64')));
-		//}
-		return BigInt(M._malloc(size));
-	};
+	window.malloc = size => M._malloc(size);
 	window.free = ptr => M._free(ptr);
 
 	imgui.clear();
@@ -1439,7 +1432,7 @@ xpcall(function()
 				gettimeofday = require 'ffi.c.sys.time'.gettimeofday,
 				strlen = require 'ffi.c.string'.strlen,
 				malloc = function(n)
-					return ffi.cast('void*', window:malloc(tonumber(n)))
+					return ffi.cast('void*', window:malloc(n))
 				end,
 				free = function(ptr)
 					-- TODO get past tonumber(ffi.cast('intptr_t', ...))
