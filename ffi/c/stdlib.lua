@@ -5,7 +5,7 @@ local ffi = require 'ffi'
 -- but it'd be nice to get dlsym working with malloc & free
 -- I might have to write vanilla lua function wrappers push & pop state ...
 ffi.cdef[[
-void * malloc(int n);
+void * malloc(size_t n);
 void free(void *);
 ]]
 

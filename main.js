@@ -103,12 +103,29 @@ lua.newState();
 	pkgs.push([
 		//{from : '.', to : '.', files : ['ffi.lua']},	// now in wasm
 		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'jpeg.lua', 'load.lua', 'libwrapper.lua', 'png.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
-		{from : './ffi/c', to : 'ffi/c', files : ['errno.lua', 'setjmp.lua', 'stdio.lua', 'stdlib.lua', 'string.lua', 'time.lua']},
-		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua']},
+		{
+			from : './ffi/c',
+			to : 'ffi/c',
+			files : [
+				'ctype.lua',
+				'errno.lua',
+				'inttypes.lua',
+				'math.lua',
+				'setjmp.lua',
+				'stdarg.lua',
+				'stddef.lua',
+				'stdio.lua',
+				'stdlib.lua',
+				'string.lua',
+				'time.lua',
+				'wchar.lua',
+			],
+		},
+		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua', 'types.lua']},
 		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
 		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
 		{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
-		{from : './tests', to : 'glapp/tests', files : ['test-js.lua']},
+		{from : './tests', to : 'glapp/tests', files : ['test-js.lua', 'test-ffi.lua']},
 	]);
 	//push all other packages
 	for (let k in luaPackages) pkgs.push(luaPackages[k]);
@@ -1191,15 +1208,7 @@ const closeCanvas = () => {
 	resize(); // refresh split
 };
 
-window.glappMainInterval = undefined;
 const doRun = async () => {
-
-	// we need to make sure the old setInterval is dead before starting the new one ...
-	// ... or else the next update could kill us ...
-	if (window.glappMainInterval) {
-		clearInterval(window.glappMainInterval);
-		window.glappMainInterval = undefined;
-	}
 
 	imgui.init();	// make the imgui div
 
@@ -1246,10 +1255,6 @@ const doRun = async () => {
 			return new cl(M.HEAPU8.buffer, addr, count);
 		}
 	};
-
-	//I need to get dlsym working ...
-	window.malloc = size => M._malloc(size);
-	window.free = ptr => M._free(ptr);
 
 	imgui.clear();
 	stdoutTA.value = '';
@@ -1307,64 +1312,9 @@ xpcall(function()
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
 
-	-- another shim layer for ffi.C now that luaffifb doesn't allow modifying it ...
-	do
-		local oldffi = ffi
-		ffi = setmetatable({
-			C = setmetatable({
-				gettimeofday = require 'ffi.c.sys.time'.gettimeofday,
-				strlen = require 'ffi.c.string'.strlen,
-				malloc = function(n)
-					return ffi.cast('void*', window:malloc(n))
-				end,
-				free = function(ptr)
-					-- TODO get past tonumber(ffi.cast('intptr_t', ...))
-					return window:free(tonumber(ffi.cast('intptr_t', ptr)))
-				end,
-			}, {__index=oldffi.C}),
-		}, {__index=oldffi})
-		package.loaded.ffi = ffi
-	end
-
-	-- start it as a new thread ...
-	-- TODO can I just wrap the whole dofile() in a main thread?
-	-- the tradeoff is I'd lose my ability for main coroutine detection ...
-	-- or maybe I should shim that function as well ...
-	local sdl = require 'ffi.sdl2'
-	local function run(path, file, ...)
-		local fn = '/'..path..'/'..file
-		arg[0] = fn
-		--dofile(fn)	-- doesn't handle ...
-		assert(loadfile(fn))(table.unpack(arg))
-	end
-	sdl.mainthread = coroutine.create(function()
-		run(rundir, runfile)
-	end)
-
-	local interval
-	local function tryToResume()
-		--coroutine.assertresume(sdl.mainthread)
-		if coroutine.status(sdl.mainthread) == 'dead' then return false, 'dead' end
-		local res, err = coroutine.resume(sdl.mainthread)
-		if not res then
-			print('mainthread coroutine.resume failed.')
-			print(err)
-			print(debug.traceback(sdl.mainthread))
-			window.glappMainInterval = nil
-			window:clearInterval(interval)
-		end
-	end
-
-	tryToResume()
-
-	-- set up main loop
-	-- TOOD use requestAnimationFrame instead
-	interval = window:setInterval(function()
-		-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
-		tryToResume()
-	end, 10)
-
-	window.glappMainInterval = interval
+	local fn = '/'..rundir..'/'..runfile
+	arg[0] = fn
+	assert(loadfile(fn))(table.unpack(arg))
 
 end, function(err)
 	print(err)
