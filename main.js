@@ -102,7 +102,30 @@ lua.newState();
 	//push local glapp-js package
 	pkgs.push([
 		//{from : '.', to : '.', files : ['ffi.lua']},	// now in wasm
-		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'jpeg.lua', 'load.lua', 'libwrapper.lua', 'png.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
+		{
+			from : './ffi',
+			to : 'ffi',
+			files : [
+				'EGL.lua',
+				'OpenGL.lua',
+				'OpenGLES3.lua',
+				'cimgui.lua',
+				'jpeg.lua',
+				'load.lua',
+				'libwrapper.lua',
+				'png.lua',
+				'req.lua',
+				'sdl2.lua',
+				'zlib.lua',
+			]
+		},
+		{
+			from : './ffi/KHR',
+			to : 'ffi/KHR',
+			files : [
+				'khrplatform.lua',
+			],
+		},
 		{
 			from : './ffi/c',
 			to : 'ffi/c',
@@ -115,6 +138,7 @@ lua.newState();
 				'stdarg.lua',
 				'stddef.lua',
 				'stdio.lua',
+				'stdint.lua',
 				'stdlib.lua',
 				'string.lua',
 				'time.lua',
@@ -1208,7 +1232,9 @@ const closeCanvas = () => {
 	resize(); // refresh split
 };
 
+
 const doRun = async () => {
+
 
 	imgui.init();	// make the imgui div
 
@@ -1255,6 +1281,30 @@ const doRun = async () => {
 			return new cl(M.HEAPU8.buffer, addr, count);
 		}
 	};
+
+
+
+
+	// Would be nice if emscripten's sdl lib had callbacks
+	// I guess I can just wrap my own shim layer in
+	// Sucks that I have to do this in each JS project that wants to use SDL ...
+	// Looks like emscripten wants a canvas with id 'canvas' or something? idk
+	// In my pure-lua implementation of ffi/sdl/etc I had this in SDL_CreateWindow
+	canvas = Canvas({
+		id : 'canvas',
+		style : {
+			position : 'absolute',
+			userSelect : 'none',
+		},
+		prependTo : document.body,
+	});
+	setCanvas(canvas);
+	M.canvas = canvas;	// simple as that?
+	window.canvas = canvas;
+	resize();
+
+
+
 
 	imgui.clear();
 	stdoutTA.value = '';
