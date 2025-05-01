@@ -1369,6 +1369,10 @@ xpcall(function()
 		return js.global.Date.now() / 1000
 	end
 
+	-- emscripten's own gl / glsl versioning are so horrid that how about we patch in the getters here instead of rewriting all my gl libraries to deal with them?
+	-- but if I require them then it'll do the GL version test, which I want to override ... hmm ...
+	-- TODO just build my own competing wasm libraries to emscripten's
+
 	-- set to emscripten's libpng version
 	require 'image.luajit.png'.libpngVersion = '1.6.18'
 
