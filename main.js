@@ -1365,9 +1365,43 @@ xpcall(function()
 	-- set to emscripten's libpng version
 	require 'image.luajit.png'.libpngVersion = '1.6.18'
 
+	-- force emscripten to yield sometimes
+	require 'sdl.app'.postUpdate = function() coroutine.yield() end
+	require 'glapp'.postUpdate = function()
+		require 'sdl'.SDL_GL_SwapWindow()
+		coroutine.yield()
+	end
+
 	local fn = '/'..rundir..'/'..runfile
 	arg[0] = fn
-	assert(loadfile(fn))(table.unpack(arg))
+	__SDLMainLuaThread = coroutine.create(function()
+		assert(loadfile(fn))(table.unpack(arg))
+	end)
+
+	local interval
+	local function tryToResume()
+		--coroutine.assertresume(__SDLMainLuaThread)
+		if coroutine.status(__SDLMainLuaThread) == 'dead' then return false, 'dead' end
+		local res, err = coroutine.resume(__SDLMainLuaThread)
+		if not res then
+			print('__SDLMainLuaThread coroutine.resume failed.')
+			print(err)
+			print(debug.traceback(__SDLMainLuaThread))
+			window.glappMainInterval = nil
+			window:clearInterval(interval)
+		end
+	end
+
+	tryToResume()
+
+	-- set up main loop
+	-- TOOD use requestAnimationFrame instead
+	interval = window:setInterval(function()
+		-- also in SDL_PollEvent, tho I could just route it through GLApp:update ...
+		tryToResume()
+	end, 10)
+
+	window.glappMainInterval = interval
 
 end, function(err)
 	print(err)
