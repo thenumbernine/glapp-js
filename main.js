@@ -1184,6 +1184,10 @@ const rootSplit = new Split({
 						canvas.width = window.innerWidth;
 						canvas.height = window.innerHeight;
 					}
+console.log('resizing...', canvas.width, canvas.height);
+// WTF TELLS EMSCRIPTEN'S SDL CODE TO LOOK AT THE CANVAS AND SEE ITS SIZE HAS CHANGED AND ISSUE A RESIZE EVENT?!?!?!!?!?!!?!
+//M.setCanvasSize(canvas.width, canvas.height);
+//lua.doString(`require'sdl'.SDL_SetWindowSize(`+canvas.width+', '+canvas.height+')');
 
 					const D = childBounds.R;
 					outDiv.style.left = D[0] + 'px';
