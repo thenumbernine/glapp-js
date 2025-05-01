@@ -1173,20 +1173,26 @@ const rootSplit = new Split({
 			onDrag : (split, childBounds) => {
 				const U = childBounds.L;
 				if (canvas) {
+					let canvasWidth, canvasHeight;
 					if (editmode) {
 						canvas.style.left = U[0] + 'px';
 						canvas.style.top = U[1] + 'px';
-						canvas.width = U[2];
-						canvas.height = U[3];
+						canvasWidth = U[2];
+						canvasHeight = U[3];
 					} else {
 						canvas.style.left = '0px';
 						canvas.style.top = '0px';
-						canvas.width = window.innerWidth;
-						canvas.height = window.innerHeight;
+						canvasWidth = window.innerWidth;
+						canvasHeight = window.innerHeight;
 					}
-console.log('resizing...', canvas.width, canvas.height);
+					canvas.width = canvasWidth;
+					canvas.height = canvasHeight;
+					canvas.style.width = canvasWidth+'px';
+					canvas.style.height = canvasHeight+'px';
+//console.log('resizing...', canvas.width, canvas.height);
 // WTF TELLS EMSCRIPTEN'S SDL CODE TO LOOK AT THE CANVAS AND SEE ITS SIZE HAS CHANGED AND ISSUE A RESIZE EVENT?!?!?!!?!?!!?!
-//M.setCanvasSize(canvas.width, canvas.height);
+M._emscripten_set_canvas_size(canvasWidth, canvasHeight);
+M.setCanvasSize(canvasWidth, canvasHeight);
 //lua.doString(`require'sdl'.SDL_SetWindowSize(`+canvas.width+', '+canvas.height+')');
 
 					const D = childBounds.R;
