@@ -1362,6 +1362,9 @@ xpcall(function()
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
 
+	-- set to emscripten's libpng version
+	require 'image.luajit.png'.libpngVersion = '1.6.18'
+
 	local fn = '/'..rundir..'/'..runfile
 	arg[0] = fn
 	assert(loadfile(fn))(table.unpack(arg))
