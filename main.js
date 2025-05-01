@@ -1362,6 +1362,13 @@ xpcall(function()
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
 
+	-- ext.timer's getTime() uses gettimeofday because of its high resolution
+	-- but emscripten craps that all the way down to the 1 second resolution
+	-- so ...
+	require 'ext.timer'.getTime = function()
+		return js.global.Date.now() / 1000
+	end
+
 	-- set to emscripten's libpng version
 	require 'image.luajit.png'.libpngVersion = '1.6.18'
 
