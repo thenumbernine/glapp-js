@@ -207,7 +207,7 @@ const refreshEditMode = () => {
 		outDiv.style.display = 'none';
 		rootSplit.setVisible(false);
 	}
-	resize();
+	glappResize();
 };
 
 // edit button
@@ -1213,7 +1213,7 @@ M.setCanvasSize(canvasWidth, canvasHeight);
 	}),
 });
 window.rootSplit = rootSplit;
-const resize = e => {
+const glappResize = e => {
 	//hide/show the split if canvas is present
 	// i'm 50/50 on giving the splits child divs themselves and not resizing based on the child bounds
 	// and then i could dynamically add/remove this split ...
@@ -1221,8 +1221,8 @@ const resize = e => {
 
 	rootSplit.resizeBounds(0, 0, window.innerWidth, window.innerHeight);
 };
-window.addEventListener('resize', resize);
-refreshEditMode();	// will trigger resize()
+window.addEventListener('resize', glappResize);
+refreshEditMode();	// will trigger glappResize()
 
 // make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
 // in fact, why not do this within doRun?
@@ -1231,20 +1231,21 @@ if (rundir && runfile) {
 }
 
 let gl;
-const closeGL = () => {
-	gl?.getExtension('WEBGL_lose_context')?.loseContext();
-	gl = undefined;
-};
 const closeCanvas = () => {
-	closeGL();
 	canvas?.parentNode?.removeChild(canvas);
 	canvas = undefined;
-	resize(); // refresh split
+	glappResize(); // refresh split
 };
 
-
+window.glappMainInterval = undefined;
 const doRun = async () => {
 
+	// we need to make sure the old setInterval is dead before starting the new one ...
+	// ... or else the next update could kill us ...
+	if (window.glappMainInterval) {
+		clearInterval(window.glappMainInterval);
+		window.glappMainInterval = undefined;
+	}
 
 	imgui.init();	// make the imgui div
 
@@ -1271,14 +1272,6 @@ const doRun = async () => {
 	// make a new state
 	lua.newState();
 
-	window.resize = resize;
-	window.Canvas = Canvas;
-
-	window.closeCanvas = closeCanvas;
-	window.setCanvas = (canvas_) => { canvas = canvas_; };
-
-	window.closeGL = closeGL;
-	window.setGL = (gl_) => { gl = gl_; };
 
 	window.imgui = imgui;
 
@@ -1308,10 +1301,8 @@ const doRun = async () => {
 		},
 		prependTo : document.body,
 	});
-	setCanvas(canvas);
-	M.canvas = canvas;	// simple as that?
-	window.canvas = canvas;
-	resize();
+	M.canvas = canvas;	// simple as that to make Emscripten work?  Yes but good luck resizing it.
+	glappResize();
 
 
 
