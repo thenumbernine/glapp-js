@@ -1,6 +1,6 @@
 local js = require 'js'
 local window = js.global
-local jsimgui = window.imgui
+local jsimgui = js.imgui
 local ffi = require 'ffi'
 
 require 'ffi.c.string'	-- strlen
@@ -1090,7 +1090,7 @@ function ig.igInputFloat(label, v, ...)
 	if changed then
 		-- before I was fasting the v ptr through to the js functions, and within that writing to v[0] ... which must've done some js magic under the hood? to be able to invoke the lua metamethod ... bad idea I guess?  i can't tell ...
 		-- reading/writing lua numbers and reading js callback single-value returns is muuuch faster than the alternatives
-		v[0] = jsimgui:lastValue()
+		v[0] = jsimgui.lastValue
 	end
 	return changed
 end
@@ -1101,7 +1101,7 @@ function ig.igInputInt(label, v, ...)
 	--local v = ffi.dataToArray('Int32Array', v, 1);
 	local changed = jsimgui:inputInt(label, v[0], ...)
 	if changed then
-		v[0] = jsimgui:lastValue()
+		v[0] = jsimgui.lastValue
 	end
 	return changed
 end
@@ -1111,7 +1111,7 @@ function ig.igInputText(label, buf, bufsize, flags, callback, user_data)
 	local str = ffi.string(buf, bufsize)
 	local changed = jsimgui:inputText(label, str)
 	if changed then
-		ffi.copy(buf, jsimgui:lastValue(), bufsize)
+		ffi.copy(buf, jsimgui.lastValue, bufsize)
 	end
 	return changed
 end
@@ -1134,7 +1134,7 @@ function ig.igCombo_Str_arr(label, currentItem, items, itemCount, popupMaxHeight
 	end
 	local changed = jsimgui:inputCombo(label, currentItem[0], jsitems)
 	if changed then
-		currentItem[0] = jsimgui:lastValue()
+		currentItem[0] = jsimgui.lastValue
 	end
 	return changed
 end
@@ -1149,7 +1149,7 @@ function ig.igCombo_Str(label, currentItem, itemsZeroSep, popupMaxHeight)
 	end
 	local changed = jsimgui:inputCombo(label, currentItem[0], jsitems)
 	if changed then
-		currentItem[0] = jsimgui:lastValue()
+		currentItem[0] = jsimgui.lastValue
 	end
 	return changed
 end
@@ -1162,7 +1162,7 @@ function ig.igCombo_FnBoolPtr(label, currentItem, getter, userData, itemsCount, 
 	end
 	local changed = jsimgui:inputCombo(label, currentItem[0], jsitems)
 	if changed then
-		currentItem[0] = jsimgui:lastValue()
+		currentItem[0] = jsimgui.lastValue
 	end
 	return changed
 end

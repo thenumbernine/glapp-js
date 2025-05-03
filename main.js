@@ -1,3 +1,74 @@
+// stop emscripten from doing its shit
+const eventListeners = new Map();	// eventListeners.get(dom)[eventType] = [ [addEventListenr's call args], ...];
+
+// This is just gonna override for window,
+// but the underlying code is extensible to all DOM types,
+// You would only need to insert the function into each one's prototype.
+// Until then, only `eventListeners.get(window)` will be present.
+const oldWindowAddEventListener = window.addEventListener;
+window.addEventListener = function(eventType, ...args) {
+	let listenersForThis = eventListeners.get(this);
+	if (!listenersForThis) {
+		listenersForThis = {};
+		eventListeners.set(this, listenersForThis);
+	}
+	listenersForThis[eventType] ??= [];
+	const listenersForType = listenersForThis[eventType];
+	listenersForType.push(Array.prototype.slice.call(args));	// pushes [func, opts, ...]
+	oldWindowAddEventListener.call(this, eventType, ...args);
+};
+
+const arrayseq = (a,b) => {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; ++i) {
+		if (a[i] !== b[i]) return false;
+	}
+	return true;
+};
+
+const oldWindowRemoveEventListener = window.removeEventListener;
+window.removeEventListener = function(eventType, ...args) {
+	oldWindowRemoveEventListener.call(this, eventType, ...args);
+
+	// if we find a matching entry then erase it
+	const listenersForThis = eventListeners.get(window);
+	if (!listenersForThis) return;
+
+	const listenersForType = listenersForThis[eventType];
+	if (!listenersForType) return;
+
+	// remove any that match
+	for (let i = listenersForType.length-1; i >= 0; --i) {
+		const listener = listenersForType[i];
+		if (arrayseq(listener, args)) {
+			listenersForType.splice(i, 1);
+		}
+	}
+
+	// remove the field if all are gone
+	if (!listenersForType.length) {
+		delete listenersForThis[eventType];
+	}
+};
+
+// only works on window , sicne window is the only thing I've installed the above traps on.
+const removeAllElemEventListeners = (elem, eventTypes) => {
+	const listenersForThis = eventListeners.get(elem);
+	if (!listenersForThis) return;
+	eventTypes.forEach(eventType => {
+		const listenersForType = listenersForThis[eventType];
+		if (listenersForType) {
+			// test in reverse-order so if we remove in reverse-order we don't invalidate this iterator
+			for (let i = listenersForType.length-1; i >= 0; --i) {
+				const listener = listenersForType[i];
+				elem.removeEventListener(eventType, ...listener);
+			}
+			delete listenersForThis[eventType];
+		}
+	});
+};
+
+
 import {addPackage} from '/js/util.js';
 import {newLua} from '/js/lua-interop.js';
 import {luaPackages} from '/js/lua-packages.js';
@@ -237,9 +308,7 @@ A({
 
 // imgui binding code.
 // TODO do this in lua with the js api
-const imgui =
-	window.imgui = 	//debuggin
-{
+const imgui = {
 	init : function() {
 		this?.div?.parentNode.removeChild(this.div);
 
@@ -431,6 +500,7 @@ const imgui =
 		return changed;
 	},
 };
+window.imgui = imgui; 	//debugging
 
 let splitDragging;
 class Split {
@@ -1229,7 +1299,6 @@ const glappResize = e => {
 };
 window.addEventListener('resize', glappResize);
 refreshEditMode();	// will trigger glappResize()
-window.glappResize = glappResize;
 
 
 // make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
@@ -1276,10 +1345,77 @@ const doRun = async () => {
 	closeCanvas();
 	//if (lua) lua.close();	//tf why are all these essential functions hidden?
 
+	// emscripten cleanup
+	// every time I start up SDL stuff, emscripten installs some window event listeners
+	// remove everything that emscripten already added:
+	// only works in console ... retards trying to make code retard-proof , smh ...
+	//const listeners = window.getEventListeners(window);
+	const resetListeners = () => {
+		// remove all listeners of these types
+		removeAllElemEventListeners(window, ['beforeunload', 'blur', 'focus', 'keydown', 'keypress', 'keyup', 'resize']);
+
+		// re-add my resize listener
+		window.addEventListener('resize', glappResize);	// now re-add mine
+	};
+	resetListeners();
+	glappResize();
+
+
+
 	// make a new state
 	lua.newState();
 	luaJsScope = {}
+	luaJsScope.imgui = imgui;	//save it here to pass to js.imgui for ffi/cimgui.lua to use
 window.luaJsScope = luaJsScope;
+	luaJsScope.resetWindowListeners = () => {
+		/*
+		This is called right after SDL_CreateWindow, right after emscripten  tries to take total control of your JS environment
+		It overrides all key events, so that text fields outside the canvas no longer work.
+		It also does nothing useful with window resizing.
+		I'd like to keep its key events, but simply not throw them away.
+		*/
+
+		// let Lua tell us once the window is made to clear the Emscripten listeners once again
+		// this gets our control back to DOM elements, but removes it from the canvas.  I want both.
+		//resetListeners();
+
+		// Remove emscripten's resize event.  what was it doing anyways?  I had to call SDL_SetWindowSize myself upon resize.
+		removeAllElemEventListeners(window, ['resize']);
+		window.addEventListener('resize', glappResize);	// now re-add mine
+
+		// save emscripten's window listeners
+		const saveEmscriptenListeners = {};
+
+		const windowListeners = eventListeners.get(window);
+		if (windowListeners) {
+			['beforeunload', 'blur', 'focus', 'keydown', 'keypress', 'keyup'].forEach(eventType => {
+				const listenersForType = windowListeners[eventType];
+				if (listenersForType) {
+if (listenersForType.length != 1) {
+	console.log(listenersForType);
+	console.log('got irregular window event listener size back from emscripten -- something will probably go wrong');
+}
+					const listener = listenersForType[0];
+					saveEmscriptenListeners[eventType] = listener.slice();
+					//window.removeEventListener(eventType, ...listenArgs);
+				}
+			});
+		}
+
+		// click the canv
+		canvas.addEventListener('focus', e => {
+			// enable/add all the emscripten events
+			for (const [eventType, listener] of Object.entries(saveEmscriptenListeners)) {
+				window.addEventListener(eventType, ...listener);
+			}
+		});
+		canvas.addEventListener('blur', e => {
+			// disable/remove all the emscripten events
+			for (const [eventType, listener] of Object.entries(saveEmscriptenListeners)) {
+				window.removeEventListener(eventType, ...listener);
+			}
+		});
+	};
 
 	// useful function , maybe store in luaJsScope?
 	window.dataToArray = (jsArrayClassName, addr, count) => {
@@ -1304,6 +1440,14 @@ window.luaJsScope = luaJsScope;
 			position : 'absolute',
 			userSelect : 'none',
 		},
+
+		// https://stackoverflow.com/a/55971481/2714073
+		// how to stop emscripten from capturing all events
+		// https://stackoverflow.com/a/46086615/2714073 -- my implementation is the eventListenrs stuff at the top, and the stuff in resetWindowListeners
+		attrs : {
+			tabindex : -1,
+		},
+
 		prependTo : document.body,
 	});
 	M.canvas = canvas;	// simple as that to make Emscripten work?  Yes but good luck resizing it.
@@ -1330,6 +1474,9 @@ local luaJsScope = ...
 local ffi = require 'ffi'
 local js = require 'js'
 local window = js.global
+
+-- save this for use in ffi/cimgui.lua
+js.imgui = luaJsScope.imgui
 
 ffi.dataToArray = function(ctype, data, ...)
 	return window:dataToArray(ctype, tonumber(ffi.cast('intptr_t', data)), ...)
@@ -1401,6 +1548,7 @@ xpcall(function()
 		luaJsScope.sdlWindow = tonumber(ffi.cast('intptr_t', self.window))
 		-- TODO what if it's more than 32bit ...
 		-- I need a function for converting lua_touserdata / lua pointers overall to WASM addresses for just this reason.
+		luaJsScope:resetWindowListeners()
 	end
 
 	local fn = '/'..rundir..'/'..runfile
