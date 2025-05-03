@@ -73,6 +73,7 @@ TODO black-hole-skymap, but the lua ver is in a subdir of the js ver ... but may
 */
 
 let stdoutTA;
+let luaJsScope;
 let lua = await newLua({
 	print : s => {
 		if (stdoutTA) stdoutTA.value += s + '\n';
@@ -236,7 +237,9 @@ A({
 
 // imgui binding code.
 // TODO do this in lua with the js api
-const imgui = {
+const imgui =
+	window.imgui = 	//debuggin
+{
 	init : function() {
 		this?.div?.parentNode.removeChild(this.div);
 
@@ -428,7 +431,6 @@ const imgui = {
 		return changed;
 	},
 };
-window.imgui = imgui;
 
 let splitDragging;
 class Split {
@@ -1075,6 +1077,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 		},
 		appendTo : document.body,
 		children : [
+				// save to window for debugging
 				window.stdoutTA = stdoutTA = TextArea({
 				readOnly : true,
 				style : {
@@ -1131,7 +1134,6 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 	const LuaMode = ace.require("ace/mode/lua").Mode;
 	aceEditor.session.setMode(new LuaMode());
 }
-window.imgui = imgui;
 
 document.body.style.overflow = 'hidden';	//slowly sorting this out ...
 let canvas;
@@ -1189,11 +1191,15 @@ const rootSplit = new Split({
 					canvas.height = canvasHeight;
 					canvas.style.width = canvasWidth+'px';
 					canvas.style.height = canvasHeight+'px';
-//console.log('resizing...', canvas.width, canvas.height);
-// WTF TELLS EMSCRIPTEN'S SDL CODE TO LOOK AT THE CANVAS AND SEE ITS SIZE HAS CHANGED AND ISSUE A RESIZE EVENT?!?!?!!?!?!!?!
-M._emscripten_set_canvas_size(canvasWidth, canvasHeight);
-M.setCanvasSize(canvasWidth, canvasHeight);
-//lua.doString(`require'sdl'.SDL_SetWindowSize(`+canvas.width+', '+canvas.height+')');
+
+					if (luaJsScope && luaJsScope.sdlWindow) {
+						// NOTICE: SDL shows that for fullscreen, this will call "SDL_UpdateFullscreenMode", which might be more baggage than I want.
+						// Lucky for me I'm using windowed SDL and not fullscren SDL.
+						// For windows all it does is set the window size and issue a SDL_WINDOWEVENT_SIZE_CHANGED
+						//
+						// I wonder why it flickers while it's resizing ...
+						M._SDL_SetWindowSize(luaJsScope.sdlWindow, canvasWidth, canvasHeight);
+					}
 
 					const D = childBounds.R;
 					outDiv.style.left = D[0] + 'px';
@@ -1212,7 +1218,7 @@ M.setCanvasSize(canvasWidth, canvasHeight);
 		}),
 	}),
 });
-window.rootSplit = rootSplit;
+window.rootSplit = rootSplit;	// debugging
 const glappResize = e => {
 	//hide/show the split if canvas is present
 	// i'm 50/50 on giving the splits child divs themselves and not resizing based on the child bounds
@@ -1223,6 +1229,8 @@ const glappResize = e => {
 };
 window.addEventListener('resize', glappResize);
 refreshEditMode();	// will trigger glappResize()
+window.glappResize = glappResize;
+
 
 // make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
 // in fact, why not do this within doRun?
@@ -1237,14 +1245,13 @@ const closeCanvas = () => {
 	glappResize(); // refresh split
 };
 
-window.glappMainInterval = undefined;
 const doRun = async () => {
 
 	// we need to make sure the old setInterval is dead before starting the new one ...
 	// ... or else the next update could kill us ...
-	if (window.glappMainInterval) {
-		clearInterval(window.glappMainInterval);
-		window.glappMainInterval = undefined;
+	if (luaJsScope && luaJsScope.glappMainInterval) {
+		clearInterval(luaJsScope.glappMainInterval);
+		luaJsScope.glappMainInterval = undefined;
 	}
 
 	imgui.init();	// make the imgui div
@@ -1271,10 +1278,10 @@ const doRun = async () => {
 
 	// make a new state
 	lua.newState();
+	luaJsScope = {}
+window.luaJsScope = luaJsScope;
 
-
-	window.imgui = imgui;
-
+	// useful function , maybe store in luaJsScope?
 	window.dataToArray = (jsArrayClassName, addr, count) => {
 		if (addr == null) return null;	// ???
 		const cl = window[jsArrayClassName];
@@ -1284,8 +1291,6 @@ const doRun = async () => {
 			return new cl(M.HEAPU8.buffer, addr, count);
 		}
 	};
-
-
 
 
 	// Would be nice if emscripten's sdl lib had callbacks
@@ -1305,8 +1310,6 @@ const doRun = async () => {
 	glappResize();
 
 
-
-
 	imgui.clear();
 	stdoutTA.value = '';
 
@@ -1320,6 +1323,10 @@ const doRun = async () => {
 		console.log('failed to parse args as JSON:', e);
 	}
 	lua.doString(`
+-- store Lua objects in here that will be shared across JavaScript.
+-- beats writing everything to window
+local luaJsScope = ...
+
 local ffi = require 'ffi'
 local js = require 'js'
 local window = js.global
@@ -1378,15 +1385,27 @@ xpcall(function()
 	require 'image.luajit.png'.libpngVersion = '1.6.18'
 
 	-- force emscripten to yield sometimes
-	require 'sdl.app'.postUpdate = function() coroutine.yield() end
+	local SDLApp = require 'sdl.app'
+	SDLApp.postUpdate = function()
+		coroutine.yield()
+	end
 	require 'glapp'.postUpdate = function()
 		require 'sdl'.SDL_GL_SwapWindow()
 		coroutine.yield()
 	end
 
+	-- let glapp-js know when the SDL window is created, so that we can send it resize events:
+	local oldSDLAppInitWindow = SDLApp.initWindow
+	function SDLApp:initWindow(...)
+		oldSDLAppInitWindow(self, ...)
+		luaJsScope.sdlWindow = tonumber(ffi.cast('intptr_t', self.window))
+		-- TODO what if it's more than 32bit ...
+		-- I need a function for converting lua_touserdata / lua pointers overall to WASM addresses for just this reason.
+	end
+
 	local fn = '/'..rundir..'/'..runfile
 	arg[0] = fn
-	__SDLMainLuaThread = coroutine.create(function()
+	local __SDLMainLuaThread = coroutine.create(function()
 		assert(loadfile(fn))(table.unpack(arg))
 	end)
 
@@ -1399,7 +1418,7 @@ xpcall(function()
 			print('__SDLMainLuaThread coroutine.resume failed.')
 			print(err)
 			print(debug.traceback(__SDLMainLuaThread))
-			window.glappMainInterval = nil
+			luaJsScope.glappMainInterval = nil
 			window:clearInterval(interval)
 		end
 	end
@@ -1413,13 +1432,13 @@ xpcall(function()
 		tryToResume()
 	end, 10)
 
-	window.glappMainInterval = interval
+	luaJsScope.glappMainInterval = interval
 
 end, function(err)
 	print(err)
 	print(debug.traceback())
 end)
-`);
+`, luaJsScope);
 };
 
 if (runfile && rundir) {
