@@ -1403,6 +1403,7 @@ if (listenersForType.length != 1) {
 		}
 
 		// click the canv
+		canvas.blur();
 		canvas.addEventListener('focus', e => {
 			// enable/add all the emscripten events
 			for (const [eventType, listener] of Object.entries(saveEmscriptenListeners)) {
@@ -1415,6 +1416,7 @@ if (listenersForType.length != 1) {
 				window.removeEventListener(eventType, ...listener);
 			}
 		});
+		canvas.focus();
 	};
 
 	// useful function , maybe store in luaJsScope?
