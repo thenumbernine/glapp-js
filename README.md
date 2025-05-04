@@ -17,13 +17,7 @@ This tool runs LuaJIT + SDL + OpenGL + ImGui code in browser.
 
 The LuaJIT is "emulated" via vanilla-Lua + lua-FFI , compiled to wasm, which is built via my [lua-ffi-wasm](http://github.com/thenumbernine/lua-ffi-wasm) project.
 
-The FFI, SDL, and ImGui calls are handled via a shim layer.
-
-FFI is all handled with a pure-Lua implementation all up to the byte allocation, which is handed off to JS.  In theory you could swap that out and use the `ffi.lua` file in any vanilla Lua environment where you want to emulate luajit.
-
-The `ffi/OpenGLES3.lua` file is an interface layer between GLES and WebGL.
-
-The `main.js` and `ffi/sdl.lua` files handle the canvas object and the Lua wrapping thread to allow for my internal SDL busy-loops to become interval loops in browser.
+The FFI is implemented using my [fork](https://github.com/thenumbernine/luaffifb) of the luaffifb project, modified for WASM, making use of Emscripten's dlsym implementation and LibFFI's WASM32 support.
 
 # Why?
 
@@ -37,6 +31,5 @@ I'm using [Ace](https://github.com/ajaxorg/ace) for the code editor.  No complai
 
 # Last
 
-- Also I'm using [Pako](https://github.com/nodeca/pako) for zlib support.
-
 - TODO maybe - pause button <-> pause the setinterval for the main event loop.
+- Maybe some progress bars while it downloads folders.  Maybe even some buttons for downloading optional folders instead of grabbing everything up front.
