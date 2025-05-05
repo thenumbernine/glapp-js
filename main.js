@@ -1186,7 +1186,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 							const txt = stdinTA.value;
 							stdinTA.value = '';
 							if (lua) {
-								lua.doString(txt);
+								lua.run(txt);
 							} else {
 								M.printErr('lua state not present');
 							}
@@ -1468,7 +1468,7 @@ if (listenersForType.length != 1) {
 	} catch (e) {
 		console.log('failed to parse args as JSON:', e);
 	}
-	lua.doString(`
+	lua.run(`
 -- store Lua objects in here that will be shared across JavaScript.
 -- beats writing everything to window
 local luaJsScope = ...
