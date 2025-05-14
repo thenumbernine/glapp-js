@@ -167,104 +167,6 @@ window.lua = lua;
 window.M = M;
 window.FS = FS;
 
-lua.newState();
-
-{
-	const pkgs = [];
-	//push local glapp-js package
-	pkgs.push([
-		//{from : '.', to : '.', files : ['ffi.lua']},	// now in wasm
-		{
-			from : './ffi',
-			to : 'ffi',
-			files : [
-				'EGL.lua',
-				'OpenGL.lua',
-				'OpenGLES3.lua',
-				'cimgui.lua',
-				'jpeg.lua',
-				'load.lua',
-				'libwrapper.lua',
-				'png.lua',
-				'req.lua',
-				'sdl2.lua',
-				'zlib.lua',
-			]
-		},
-		{
-			from : './ffi/KHR',
-			to : 'ffi/KHR',
-			files : [
-				'khrplatform.lua',
-			],
-		},
-		{
-			from : './ffi/c',
-			to : 'ffi/c',
-			files : [
-				'ctype.lua',
-				'errno.lua',
-				'inttypes.lua',
-				'math.lua',
-				'setjmp.lua',
-				'stdarg.lua',
-				'stddef.lua',
-				'stdio.lua',
-				'stdint.lua',
-				'stdlib.lua',
-				'string.lua',
-				'time.lua',
-				'wchar.lua',
-			],
-		},
-		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua', 'types.lua']},
-		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
-		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
-		{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
-		{from : './tests', to : 'glapp/tests', files : ['test-js.lua', 'test-ffi.lua']},
-	]);
-	//push all other packages
-	for (let k in luaPackages) pkgs.push(luaPackages[k]);
-	// and wait for them all to load
-	await Promise.all(pkgs.map(pkg => addPackage(FS, pkg)))
-	.catch(e => { throw e; });
-}
-// why is this here when it's not down there in FS.readdir'/' ?
-//console.log('glapp', FS.stat('/glapp'));
-
-// shim layer filesystem stuff here:
-
-FS.writeFile('audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
-
-// remove ffi check from complex
-FS.writeFile(
-	'/complex/complex.lua',
-	FS.readFile('/complex/complex.lua', {encoding:'utf8'}).replace(` = pcall(require, 'ffi')`, ``),
-	{encoding:'binary'});
-
-// override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
-FS.writeFile('ext/gcmem.lua', `
-local ffi = require 'ffi'
-return {
-	new = function(T, n)
-		n = math.floor(tonumber(n))			-- get rid of pesky decimals ...
-		return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
-	end,
-	free = function(ptr)
-		-- TODO M._free(ptr)
-	end,
-}
-`, {encoding:'utf8'});
-
-// this is usually clip.so
-FS.writeFile('clip.lua', `
-return {
-	text = function() end,
-	image = function() end,
-}
-`, {encoding:'utf8'});
-
-
 const refreshEditMode = () => {
 	if (editmode) {
 		fsDiv.style.display = 'block';
@@ -392,7 +294,7 @@ const imgui = {
 					display : 'block',
 				},
 				events : {
-					click :  e => {
+					click : e => {
 						button.imguiClicked = true;
 					},
 				},
@@ -717,6 +619,7 @@ const setEditorFilePath = path => {
 
 const isDir = path => FS.lstat(path).mode & 0x4000;
 
+let makeFileDiv;
 {
 	fsDiv = Div({
 		style : {
@@ -730,7 +633,8 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 		appendTo : document.body,
 	});
 
-	const makeFileDiv = (path, name, parentFileInfo) => {
+	makeFileDiv = (path, name, parentFileInfo) => {
+
 		//FS.chdir(path);
 
 		const fileDiv = Div({
@@ -996,7 +900,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 			keydown : async (e) => {
 				//what's a good hotkey for run?
 				// ctrl-r ? nah that's "reload"
-				// shift-f5?  can browser trap f-keys?
+				// shift-f5? can browser trap f-keys?
 				// shift-enter?
 				if (e.shiftKey && e.key == 'Enter') {
 					e.preventDefault();
@@ -1301,11 +1205,8 @@ window.addEventListener('resize', glappResize);
 refreshEditMode();	// will trigger glappResize()
 
 
-// make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
-// in fact, why not do this within doRun?
-if (rundir && runfile) {
-	setEditorFilePath(rundir+'/'+runfile);
-}
+
+
 
 let gl;
 const closeCanvas = () => {
@@ -1369,7 +1270,7 @@ const doRun = async () => {
 window.luaJsScope = luaJsScope;
 	luaJsScope.resetWindowListeners = () => {
 		/*
-		This is called right after SDL_CreateWindow, right after emscripten  tries to take total control of your JS environment
+		This is called right after SDL_CreateWindow, right after emscripten tries to take total control of your JS environment
 		It overrides all key events, so that text fields outside the canvas no longer work.
 		It also does nothing useful with window resizing.
 		I'd like to keep its key events, but simply not throw them away.
@@ -1591,20 +1492,171 @@ end)
 `, luaJsScope);
 };
 
-if (runfile && rundir) {
 
-	// push initial state ...
-	const newParams = new URLSearchParams();
-	newParams.set('file', runfile);
-	newParams.set('dir', rundir);
-	newParams.set('args', runargs);
-	if (editmode) newParams.set('edit', editmode);
-	const url = location.origin + location.pathname + '?' + newParams.toString();
-	history.pushState({
-		runfile : runfile,
-		rundir : rundir,
-		runargs : runargs,
-	}, document.title, url);
 
-	await doRun();
+
+
+
+
+
+/////////////////// now that the editor is set up, load the files ///////////////////
+
+{
+	const addPackageToGUI = (pkgname, pkg) =>
+		addPackage(FS, pkg, path => {
+			// upon file finished ...
+
+			const parts = path.split('/');
+			let parentPath = '/';
+			let parentFileInfo = fileInfoForPath[parentPath];
+//console.log('/', parentFileInfo);
+			for (let i = 0; i < parts.length; ++i) {
+				const nextPath = '/'+parts.slice(0, i+1).join('/');
+				const filename = parts[i];
+//console.log('i', i, 'nextPath', nextPath, 'filename', filename, fileInfoForPath[nextPath]);
+				if (fileInfoForPath[nextPath]) {
+//console.log("found prev nextPath fileinfo: "+nextPath);
+				} else {
+//console.log('makeFileDiv', nextPath, filename, parentFileInfo);
+					makeFileDiv(nextPath, filename, parentFileInfo);
+					parentFileInfo.sortChildren();
+					if (!fileInfoForPath[nextPath]) {
+						console.log("!!!WARNING!!! couldn't find nextPath fileinfo", nextPath);
+					}
+				}
+				parentFileInfo = fileInfoForPath[nextPath];
+			}
+		});
+
+	//push local glapp-js package
+	addPackageToGUI('<glapp-builtin>', [
+		//{from : '.', to : '.', files : ['ffi.lua']},	// now in wasm
+		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'jpeg.lua', 'load.lua', 'libwrapper.lua', 'png.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
+		{from : './ffi/KHR', to : 'ffi/KHR', files : ['khrplatform.lua']},
+		{from : './ffi/c', to : 'ffi/c', files : ['ctype.lua', 'errno.lua', 'inttypes.lua', 'math.lua', 'setjmp.lua', 'stdarg.lua', 'stddef.lua', 'stdio.lua', 'stdint.lua', 'stdlib.lua', 'string.lua', 'time.lua', 'wchar.lua']},
+		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua', 'types.lua']},
+		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
+		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
+		{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
+		{from : './tests', to : 'glapp/tests', files : ['test-js.lua', 'test-ffi.lua']},
+	]);
+
+	// TODO
+	// for each package
+	// check cfg to see if autoloadj
+	// if not ... put a button of the package name here ... that upon click ...
+	// if so ...
+	// ... progress bar while each file loads ...
+
+	// TODO customize this so we don't load everything every run
+	// TODO start with just one like 'glapp' then search package dependencies provided in `distinfo` or `.rockspec`
+/* here's the minimum packages to run glapp/tests/test_tex.lua * /
+	const packageRequestedToLoad = [
+		'bit',
+		'template',
+		'ext',
+		'sdl',
+		'gl',
+		'struct',
+		'matrix',
+		'vec-ffi',
+		'image',
+		'glapp',
+	];
+/**/
+/* ... or just load all still */
+	const packageRequestedToLoad = Object.keys(luaPackages);
+/**/
+
+	// this is usually clip.so
+	// it doesn't go with any packages just yet
+	FS.writeFile('clip.lua', `
+return {
+	text = function() end,
+	image = function() end,
+}
+`, {encoding:'utf8'});
+
+
+	// shim layer filesystem stuff here:
+	// init shim layer per package upon load ...
+	// this way if we don't request audio then we don't need to shim audio until maybe someday it is requested
+	const packageOnLoad = {
+		ext : () => {
+			// override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
+			FS.writeFile('/ext/gcmem.lua', `
+local ffi = require 'ffi'
+return {
+	new = function(T, n)
+		n = math.floor(tonumber(n))			-- get rid of pesky decimals ...
+		return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
+	end,
+	free = function(ptr)
+		-- TODO M._free(ptr)
+	end,
+}
+`, {encoding:'utf8'});
+		},
+		audio : () => {
+			FS.writeFile('/audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
+		},
+		complex : () => {
+			// remove ffi check from complex
+			FS.writeFile(
+				'/complex/complex.lua',
+				FS.readFile('/complex/complex.lua', {encoding:'utf8'}).replace(` = pcall(require, 'ffi')`, ``),
+				{encoding:'binary'});
+		},
+		clip : () => {
+		},
+	};
+
+	//push all other packages
+	Promise.all(
+	packageRequestedToLoad.map(pkgname =>
+		addPackageToGUI(pkgname, luaPackages[pkgname])
+		.then(pkg => {
+			console.log('loaded package', pkgname);
+
+			// see if there's a shim layer
+			const shim = packageOnLoad[pkgname];
+			if (shim) shim();
+
+			// see if this is our on-edit file?
+
+			// see if this is our run-on-load file?
+			// or not?
+			// for that, make sure all packages are loaded first.
+		})
+	)).then(() => {
+		// all init packages loaded
+
+		if (rundir && runfile) {
+			// TODO once the file has loaded - and grey out the run button until all initial packages are loaded
+			// only once the file has loaded ... and it's the one we want to run ...
+			// make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
+			// in fact, why not do this within doRun?
+			setEditorFilePath(rundir+'/'+runfile);
+
+			// once all our initial files have loaded - if we want to run something then run it:
+
+			// push initial state ...
+			const newParams = new URLSearchParams();
+			newParams.set('file', runfile);
+			newParams.set('dir', rundir);
+			newParams.set('args', runargs);
+			if (editmode) newParams.set('edit', editmode);
+			const url = location.origin + location.pathname + '?' + newParams.toString();
+			history.pushState({
+				runfile : runfile,
+				rundir : rundir,
+				runargs : runargs,
+			}, document.title, url);
+
+			// TODO only once the file has loaded ... and it's the one we want to run ...
+			doRun();
+		}
+	});
+
+	// TODO and now provide buttons for all non-init packages ...
 }
