@@ -1454,6 +1454,17 @@ xpcall(function()
 		luaJsScope:resetWindowListeners()
 	end
 
+
+	-- If it's a langfix file then route it through langfix ...
+	-- TODO this here or outside the lua.run() or indicate in the UI or flags?
+	if runfile:sub(-4) == '.rua' then
+print'running langfix...'
+		table.insert(arg, 1, '/'..rundir..'/'..runfile)
+		rundir = 'langfix'
+		runfile = 'run.lua'
+	end
+
+
 	local fn = '/'..rundir..'/'..runfile
 	arg[0] = fn
 	local __SDLMainLuaThread = coroutine.create(function()
@@ -1494,12 +1505,9 @@ end)
 
 
 
-
-
-
-
-
 /////////////////// now that the editor is set up, load the files ///////////////////
+
+
 
 {
 	const addPackageToGUI = (pkgname, pkg) =>
