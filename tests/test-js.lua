@@ -5,7 +5,7 @@ print sdl/js events while they happen
 local table = require 'ext.table'
 local string = require 'ext.string'
 local op = require 'ext.op'
-local sdl = require 'ffi.req' 'sdl'
+local sdl = require 'sdl'
 
 -- https://wiki.libsdl.org/SDL2/SDL_Event
 local eventInfo = {}
