@@ -371,8 +371,9 @@ const imgui = {
 			},
 		}));
 		const sel = this.create(label+'_value', () => Select({
-			children : items.map(item => Option({
+			children : items.map((item, index) => Option({
 				innerText : item,
+				selected : index == v,
 			})),
 		}));
 		const iv = sel.selectedIndex;
