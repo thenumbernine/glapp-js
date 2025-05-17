@@ -180,41 +180,6 @@ window.M = M;
 window.FS = FS;
 
 
-M._initialize_gl4es();
-/* try to initialize GL4ES so I can bring back GL 1.x API for easy & fast poly drawing fun * /
-for (const [k, v] of Object.entries(M)) {
-	const ingl4es = k.match(/^_gl4es(_gl.*)/);
-	if (ingl4es && ingl4es[1]) {
-		const webglk = ingl4es[1];
-		// should I copy all _gl4es_gl* to _gl*
-		// or should I preserve the originals that Emscripten provides for its GLES 3 <-> WebGL 2 layer?
-		// ultimately GL4ES is using that same layer itself, so ... tempted to say just copy them all ...
-		// but ... does GL4ES break anything?  or does it only add to the API?
-		const inwebgl = !!M[webglk];
-		// only copy whats needed?  
-		// and then if any gles3<->webgl2 functions might talk to gl4es 1.0 behavior (idk where ... getters or setters ... ?) then something will break
-		// but if we copy over all, then maybe gl4es will not fully implement all paths to all the functions it provides, whereas gles3<->webgl2 is pretty complete.
-		// BUT FAIR WARNING
-		// EMSCRIPTEN WENT OUT OF THEIR WAY TO IMPLEMENT THE FUNCTION TO THROW AN ERROR TO LET ME KNOW IT'S NOT THERE!!! SO NICE OF THEM!
-		// THEY COULD HAVE, OH, YOU KNOW, JUST LEFT IT OUT, SO I COULD TELL IT'S NOT THERE, BUT THEY HAVE TO ADD IT, TO TELL ME IT'S NOT THERE.  GENIUS.
-		// I GUESS NOW I'M PICKING APART MANUALLY THE EMSCRIPTEN GENERATED BINDINGS TO SEE WHICH GL 1.1 FUNCTIONS ARE THERE AND WHICH ARE NOT.  THANKS AGAIN EMSCRIPTEN.
-		if (!inwebgl) {
-			M[webglk] = v;
-		}
-	}
-}
-/**/
-// hmm maybe I'll just use emscripten's legacy emulation ... or maybe I'll compare both ...
-// oh wait, I can't just overwrite the module js key here
-// I've gotta change the underlying table entry in wasm - if I even can - for the emscripten's to ...
-// or alternatively I can not replace names here, and just link to the _gl4es_gl* functions from luajit
-// and maybe give back a mapping table in lua ... but that seems like it might be slow ...
-// every option seems slow here ...
-// ... AND OF COURSE ...
-// emscripten legacy emulation is broken. link errors, `glTexEnvf` is defined twice.  smh.
-// ok back to GL4ES, and I guess I'll just patch the names in Lua.
-
-
 const refreshEditMode = () => {
 	if (editmode) {
 		fsDiv.style.display = 'block';

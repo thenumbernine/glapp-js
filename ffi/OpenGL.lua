@@ -1,12 +1,5 @@
--- HERE for GL4ES
--- provide just the stuff in GL up to whatever GLES3-equivalent is
--- and then OpenGLES3 for the rest because I'm lazy?
--- or thats a bad idea
--- idk
-
---- ... 
--- getting lots of webgl "WebGL: INVALID_OPERATION: drawArrays: no buffer is bound to enabled attribute" errors ...
--- maybe I will just can this whole idea ... and try to fix the stupid bugs left in the emscripten legacy gl support 
+-- I tried GL4ES but it didn't work so well out of the box
+-- so here I am trying for emscripten's legacy support
 
 local ffi = require 'ffi'
 
@@ -616,342 +609,342 @@ enum { GL_PHONG_HINT_WIN = 33003 };
 enum { GL_FOG_SPECULAR_TEXTURE_WIN = 33004 };
 enum { GL_LOGIC_OP = 3057 };
 enum { GL_TEXTURE_COMPONENTS = 4099 };
-void gl4es_glAccum (GLenum op, GLfloat value);
-void gl4es_glAlphaFunc (GLenum func, GLclampf ref);
-GLboolean gl4es_glAreTexturesResident (GLsizei n, const GLuint *textures, GLboolean *residences);
-void gl4es_glArrayElement (GLint i);
-void gl4es_glBegin (GLenum mode);
-void gl4es_glBindTexture (GLenum target, GLuint texture);
-void gl4es_glBitmap (GLsizei width, GLsizei height, GLfloat xorig, GLfloat yorig, GLfloat xmove, GLfloat ymove, const GLubyte *bitmap);
-void gl4es_glBlendFunc (GLenum sfactor, GLenum dfactor);
-void gl4es_glCallList (GLuint list);
-void gl4es_glCallLists (GLsizei n, GLenum type, const GLvoid *lists);
-void gl4es_glClear (GLbitfield mask);
-void gl4es_glClearAccum (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-void gl4es_glClearColor (GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
-void gl4es_glClearDepth (GLclampd depth);
-void gl4es_glClearIndex (GLfloat c);
-void gl4es_glClearStencil (GLint s);
-void gl4es_glClipPlane (GLenum plane, const GLdouble *equation);
-void gl4es_glColor3b (GLbyte red, GLbyte green, GLbyte blue);
-void gl4es_glColor3bv (const GLbyte *v);
-void gl4es_glColor3d (GLdouble red, GLdouble green, GLdouble blue);
-void gl4es_glColor3dv (const GLdouble *v);
-void gl4es_glColor3f (GLfloat red, GLfloat green, GLfloat blue);
-void gl4es_glColor3fv (const GLfloat *v);
-void gl4es_glColor3i (GLint red, GLint green, GLint blue);
-void gl4es_glColor3iv (const GLint *v);
-void gl4es_glColor3s (GLshort red, GLshort green, GLshort blue);
-void gl4es_glColor3sv (const GLshort *v);
-void gl4es_glColor3ub (GLubyte red, GLubyte green, GLubyte blue);
-void gl4es_glColor3ubv (const GLubyte *v);
-void gl4es_glColor3ui (GLuint red, GLuint green, GLuint blue);
-void gl4es_glColor3uiv (const GLuint *v);
-void gl4es_glColor3us (GLushort red, GLushort green, GLushort blue);
-void gl4es_glColor3usv (const GLushort *v);
-void gl4es_glColor4b (GLbyte red, GLbyte green, GLbyte blue, GLbyte alpha);
-void gl4es_glColor4bv (const GLbyte *v);
-void gl4es_glColor4d (GLdouble red, GLdouble green, GLdouble blue, GLdouble alpha);
-void gl4es_glColor4dv (const GLdouble *v);
-void gl4es_glColor4f (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-void gl4es_glColor4fv (const GLfloat *v);
-void gl4es_glColor4i (GLint red, GLint green, GLint blue, GLint alpha);
-void gl4es_glColor4iv (const GLint *v);
-void gl4es_glColor4s (GLshort red, GLshort green, GLshort blue, GLshort alpha);
-void gl4es_glColor4sv (const GLshort *v);
-void gl4es_glColor4ub (GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
-void gl4es_glColor4ubv (const GLubyte *v);
-void gl4es_glColor4ui (GLuint red, GLuint green, GLuint blue, GLuint alpha);
-void gl4es_glColor4uiv (const GLuint *v);
-void gl4es_glColor4us (GLushort red, GLushort green, GLushort blue, GLushort alpha);
-void gl4es_glColor4usv (const GLushort *v);
-void gl4es_glColorMask (GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
-void gl4es_glColorMaterial (GLenum face, GLenum mode);
-void gl4es_glColorPointer (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
-void gl4es_glCopyPixels (GLint x, GLint y, GLsizei width, GLsizei height, GLenum type);
-void gl4es_glCopyTexImage1D (GLenum target, GLint level, GLenum internalFormat, GLint x, GLint y, GLsizei width, GLint border);
-void gl4es_glCopyTexImage2D (GLenum target, GLint level, GLenum internalFormat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
-void gl4es_glCopyTexSubImage1D (GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width);
-void gl4es_glCopyTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
-void gl4es_glCullFace (GLenum mode);
-void gl4es_glDeleteLists (GLuint list, GLsizei range);
-void gl4es_glDeleteTextures (GLsizei n, const GLuint *textures);
-void gl4es_glDepthFunc (GLenum func);
-void gl4es_glDepthMask (GLboolean flag);
-void gl4es_glDepthRange (GLclampd zNear, GLclampd zFar);
-void gl4es_glDisable (GLenum cap);
-void gl4es_glDisableClientState (GLenum array);
-void gl4es_glDrawArrays (GLenum mode, GLint first, GLsizei count);
-void gl4es_glDrawBuffer (GLenum mode);
-void gl4es_glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
-void gl4es_glDrawPixels (GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
-void gl4es_glEdgeFlag (GLboolean flag);
-void gl4es_glEdgeFlagPointer (GLsizei stride, const GLvoid *pointer);
-void gl4es_glEdgeFlagv (const GLboolean *flag);
-void gl4es_glEnable (GLenum cap);
-void gl4es_glEnableClientState (GLenum array);
-void gl4es_glEnd (void);
-void gl4es_glEndList (void);
-void gl4es_glEvalCoord1d (GLdouble u);
-void gl4es_glEvalCoord1dv (const GLdouble *u);
-void gl4es_glEvalCoord1f (GLfloat u);
-void gl4es_glEvalCoord1fv (const GLfloat *u);
-void gl4es_glEvalCoord2d (GLdouble u, GLdouble v);
-void gl4es_glEvalCoord2dv (const GLdouble *u);
-void gl4es_glEvalCoord2f (GLfloat u, GLfloat v);
-void gl4es_glEvalCoord2fv (const GLfloat *u);
-void gl4es_glEvalMesh1 (GLenum mode, GLint i1, GLint i2);
-void gl4es_glEvalMesh2 (GLenum mode, GLint i1, GLint i2, GLint j1, GLint j2);
-void gl4es_glEvalPoint1 (GLint i);
-void gl4es_glEvalPoint2 (GLint i, GLint j);
-void gl4es_glFeedbackBuffer (GLsizei size, GLenum type, GLfloat *buffer);
-void gl4es_glFinish (void);
-void gl4es_glFlush (void);
-void gl4es_glFogf (GLenum pname, GLfloat param);
-void gl4es_glFogfv (GLenum pname, const GLfloat *params);
-void gl4es_glFogi (GLenum pname, GLint param);
-void gl4es_glFogiv (GLenum pname, const GLint *params);
-void gl4es_glFrontFace (GLenum mode);
-void gl4es_glFrustum (GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble zNear, GLdouble zFar);
-GLuint gl4es_glGenLists (GLsizei range);
-void gl4es_glGenTextures (GLsizei n, GLuint *textures);
-void gl4es_glGetBooleanv (GLenum pname, GLboolean *params);
-void gl4es_glGetClipPlane (GLenum plane, GLdouble *equation);
-void gl4es_glGetDoublev (GLenum pname, GLdouble *params);
-GLenum gl4es_glGetError (void);
-void gl4es_glGetFloatv (GLenum pname, GLfloat *params);
-void gl4es_glGetIntegerv (GLenum pname, GLint *params);
-void gl4es_glGetLightfv (GLenum light, GLenum pname, GLfloat *params);
-void gl4es_glGetLightiv (GLenum light, GLenum pname, GLint *params);
-void gl4es_glGetMapdv (GLenum target, GLenum query, GLdouble *v);
-void gl4es_glGetMapfv (GLenum target, GLenum query, GLfloat *v);
-void gl4es_glGetMapiv (GLenum target, GLenum query, GLint *v);
-void gl4es_glGetMaterialfv (GLenum face, GLenum pname, GLfloat *params);
-void gl4es_glGetMaterialiv (GLenum face, GLenum pname, GLint *params);
-void gl4es_glGetPixelMapfv (GLenum map, GLfloat *values);
-void gl4es_glGetPixelMapuiv (GLenum map, GLuint *values);
-void gl4es_glGetPixelMapusv (GLenum map, GLushort *values);
-void gl4es_glGetPointerv (GLenum pname, GLvoid* *params);
-void gl4es_glGetPolygonStipple (GLubyte *mask);
-const GLubyte * gl4es_glGetString (GLenum name);
-void gl4es_glGetTexEnvfv (GLenum target, GLenum pname, GLfloat *params);
-void gl4es_glGetTexEnviv (GLenum target, GLenum pname, GLint *params);
-void gl4es_glGetTexGendv (GLenum coord, GLenum pname, GLdouble *params);
-void gl4es_glGetTexGenfv (GLenum coord, GLenum pname, GLfloat *params);
-void gl4es_glGetTexGeniv (GLenum coord, GLenum pname, GLint *params);
-void gl4es_glGetTexImage (GLenum target, GLint level, GLenum format, GLenum type, GLvoid *pixels);
-void gl4es_glGetTexLevelParameterfv (GLenum target, GLint level, GLenum pname, GLfloat *params);
-void gl4es_glGetTexLevelParameteriv (GLenum target, GLint level, GLenum pname, GLint *params);
-void gl4es_glGetTexParameterfv (GLenum target, GLenum pname, GLfloat *params);
-void gl4es_glGetTexParameteriv (GLenum target, GLenum pname, GLint *params);
-void gl4es_glHint (GLenum target, GLenum mode);
-void gl4es_glIndexMask (GLuint mask);
-void gl4es_glIndexPointer (GLenum type, GLsizei stride, const GLvoid *pointer);
-void gl4es_glIndexd (GLdouble c);
-void gl4es_glIndexdv (const GLdouble *c);
-void gl4es_glIndexf (GLfloat c);
-void gl4es_glIndexfv (const GLfloat *c);
-void gl4es_glIndexi (GLint c);
-void gl4es_glIndexiv (const GLint *c);
-void gl4es_glIndexs (GLshort c);
-void gl4es_glIndexsv (const GLshort *c);
-void gl4es_glIndexub (GLubyte c);
-void gl4es_glIndexubv (const GLubyte *c);
-void gl4es_glInitNames (void);
-void gl4es_glInterleavedArrays (GLenum format, GLsizei stride, const GLvoid *pointer);
-GLboolean gl4es_glIsEnabled (GLenum cap);
-GLboolean gl4es_glIsList (GLuint list);
-GLboolean gl4es_glIsTexture (GLuint texture);
-void gl4es_glLightModelf (GLenum pname, GLfloat param);
-void gl4es_glLightModelfv (GLenum pname, const GLfloat *params);
-void gl4es_glLightModeli (GLenum pname, GLint param);
-void gl4es_glLightModeliv (GLenum pname, const GLint *params);
-void gl4es_glLightf (GLenum light, GLenum pname, GLfloat param);
-void gl4es_glLightfv (GLenum light, GLenum pname, const GLfloat *params);
-void gl4es_glLighti (GLenum light, GLenum pname, GLint param);
-void gl4es_glLightiv (GLenum light, GLenum pname, const GLint *params);
-void gl4es_glLineStipple (GLint factor, GLushort pattern);
-void gl4es_glLineWidth (GLfloat width);
-void gl4es_glListBase (GLuint base);
-void gl4es_glLoadIdentity (void);
-void gl4es_glLoadMatrixd (const GLdouble *m);
-void gl4es_glLoadMatrixf (const GLfloat *m);
-void gl4es_glLoadName (GLuint name);
-void gl4es_glLogicOp (GLenum opcode);
-void gl4es_glMap1d (GLenum target, GLdouble u1, GLdouble u2, GLint stride, GLint order, const GLdouble *points);
-void gl4es_glMap1f (GLenum target, GLfloat u1, GLfloat u2, GLint stride, GLint order, const GLfloat *points);
-void gl4es_glMap2d (GLenum target, GLdouble u1, GLdouble u2, GLint ustride, GLint uorder, GLdouble v1, GLdouble v2, GLint vstride, GLint vorder, const GLdouble *points);
-void gl4es_glMap2f (GLenum target, GLfloat u1, GLfloat u2, GLint ustride, GLint uorder, GLfloat v1, GLfloat v2, GLint vstride, GLint vorder, const GLfloat *points);
-void gl4es_glMapGrid1d (GLint un, GLdouble u1, GLdouble u2);
-void gl4es_glMapGrid1f (GLint un, GLfloat u1, GLfloat u2);
-void gl4es_glMapGrid2d (GLint un, GLdouble u1, GLdouble u2, GLint vn, GLdouble v1, GLdouble v2);
-void gl4es_glMapGrid2f (GLint un, GLfloat u1, GLfloat u2, GLint vn, GLfloat v1, GLfloat v2);
-void gl4es_glMaterialf (GLenum face, GLenum pname, GLfloat param);
-void gl4es_glMaterialfv (GLenum face, GLenum pname, const GLfloat *params);
-void gl4es_glMateriali (GLenum face, GLenum pname, GLint param);
-void gl4es_glMaterialiv (GLenum face, GLenum pname, const GLint *params);
-void gl4es_glMatrixMode (GLenum mode);
-void gl4es_glMultMatrixd (const GLdouble *m);
-void gl4es_glMultMatrixf (const GLfloat *m);
-void gl4es_glNewList (GLuint list, GLenum mode);
-void gl4es_glNormal3b (GLbyte nx, GLbyte ny, GLbyte nz);
-void gl4es_glNormal3bv (const GLbyte *v);
-void gl4es_glNormal3d (GLdouble nx, GLdouble ny, GLdouble nz);
-void gl4es_glNormal3dv (const GLdouble *v);
-void gl4es_glNormal3f (GLfloat nx, GLfloat ny, GLfloat nz);
-void gl4es_glNormal3fv (const GLfloat *v);
-void gl4es_glNormal3i (GLint nx, GLint ny, GLint nz);
-void gl4es_glNormal3iv (const GLint *v);
-void gl4es_glNormal3s (GLshort nx, GLshort ny, GLshort nz);
-void gl4es_glNormal3sv (const GLshort *v);
-void gl4es_glNormalPointer (GLenum type, GLsizei stride, const GLvoid *pointer);
-void gl4es_glOrtho (GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble zNear, GLdouble zFar);
-void gl4es_glPassThrough (GLfloat token);
-void gl4es_glPixelMapfv (GLenum map, GLsizei mapsize, const GLfloat *values);
-void gl4es_glPixelMapuiv (GLenum map, GLsizei mapsize, const GLuint *values);
-void gl4es_glPixelMapusv (GLenum map, GLsizei mapsize, const GLushort *values);
-void gl4es_glPixelStoref (GLenum pname, GLfloat param);
-void gl4es_glPixelStorei (GLenum pname, GLint param);
-void gl4es_glPixelTransferf (GLenum pname, GLfloat param);
-void gl4es_glPixelTransferi (GLenum pname, GLint param);
-void gl4es_glPixelZoom (GLfloat xfactor, GLfloat yfactor);
-void gl4es_glPointSize (GLfloat size);
-void gl4es_glPolygonMode (GLenum face, GLenum mode);
-void gl4es_glPolygonOffset (GLfloat factor, GLfloat units);
-void gl4es_glPolygonStipple (const GLubyte *mask);
-void gl4es_glPopAttrib (void);
-void gl4es_glPopClientAttrib (void);
-void gl4es_glPopMatrix (void);
-void gl4es_glPopName (void);
-void gl4es_glPrioritizeTextures (GLsizei n, const GLuint *textures, const GLclampf *priorities);
-void gl4es_glPushAttrib (GLbitfield mask);
-void gl4es_glPushClientAttrib (GLbitfield mask);
-void gl4es_glPushMatrix (void);
-void gl4es_glPushName (GLuint name);
-void gl4es_glRasterPos2d (GLdouble x, GLdouble y);
-void gl4es_glRasterPos2dv (const GLdouble *v);
-void gl4es_glRasterPos2f (GLfloat x, GLfloat y);
-void gl4es_glRasterPos2fv (const GLfloat *v);
-void gl4es_glRasterPos2i (GLint x, GLint y);
-void gl4es_glRasterPos2iv (const GLint *v);
-void gl4es_glRasterPos2s (GLshort x, GLshort y);
-void gl4es_glRasterPos2sv (const GLshort *v);
-void gl4es_glRasterPos3d (GLdouble x, GLdouble y, GLdouble z);
-void gl4es_glRasterPos3dv (const GLdouble *v);
-void gl4es_glRasterPos3f (GLfloat x, GLfloat y, GLfloat z);
-void gl4es_glRasterPos3fv (const GLfloat *v);
-void gl4es_glRasterPos3i (GLint x, GLint y, GLint z);
-void gl4es_glRasterPos3iv (const GLint *v);
-void gl4es_glRasterPos3s (GLshort x, GLshort y, GLshort z);
-void gl4es_glRasterPos3sv (const GLshort *v);
-void gl4es_glRasterPos4d (GLdouble x, GLdouble y, GLdouble z, GLdouble w);
-void gl4es_glRasterPos4dv (const GLdouble *v);
-void gl4es_glRasterPos4f (GLfloat x, GLfloat y, GLfloat z, GLfloat w);
-void gl4es_glRasterPos4fv (const GLfloat *v);
-void gl4es_glRasterPos4i (GLint x, GLint y, GLint z, GLint w);
-void gl4es_glRasterPos4iv (const GLint *v);
-void gl4es_glRasterPos4s (GLshort x, GLshort y, GLshort z, GLshort w);
-void gl4es_glRasterPos4sv (const GLshort *v);
-void gl4es_glReadBuffer (GLenum mode);
-void gl4es_glReadPixels (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
-void gl4es_glRectd (GLdouble x1, GLdouble y1, GLdouble x2, GLdouble y2);
-void gl4es_glRectdv (const GLdouble *v1, const GLdouble *v2);
-void gl4es_glRectf (GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2);
-void gl4es_glRectfv (const GLfloat *v1, const GLfloat *v2);
-void gl4es_glRecti (GLint x1, GLint y1, GLint x2, GLint y2);
-void gl4es_glRectiv (const GLint *v1, const GLint *v2);
-void gl4es_glRects (GLshort x1, GLshort y1, GLshort x2, GLshort y2);
-void gl4es_glRectsv (const GLshort *v1, const GLshort *v2);
-GLint gl4es_glRenderMode (GLenum mode);
-void gl4es_glRotated (GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
-void gl4es_glRotatef (GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
-void gl4es_glScaled (GLdouble x, GLdouble y, GLdouble z);
-void gl4es_glScalef (GLfloat x, GLfloat y, GLfloat z);
-void gl4es_glScissor (GLint x, GLint y, GLsizei width, GLsizei height);
-void gl4es_glSelectBuffer (GLsizei size, GLuint *buffer);
-void gl4es_glShadeModel (GLenum mode);
-void gl4es_glStencilFunc (GLenum func, GLint ref, GLuint mask);
-void gl4es_glStencilMask (GLuint mask);
-void gl4es_glStencilOp (GLenum fail, GLenum zfail, GLenum zpass);
-void gl4es_glTexCoord1d (GLdouble s);
-void gl4es_glTexCoord1dv (const GLdouble *v);
-void gl4es_glTexCoord1f (GLfloat s);
-void gl4es_glTexCoord1fv (const GLfloat *v);
-void gl4es_glTexCoord1i (GLint s);
-void gl4es_glTexCoord1iv (const GLint *v);
-void gl4es_glTexCoord1s (GLshort s);
-void gl4es_glTexCoord1sv (const GLshort *v);
-void gl4es_glTexCoord2d (GLdouble s, GLdouble t);
-void gl4es_glTexCoord2dv (const GLdouble *v);
-void gl4es_glTexCoord2f (GLfloat s, GLfloat t);
-void gl4es_glTexCoord2fv (const GLfloat *v);
-void gl4es_glTexCoord2i (GLint s, GLint t);
-void gl4es_glTexCoord2iv (const GLint *v);
-void gl4es_glTexCoord2s (GLshort s, GLshort t);
-void gl4es_glTexCoord2sv (const GLshort *v);
-void gl4es_glTexCoord3d (GLdouble s, GLdouble t, GLdouble r);
-void gl4es_glTexCoord3dv (const GLdouble *v);
-void gl4es_glTexCoord3f (GLfloat s, GLfloat t, GLfloat r);
-void gl4es_glTexCoord3fv (const GLfloat *v);
-void gl4es_glTexCoord3i (GLint s, GLint t, GLint r);
-void gl4es_glTexCoord3iv (const GLint *v);
-void gl4es_glTexCoord3s (GLshort s, GLshort t, GLshort r);
-void gl4es_glTexCoord3sv (const GLshort *v);
-void gl4es_glTexCoord4d (GLdouble s, GLdouble t, GLdouble r, GLdouble q);
-void gl4es_glTexCoord4dv (const GLdouble *v);
-void gl4es_glTexCoord4f (GLfloat s, GLfloat t, GLfloat r, GLfloat q);
-void gl4es_glTexCoord4fv (const GLfloat *v);
-void gl4es_glTexCoord4i (GLint s, GLint t, GLint r, GLint q);
-void gl4es_glTexCoord4iv (const GLint *v);
-void gl4es_glTexCoord4s (GLshort s, GLshort t, GLshort r, GLshort q);
-void gl4es_glTexCoord4sv (const GLshort *v);
-void gl4es_glTexCoordPointer (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
-void gl4es_glTexEnvf (GLenum target, GLenum pname, GLfloat param);
-void gl4es_glTexEnvfv (GLenum target, GLenum pname, const GLfloat *params);
-void gl4es_glTexEnvi (GLenum target, GLenum pname, GLint param);
-void gl4es_glTexEnviv (GLenum target, GLenum pname, const GLint *params);
-void gl4es_glTexGend (GLenum coord, GLenum pname, GLdouble param);
-void gl4es_glTexGendv (GLenum coord, GLenum pname, const GLdouble *params);
-void gl4es_glTexGenf (GLenum coord, GLenum pname, GLfloat param);
-void gl4es_glTexGenfv (GLenum coord, GLenum pname, const GLfloat *params);
-void gl4es_glTexGeni (GLenum coord, GLenum pname, GLint param);
-void gl4es_glTexGeniv (GLenum coord, GLenum pname, const GLint *params);
-void gl4es_glTexImage1D (GLenum target, GLint level, GLint internalformat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
-void gl4es_glTexImage2D (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
-void gl4es_glTexParameterf (GLenum target, GLenum pname, GLfloat param);
-void gl4es_glTexParameterfv (GLenum target, GLenum pname, const GLfloat *params);
-void gl4es_glTexParameteri (GLenum target, GLenum pname, GLint param);
-void gl4es_glTexParameteriv (GLenum target, GLenum pname, const GLint *params);
-void gl4es_glTexSubImage1D (GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels);
-void gl4es_glTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
-void gl4es_glTranslated (GLdouble x, GLdouble y, GLdouble z);
-void gl4es_glTranslatef (GLfloat x, GLfloat y, GLfloat z);
-void gl4es_glVertex2d (GLdouble x, GLdouble y);
-void gl4es_glVertex2dv (const GLdouble *v);
-void gl4es_glVertex2f (GLfloat x, GLfloat y);
-void gl4es_glVertex2fv (const GLfloat *v);
-void gl4es_glVertex2i (GLint x, GLint y);
-void gl4es_glVertex2iv (const GLint *v);
-void gl4es_glVertex2s (GLshort x, GLshort y);
-void gl4es_glVertex2sv (const GLshort *v);
-void gl4es_glVertex3d (GLdouble x, GLdouble y, GLdouble z);
-void gl4es_glVertex3dv (const GLdouble *v);
-void gl4es_glVertex3f (GLfloat x, GLfloat y, GLfloat z);
-void gl4es_glVertex3fv (const GLfloat *v);
-void gl4es_glVertex3i (GLint x, GLint y, GLint z);
-void gl4es_glVertex3iv (const GLint *v);
-void gl4es_glVertex3s (GLshort x, GLshort y, GLshort z);
-void gl4es_glVertex3sv (const GLshort *v);
-void gl4es_glVertex4d (GLdouble x, GLdouble y, GLdouble z, GLdouble w);
-void gl4es_glVertex4dv (const GLdouble *v);
-void gl4es_glVertex4f (GLfloat x, GLfloat y, GLfloat z, GLfloat w);
-void gl4es_glVertex4fv (const GLfloat *v);
-void gl4es_glVertex4i (GLint x, GLint y, GLint z, GLint w);
-void gl4es_glVertex4iv (const GLint *v);
-void gl4es_glVertex4s (GLshort x, GLshort y, GLshort z, GLshort w);
-void gl4es_glVertex4sv (const GLshort *v);
-void gl4es_glVertexPointer (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
-void gl4es_glViewport (GLint x, GLint y, GLsizei width, GLsizei height);
+void glAccum (GLenum op, GLfloat value);
+void glAlphaFunc (GLenum func, GLclampf ref);
+GLboolean glAreTexturesResident (GLsizei n, const GLuint *textures, GLboolean *residences);
+void glArrayElement (GLint i);
+void glBegin (GLenum mode);
+void glBindTexture (GLenum target, GLuint texture);
+void glBitmap (GLsizei width, GLsizei height, GLfloat xorig, GLfloat yorig, GLfloat xmove, GLfloat ymove, const GLubyte *bitmap);
+void glBlendFunc (GLenum sfactor, GLenum dfactor);
+void glCallList (GLuint list);
+void glCallLists (GLsizei n, GLenum type, const GLvoid *lists);
+void glClear (GLbitfield mask);
+void glClearAccum (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
+void glClearColor (GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
+void glClearDepth (GLclampd depth);
+void glClearIndex (GLfloat c);
+void glClearStencil (GLint s);
+void glClipPlane (GLenum plane, const GLdouble *equation);
+void glColor3b (GLbyte red, GLbyte green, GLbyte blue);
+void glColor3bv (const GLbyte *v);
+void glColor3d (GLdouble red, GLdouble green, GLdouble blue);
+void glColor3dv (const GLdouble *v);
+void glColor3f (GLfloat red, GLfloat green, GLfloat blue);
+void glColor3fv (const GLfloat *v);
+void glColor3i (GLint red, GLint green, GLint blue);
+void glColor3iv (const GLint *v);
+void glColor3s (GLshort red, GLshort green, GLshort blue);
+void glColor3sv (const GLshort *v);
+void glColor3ub (GLubyte red, GLubyte green, GLubyte blue);
+void glColor3ubv (const GLubyte *v);
+void glColor3ui (GLuint red, GLuint green, GLuint blue);
+void glColor3uiv (const GLuint *v);
+void glColor3us (GLushort red, GLushort green, GLushort blue);
+void glColor3usv (const GLushort *v);
+void glColor4b (GLbyte red, GLbyte green, GLbyte blue, GLbyte alpha);
+void glColor4bv (const GLbyte *v);
+void glColor4d (GLdouble red, GLdouble green, GLdouble blue, GLdouble alpha);
+void glColor4dv (const GLdouble *v);
+void glColor4f (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
+void glColor4fv (const GLfloat *v);
+void glColor4i (GLint red, GLint green, GLint blue, GLint alpha);
+void glColor4iv (const GLint *v);
+void glColor4s (GLshort red, GLshort green, GLshort blue, GLshort alpha);
+void glColor4sv (const GLshort *v);
+void glColor4ub (GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
+void glColor4ubv (const GLubyte *v);
+void glColor4ui (GLuint red, GLuint green, GLuint blue, GLuint alpha);
+void glColor4uiv (const GLuint *v);
+void glColor4us (GLushort red, GLushort green, GLushort blue, GLushort alpha);
+void glColor4usv (const GLushort *v);
+void glColorMask (GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
+void glColorMaterial (GLenum face, GLenum mode);
+void glColorPointer (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+void glCopyPixels (GLint x, GLint y, GLsizei width, GLsizei height, GLenum type);
+void glCopyTexImage1D (GLenum target, GLint level, GLenum internalFormat, GLint x, GLint y, GLsizei width, GLint border);
+void glCopyTexImage2D (GLenum target, GLint level, GLenum internalFormat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
+void glCopyTexSubImage1D (GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width);
+void glCopyTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
+void glCullFace (GLenum mode);
+void glDeleteLists (GLuint list, GLsizei range);
+void glDeleteTextures (GLsizei n, const GLuint *textures);
+void glDepthFunc (GLenum func);
+void glDepthMask (GLboolean flag);
+void glDepthRange (GLclampd zNear, GLclampd zFar);
+void glDisable (GLenum cap);
+void glDisableClientState (GLenum array);
+void glDrawArrays (GLenum mode, GLint first, GLsizei count);
+void glDrawBuffer (GLenum mode);
+void glDrawElements (GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+void glDrawPixels (GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
+void glEdgeFlag (GLboolean flag);
+void glEdgeFlagPointer (GLsizei stride, const GLvoid *pointer);
+void glEdgeFlagv (const GLboolean *flag);
+void glEnable (GLenum cap);
+void glEnableClientState (GLenum array);
+void glEnd (void);
+void glEndList (void);
+void glEvalCoord1d (GLdouble u);
+void glEvalCoord1dv (const GLdouble *u);
+void glEvalCoord1f (GLfloat u);
+void glEvalCoord1fv (const GLfloat *u);
+void glEvalCoord2d (GLdouble u, GLdouble v);
+void glEvalCoord2dv (const GLdouble *u);
+void glEvalCoord2f (GLfloat u, GLfloat v);
+void glEvalCoord2fv (const GLfloat *u);
+void glEvalMesh1 (GLenum mode, GLint i1, GLint i2);
+void glEvalMesh2 (GLenum mode, GLint i1, GLint i2, GLint j1, GLint j2);
+void glEvalPoint1 (GLint i);
+void glEvalPoint2 (GLint i, GLint j);
+void glFeedbackBuffer (GLsizei size, GLenum type, GLfloat *buffer);
+void glFinish (void);
+void glFlush (void);
+void glFogf (GLenum pname, GLfloat param);
+void glFogfv (GLenum pname, const GLfloat *params);
+void glFogi (GLenum pname, GLint param);
+void glFogiv (GLenum pname, const GLint *params);
+void glFrontFace (GLenum mode);
+void glFrustum (GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble zNear, GLdouble zFar);
+GLuint glGenLists (GLsizei range);
+void glGenTextures (GLsizei n, GLuint *textures);
+void glGetBooleanv (GLenum pname, GLboolean *params);
+void glGetClipPlane (GLenum plane, GLdouble *equation);
+void glGetDoublev (GLenum pname, GLdouble *params);
+GLenum glGetError (void);
+void glGetFloatv (GLenum pname, GLfloat *params);
+void glGetIntegerv (GLenum pname, GLint *params);
+void glGetLightfv (GLenum light, GLenum pname, GLfloat *params);
+void glGetLightiv (GLenum light, GLenum pname, GLint *params);
+void glGetMapdv (GLenum target, GLenum query, GLdouble *v);
+void glGetMapfv (GLenum target, GLenum query, GLfloat *v);
+void glGetMapiv (GLenum target, GLenum query, GLint *v);
+void glGetMaterialfv (GLenum face, GLenum pname, GLfloat *params);
+void glGetMaterialiv (GLenum face, GLenum pname, GLint *params);
+void glGetPixelMapfv (GLenum map, GLfloat *values);
+void glGetPixelMapuiv (GLenum map, GLuint *values);
+void glGetPixelMapusv (GLenum map, GLushort *values);
+void glGetPointerv (GLenum pname, GLvoid* *params);
+void glGetPolygonStipple (GLubyte *mask);
+const GLubyte * glGetString (GLenum name);
+void glGetTexEnvfv (GLenum target, GLenum pname, GLfloat *params);
+void glGetTexEnviv (GLenum target, GLenum pname, GLint *params);
+void glGetTexGendv (GLenum coord, GLenum pname, GLdouble *params);
+void glGetTexGenfv (GLenum coord, GLenum pname, GLfloat *params);
+void glGetTexGeniv (GLenum coord, GLenum pname, GLint *params);
+void glGetTexImage (GLenum target, GLint level, GLenum format, GLenum type, GLvoid *pixels);
+void glGetTexLevelParameterfv (GLenum target, GLint level, GLenum pname, GLfloat *params);
+void glGetTexLevelParameteriv (GLenum target, GLint level, GLenum pname, GLint *params);
+void glGetTexParameterfv (GLenum target, GLenum pname, GLfloat *params);
+void glGetTexParameteriv (GLenum target, GLenum pname, GLint *params);
+void glHint (GLenum target, GLenum mode);
+void glIndexMask (GLuint mask);
+void glIndexPointer (GLenum type, GLsizei stride, const GLvoid *pointer);
+void glIndexd (GLdouble c);
+void glIndexdv (const GLdouble *c);
+void glIndexf (GLfloat c);
+void glIndexfv (const GLfloat *c);
+void glIndexi (GLint c);
+void glIndexiv (const GLint *c);
+void glIndexs (GLshort c);
+void glIndexsv (const GLshort *c);
+void glIndexub (GLubyte c);
+void glIndexubv (const GLubyte *c);
+void glInitNames (void);
+void glInterleavedArrays (GLenum format, GLsizei stride, const GLvoid *pointer);
+GLboolean glIsEnabled (GLenum cap);
+GLboolean glIsList (GLuint list);
+GLboolean glIsTexture (GLuint texture);
+void glLightModelf (GLenum pname, GLfloat param);
+void glLightModelfv (GLenum pname, const GLfloat *params);
+void glLightModeli (GLenum pname, GLint param);
+void glLightModeliv (GLenum pname, const GLint *params);
+void glLightf (GLenum light, GLenum pname, GLfloat param);
+void glLightfv (GLenum light, GLenum pname, const GLfloat *params);
+void glLighti (GLenum light, GLenum pname, GLint param);
+void glLightiv (GLenum light, GLenum pname, const GLint *params);
+void glLineStipple (GLint factor, GLushort pattern);
+void glLineWidth (GLfloat width);
+void glListBase (GLuint base);
+void glLoadIdentity (void);
+void glLoadMatrixd (const GLdouble *m);
+void glLoadMatrixf (const GLfloat *m);
+void glLoadName (GLuint name);
+void glLogicOp (GLenum opcode);
+void glMap1d (GLenum target, GLdouble u1, GLdouble u2, GLint stride, GLint order, const GLdouble *points);
+void glMap1f (GLenum target, GLfloat u1, GLfloat u2, GLint stride, GLint order, const GLfloat *points);
+void glMap2d (GLenum target, GLdouble u1, GLdouble u2, GLint ustride, GLint uorder, GLdouble v1, GLdouble v2, GLint vstride, GLint vorder, const GLdouble *points);
+void glMap2f (GLenum target, GLfloat u1, GLfloat u2, GLint ustride, GLint uorder, GLfloat v1, GLfloat v2, GLint vstride, GLint vorder, const GLfloat *points);
+void glMapGrid1d (GLint un, GLdouble u1, GLdouble u2);
+void glMapGrid1f (GLint un, GLfloat u1, GLfloat u2);
+void glMapGrid2d (GLint un, GLdouble u1, GLdouble u2, GLint vn, GLdouble v1, GLdouble v2);
+void glMapGrid2f (GLint un, GLfloat u1, GLfloat u2, GLint vn, GLfloat v1, GLfloat v2);
+void glMaterialf (GLenum face, GLenum pname, GLfloat param);
+void glMaterialfv (GLenum face, GLenum pname, const GLfloat *params);
+void glMateriali (GLenum face, GLenum pname, GLint param);
+void glMaterialiv (GLenum face, GLenum pname, const GLint *params);
+void glMatrixMode (GLenum mode);
+void glMultMatrixd (const GLdouble *m);
+void glMultMatrixf (const GLfloat *m);
+void glNewList (GLuint list, GLenum mode);
+void glNormal3b (GLbyte nx, GLbyte ny, GLbyte nz);
+void glNormal3bv (const GLbyte *v);
+void glNormal3d (GLdouble nx, GLdouble ny, GLdouble nz);
+void glNormal3dv (const GLdouble *v);
+void glNormal3f (GLfloat nx, GLfloat ny, GLfloat nz);
+void glNormal3fv (const GLfloat *v);
+void glNormal3i (GLint nx, GLint ny, GLint nz);
+void glNormal3iv (const GLint *v);
+void glNormal3s (GLshort nx, GLshort ny, GLshort nz);
+void glNormal3sv (const GLshort *v);
+void glNormalPointer (GLenum type, GLsizei stride, const GLvoid *pointer);
+void glOrtho (GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble zNear, GLdouble zFar);
+void glPassThrough (GLfloat token);
+void glPixelMapfv (GLenum map, GLsizei mapsize, const GLfloat *values);
+void glPixelMapuiv (GLenum map, GLsizei mapsize, const GLuint *values);
+void glPixelMapusv (GLenum map, GLsizei mapsize, const GLushort *values);
+void glPixelStoref (GLenum pname, GLfloat param);
+void glPixelStorei (GLenum pname, GLint param);
+void glPixelTransferf (GLenum pname, GLfloat param);
+void glPixelTransferi (GLenum pname, GLint param);
+void glPixelZoom (GLfloat xfactor, GLfloat yfactor);
+void glPointSize (GLfloat size);
+void glPolygonMode (GLenum face, GLenum mode);
+void glPolygonOffset (GLfloat factor, GLfloat units);
+void glPolygonStipple (const GLubyte *mask);
+void glPopAttrib (void);
+void glPopClientAttrib (void);
+void glPopMatrix (void);
+void glPopName (void);
+void glPrioritizeTextures (GLsizei n, const GLuint *textures, const GLclampf *priorities);
+void glPushAttrib (GLbitfield mask);
+void glPushClientAttrib (GLbitfield mask);
+void glPushMatrix (void);
+void glPushName (GLuint name);
+void glRasterPos2d (GLdouble x, GLdouble y);
+void glRasterPos2dv (const GLdouble *v);
+void glRasterPos2f (GLfloat x, GLfloat y);
+void glRasterPos2fv (const GLfloat *v);
+void glRasterPos2i (GLint x, GLint y);
+void glRasterPos2iv (const GLint *v);
+void glRasterPos2s (GLshort x, GLshort y);
+void glRasterPos2sv (const GLshort *v);
+void glRasterPos3d (GLdouble x, GLdouble y, GLdouble z);
+void glRasterPos3dv (const GLdouble *v);
+void glRasterPos3f (GLfloat x, GLfloat y, GLfloat z);
+void glRasterPos3fv (const GLfloat *v);
+void glRasterPos3i (GLint x, GLint y, GLint z);
+void glRasterPos3iv (const GLint *v);
+void glRasterPos3s (GLshort x, GLshort y, GLshort z);
+void glRasterPos3sv (const GLshort *v);
+void glRasterPos4d (GLdouble x, GLdouble y, GLdouble z, GLdouble w);
+void glRasterPos4dv (const GLdouble *v);
+void glRasterPos4f (GLfloat x, GLfloat y, GLfloat z, GLfloat w);
+void glRasterPos4fv (const GLfloat *v);
+void glRasterPos4i (GLint x, GLint y, GLint z, GLint w);
+void glRasterPos4iv (const GLint *v);
+void glRasterPos4s (GLshort x, GLshort y, GLshort z, GLshort w);
+void glRasterPos4sv (const GLshort *v);
+void glReadBuffer (GLenum mode);
+void glReadPixels (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
+void glRectd (GLdouble x1, GLdouble y1, GLdouble x2, GLdouble y2);
+void glRectdv (const GLdouble *v1, const GLdouble *v2);
+void glRectf (GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2);
+void glRectfv (const GLfloat *v1, const GLfloat *v2);
+void glRecti (GLint x1, GLint y1, GLint x2, GLint y2);
+void glRectiv (const GLint *v1, const GLint *v2);
+void glRects (GLshort x1, GLshort y1, GLshort x2, GLshort y2);
+void glRectsv (const GLshort *v1, const GLshort *v2);
+GLint glRenderMode (GLenum mode);
+void glRotated (GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
+void glRotatef (GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
+void glScaled (GLdouble x, GLdouble y, GLdouble z);
+void glScalef (GLfloat x, GLfloat y, GLfloat z);
+void glScissor (GLint x, GLint y, GLsizei width, GLsizei height);
+void glSelectBuffer (GLsizei size, GLuint *buffer);
+void glShadeModel (GLenum mode);
+void glStencilFunc (GLenum func, GLint ref, GLuint mask);
+void glStencilMask (GLuint mask);
+void glStencilOp (GLenum fail, GLenum zfail, GLenum zpass);
+void glTexCoord1d (GLdouble s);
+void glTexCoord1dv (const GLdouble *v);
+void glTexCoord1f (GLfloat s);
+void glTexCoord1fv (const GLfloat *v);
+void glTexCoord1i (GLint s);
+void glTexCoord1iv (const GLint *v);
+void glTexCoord1s (GLshort s);
+void glTexCoord1sv (const GLshort *v);
+void glTexCoord2d (GLdouble s, GLdouble t);
+void glTexCoord2dv (const GLdouble *v);
+void glTexCoord2f (GLfloat s, GLfloat t);
+void glTexCoord2fv (const GLfloat *v);
+void glTexCoord2i (GLint s, GLint t);
+void glTexCoord2iv (const GLint *v);
+void glTexCoord2s (GLshort s, GLshort t);
+void glTexCoord2sv (const GLshort *v);
+void glTexCoord3d (GLdouble s, GLdouble t, GLdouble r);
+void glTexCoord3dv (const GLdouble *v);
+void glTexCoord3f (GLfloat s, GLfloat t, GLfloat r);
+void glTexCoord3fv (const GLfloat *v);
+void glTexCoord3i (GLint s, GLint t, GLint r);
+void glTexCoord3iv (const GLint *v);
+void glTexCoord3s (GLshort s, GLshort t, GLshort r);
+void glTexCoord3sv (const GLshort *v);
+void glTexCoord4d (GLdouble s, GLdouble t, GLdouble r, GLdouble q);
+void glTexCoord4dv (const GLdouble *v);
+void glTexCoord4f (GLfloat s, GLfloat t, GLfloat r, GLfloat q);
+void glTexCoord4fv (const GLfloat *v);
+void glTexCoord4i (GLint s, GLint t, GLint r, GLint q);
+void glTexCoord4iv (const GLint *v);
+void glTexCoord4s (GLshort s, GLshort t, GLshort r, GLshort q);
+void glTexCoord4sv (const GLshort *v);
+void glTexCoordPointer (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+void glTexEnvf (GLenum target, GLenum pname, GLfloat param);
+void glTexEnvfv (GLenum target, GLenum pname, const GLfloat *params);
+void glTexEnvi (GLenum target, GLenum pname, GLint param);
+void glTexEnviv (GLenum target, GLenum pname, const GLint *params);
+void glTexGend (GLenum coord, GLenum pname, GLdouble param);
+void glTexGendv (GLenum coord, GLenum pname, const GLdouble *params);
+void glTexGenf (GLenum coord, GLenum pname, GLfloat param);
+void glTexGenfv (GLenum coord, GLenum pname, const GLfloat *params);
+void glTexGeni (GLenum coord, GLenum pname, GLint param);
+void glTexGeniv (GLenum coord, GLenum pname, const GLint *params);
+void glTexImage1D (GLenum target, GLint level, GLint internalformat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+void glTexImage2D (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+void glTexParameterf (GLenum target, GLenum pname, GLfloat param);
+void glTexParameterfv (GLenum target, GLenum pname, const GLfloat *params);
+void glTexParameteri (GLenum target, GLenum pname, GLint param);
+void glTexParameteriv (GLenum target, GLenum pname, const GLint *params);
+void glTexSubImage1D (GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels);
+void glTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
+void glTranslated (GLdouble x, GLdouble y, GLdouble z);
+void glTranslatef (GLfloat x, GLfloat y, GLfloat z);
+void glVertex2d (GLdouble x, GLdouble y);
+void glVertex2dv (const GLdouble *v);
+void glVertex2f (GLfloat x, GLfloat y);
+void glVertex2fv (const GLfloat *v);
+void glVertex2i (GLint x, GLint y);
+void glVertex2iv (const GLint *v);
+void glVertex2s (GLshort x, GLshort y);
+void glVertex2sv (const GLshort *v);
+void glVertex3d (GLdouble x, GLdouble y, GLdouble z);
+void glVertex3dv (const GLdouble *v);
+void glVertex3f (GLfloat x, GLfloat y, GLfloat z);
+void glVertex3fv (const GLfloat *v);
+void glVertex3i (GLint x, GLint y, GLint z);
+void glVertex3iv (const GLint *v);
+void glVertex3s (GLshort x, GLshort y, GLshort z);
+void glVertex3sv (const GLshort *v);
+void glVertex4d (GLdouble x, GLdouble y, GLdouble z, GLdouble w);
+void glVertex4dv (const GLdouble *v);
+void glVertex4f (GLfloat x, GLfloat y, GLfloat z, GLfloat w);
+void glVertex4fv (const GLfloat *v);
+void glVertex4i (GLint x, GLint y, GLint z, GLint w);
+void glVertex4iv (const GLint *v);
+void glVertex4s (GLshort x, GLshort y, GLshort z, GLshort w);
+void glVertex4sv (const GLshort *v);
+void glVertexPointer (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+void glViewport (GLint x, GLint y, GLsizei width, GLsizei height);
 typedef void ( * PFNGLARRAYELEMENTEXTPROC) (GLint i);
 typedef void ( * PFNGLDRAWARRAYSEXTPROC) (GLenum mode, GLint first, GLsizei count);
 typedef void ( * PFNGLVERTEXPOINTEREXTPROC) (GLint size, GLenum type, GLsizei stride, GLsizei count, const GLvoid *pointer);
@@ -1021,10 +1014,10 @@ typedef void ( * PFNGLDRAWRANGEELEMENTSPROC) (GLenum mode, GLuint start, GLuint 
 typedef void ( * PFNGLTEXIMAGE3DPROC) (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels);
 typedef void ( * PFNGLTEXSUBIMAGE3DPROC) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
 typedef void ( * PFNGLCOPYTEXSUBIMAGE3DPROC) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
-extern void gl4es_glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices);
-extern void gl4es_glTexImage3D (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels);
-extern void gl4es_glTexSubImage3D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
-extern void gl4es_glCopyTexSubImage3D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
+extern void glDrawRangeElements (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices);
+extern void glTexImage3D (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels);
+extern void glTexSubImage3D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *pixels);
+extern void glCopyTexSubImage3D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
 enum { GL_VERSION_1_3 = 1 };
 enum { GL_TEXTURE0 = 33984 };
 enum { GL_TEXTURE1 = 33985 };
@@ -1168,52 +1161,52 @@ typedef void ( * PFNGLLOADTRANSPOSEMATRIXFPROC) (const GLfloat *m);
 typedef void ( * PFNGLLOADTRANSPOSEMATRIXDPROC) (const GLdouble *m);
 typedef void ( * PFNGLMULTTRANSPOSEMATRIXFPROC) (const GLfloat *m);
 typedef void ( * PFNGLMULTTRANSPOSEMATRIXDPROC) (const GLdouble *m);
-extern void gl4es_glActiveTexture (GLenum texture);
-extern void gl4es_glSampleCoverage (GLfloat value, GLboolean invert);
-extern void gl4es_glCompressedTexImage3D (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
-extern void gl4es_glCompressedTexImage2D (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data);
-extern void gl4es_glCompressedTexImage1D (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const void *data);
-extern void gl4es_glCompressedTexSubImage3D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
-extern void gl4es_glCompressedTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
-extern void gl4es_glCompressedTexSubImage1D (GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const void *data);
-extern void gl4es_glGetCompressedTexImage (GLenum target, GLint level, void *img);
-extern void gl4es_glClientActiveTexture (GLenum texture);
-extern void gl4es_glMultiTexCoord1d (GLenum target, GLdouble s);
-extern void gl4es_glMultiTexCoord1dv (GLenum target, const GLdouble *v);
-extern void gl4es_glMultiTexCoord1f (GLenum target, GLfloat s);
-extern void gl4es_glMultiTexCoord1fv (GLenum target, const GLfloat *v);
-extern void gl4es_glMultiTexCoord1i (GLenum target, GLint s);
-extern void gl4es_glMultiTexCoord1iv (GLenum target, const GLint *v);
-extern void gl4es_glMultiTexCoord1s (GLenum target, GLshort s);
-extern void gl4es_glMultiTexCoord1sv (GLenum target, const GLshort *v);
-extern void gl4es_glMultiTexCoord2d (GLenum target, GLdouble s, GLdouble t);
-extern void gl4es_glMultiTexCoord2dv (GLenum target, const GLdouble *v);
-extern void gl4es_glMultiTexCoord2f (GLenum target, GLfloat s, GLfloat t);
-extern void gl4es_glMultiTexCoord2fv (GLenum target, const GLfloat *v);
-extern void gl4es_glMultiTexCoord2i (GLenum target, GLint s, GLint t);
-extern void gl4es_glMultiTexCoord2iv (GLenum target, const GLint *v);
-extern void gl4es_glMultiTexCoord2s (GLenum target, GLshort s, GLshort t);
-extern void gl4es_glMultiTexCoord2sv (GLenum target, const GLshort *v);
-extern void gl4es_glMultiTexCoord3d (GLenum target, GLdouble s, GLdouble t, GLdouble r);
-extern void gl4es_glMultiTexCoord3dv (GLenum target, const GLdouble *v);
-extern void gl4es_glMultiTexCoord3f (GLenum target, GLfloat s, GLfloat t, GLfloat r);
-extern void gl4es_glMultiTexCoord3fv (GLenum target, const GLfloat *v);
-extern void gl4es_glMultiTexCoord3i (GLenum target, GLint s, GLint t, GLint r);
-extern void gl4es_glMultiTexCoord3iv (GLenum target, const GLint *v);
-extern void gl4es_glMultiTexCoord3s (GLenum target, GLshort s, GLshort t, GLshort r);
-extern void gl4es_glMultiTexCoord3sv (GLenum target, const GLshort *v);
-extern void gl4es_glMultiTexCoord4d (GLenum target, GLdouble s, GLdouble t, GLdouble r, GLdouble q);
-extern void gl4es_glMultiTexCoord4dv (GLenum target, const GLdouble *v);
-extern void gl4es_glMultiTexCoord4f (GLenum target, GLfloat s, GLfloat t, GLfloat r, GLfloat q);
-extern void gl4es_glMultiTexCoord4fv (GLenum target, const GLfloat *v);
-extern void gl4es_glMultiTexCoord4i (GLenum target, GLint s, GLint t, GLint r, GLint q);
-extern void gl4es_glMultiTexCoord4iv (GLenum target, const GLint *v);
-extern void gl4es_glMultiTexCoord4s (GLenum target, GLshort s, GLshort t, GLshort r, GLshort q);
-extern void gl4es_glMultiTexCoord4sv (GLenum target, const GLshort *v);
-extern void gl4es_glLoadTransposeMatrixf (const GLfloat *m);
-extern void gl4es_glLoadTransposeMatrixd (const GLdouble *m);
-extern void gl4es_glMultTransposeMatrixf (const GLfloat *m);
-extern void gl4es_glMultTransposeMatrixd (const GLdouble *m);
+extern void glActiveTexture (GLenum texture);
+extern void glSampleCoverage (GLfloat value, GLboolean invert);
+extern void glCompressedTexImage3D (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
+extern void glCompressedTexImage2D (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data);
+extern void glCompressedTexImage1D (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const void *data);
+extern void glCompressedTexSubImage3D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
+extern void glCompressedTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
+extern void glCompressedTexSubImage1D (GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const void *data);
+extern void glGetCompressedTexImage (GLenum target, GLint level, void *img);
+extern void glClientActiveTexture (GLenum texture);
+extern void glMultiTexCoord1d (GLenum target, GLdouble s);
+extern void glMultiTexCoord1dv (GLenum target, const GLdouble *v);
+extern void glMultiTexCoord1f (GLenum target, GLfloat s);
+extern void glMultiTexCoord1fv (GLenum target, const GLfloat *v);
+extern void glMultiTexCoord1i (GLenum target, GLint s);
+extern void glMultiTexCoord1iv (GLenum target, const GLint *v);
+extern void glMultiTexCoord1s (GLenum target, GLshort s);
+extern void glMultiTexCoord1sv (GLenum target, const GLshort *v);
+extern void glMultiTexCoord2d (GLenum target, GLdouble s, GLdouble t);
+extern void glMultiTexCoord2dv (GLenum target, const GLdouble *v);
+extern void glMultiTexCoord2f (GLenum target, GLfloat s, GLfloat t);
+extern void glMultiTexCoord2fv (GLenum target, const GLfloat *v);
+extern void glMultiTexCoord2i (GLenum target, GLint s, GLint t);
+extern void glMultiTexCoord2iv (GLenum target, const GLint *v);
+extern void glMultiTexCoord2s (GLenum target, GLshort s, GLshort t);
+extern void glMultiTexCoord2sv (GLenum target, const GLshort *v);
+extern void glMultiTexCoord3d (GLenum target, GLdouble s, GLdouble t, GLdouble r);
+extern void glMultiTexCoord3dv (GLenum target, const GLdouble *v);
+extern void glMultiTexCoord3f (GLenum target, GLfloat s, GLfloat t, GLfloat r);
+extern void glMultiTexCoord3fv (GLenum target, const GLfloat *v);
+extern void glMultiTexCoord3i (GLenum target, GLint s, GLint t, GLint r);
+extern void glMultiTexCoord3iv (GLenum target, const GLint *v);
+extern void glMultiTexCoord3s (GLenum target, GLshort s, GLshort t, GLshort r);
+extern void glMultiTexCoord3sv (GLenum target, const GLshort *v);
+extern void glMultiTexCoord4d (GLenum target, GLdouble s, GLdouble t, GLdouble r, GLdouble q);
+extern void glMultiTexCoord4dv (GLenum target, const GLdouble *v);
+extern void glMultiTexCoord4f (GLenum target, GLfloat s, GLfloat t, GLfloat r, GLfloat q);
+extern void glMultiTexCoord4fv (GLenum target, const GLfloat *v);
+extern void glMultiTexCoord4i (GLenum target, GLint s, GLint t, GLint r, GLint q);
+extern void glMultiTexCoord4iv (GLenum target, const GLint *v);
+extern void glMultiTexCoord4s (GLenum target, GLshort s, GLshort t, GLshort r, GLshort q);
+extern void glMultiTexCoord4sv (GLenum target, const GLshort *v);
+extern void glLoadTransposeMatrixf (const GLfloat *m);
+extern void glLoadTransposeMatrixd (const GLdouble *m);
+extern void glMultTransposeMatrixf (const GLfloat *m);
+extern void glMultTransposeMatrixd (const GLdouble *m);
 enum { GL_VERSION_1_4 = 1 };
 enum { GL_BLEND_DST_RGB = 32968 };
 enum { GL_BLEND_SRC_RGB = 32969 };
@@ -1312,53 +1305,53 @@ typedef void ( * PFNGLWINDOWPOS3SPROC) (GLshort x, GLshort y, GLshort z);
 typedef void ( * PFNGLWINDOWPOS3SVPROC) (const GLshort *v);
 typedef void ( * PFNGLBLENDCOLORPROC) (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 typedef void ( * PFNGLBLENDEQUATIONPROC) (GLenum mode);
-extern void gl4es_glBlendFuncSeparate (GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha);
-extern void gl4es_glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, GLsizei drawcount);
-extern void gl4es_glMultiDrawElements (GLenum mode, const GLsizei *count, GLenum type, const void *const*indices, GLsizei drawcount);
-extern void gl4es_glPointParameterf (GLenum pname, GLfloat param);
-extern void gl4es_glPointParameterfv (GLenum pname, const GLfloat *params);
-extern void gl4es_glPointParameteri (GLenum pname, GLint param);
-extern void gl4es_glPointParameteriv (GLenum pname, const GLint *params);
-extern void gl4es_glFogCoordf (GLfloat coord);
-extern void gl4es_glFogCoordfv (const GLfloat *coord);
-extern void gl4es_glFogCoordd (GLdouble coord);
-extern void gl4es_glFogCoorddv (const GLdouble *coord);
-extern void gl4es_glFogCoordPointer (GLenum type, GLsizei stride, const void *pointer);
-extern void gl4es_glSecondaryColor3b (GLbyte red, GLbyte green, GLbyte blue);
-extern void gl4es_glSecondaryColor3bv (const GLbyte *v);
-extern void gl4es_glSecondaryColor3d (GLdouble red, GLdouble green, GLdouble blue);
-extern void gl4es_glSecondaryColor3dv (const GLdouble *v);
-extern void gl4es_glSecondaryColor3f (GLfloat red, GLfloat green, GLfloat blue);
-extern void gl4es_glSecondaryColor3fv (const GLfloat *v);
-extern void gl4es_glSecondaryColor3i (GLint red, GLint green, GLint blue);
-extern void gl4es_glSecondaryColor3iv (const GLint *v);
-extern void gl4es_glSecondaryColor3s (GLshort red, GLshort green, GLshort blue);
-extern void gl4es_glSecondaryColor3sv (const GLshort *v);
-extern void gl4es_glSecondaryColor3ub (GLubyte red, GLubyte green, GLubyte blue);
-extern void gl4es_glSecondaryColor3ubv (const GLubyte *v);
-extern void gl4es_glSecondaryColor3ui (GLuint red, GLuint green, GLuint blue);
-extern void gl4es_glSecondaryColor3uiv (const GLuint *v);
-extern void gl4es_glSecondaryColor3us (GLushort red, GLushort green, GLushort blue);
-extern void gl4es_glSecondaryColor3usv (const GLushort *v);
-extern void gl4es_glSecondaryColorPointer (GLint size, GLenum type, GLsizei stride, const void *pointer);
-extern void gl4es_glWindowPos2d (GLdouble x, GLdouble y);
-extern void gl4es_glWindowPos2dv (const GLdouble *v);
-extern void gl4es_glWindowPos2f (GLfloat x, GLfloat y);
-extern void gl4es_glWindowPos2fv (const GLfloat *v);
-extern void gl4es_glWindowPos2i (GLint x, GLint y);
-extern void gl4es_glWindowPos2iv (const GLint *v);
-extern void gl4es_glWindowPos2s (GLshort x, GLshort y);
-extern void gl4es_glWindowPos2sv (const GLshort *v);
-extern void gl4es_glWindowPos3d (GLdouble x, GLdouble y, GLdouble z);
-extern void gl4es_glWindowPos3dv (const GLdouble *v);
-extern void gl4es_glWindowPos3f (GLfloat x, GLfloat y, GLfloat z);
-extern void gl4es_glWindowPos3fv (const GLfloat *v);
-extern void gl4es_glWindowPos3i (GLint x, GLint y, GLint z);
-extern void gl4es_glWindowPos3iv (const GLint *v);
-extern void gl4es_glWindowPos3s (GLshort x, GLshort y, GLshort z);
-extern void gl4es_glWindowPos3sv (const GLshort *v);
-extern void gl4es_glBlendColor (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-extern void gl4es_glBlendEquation (GLenum mode);
+extern void glBlendFuncSeparate (GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha);
+extern void glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, GLsizei drawcount);
+extern void glMultiDrawElements (GLenum mode, const GLsizei *count, GLenum type, const void *const*indices, GLsizei drawcount);
+extern void glPointParameterf (GLenum pname, GLfloat param);
+extern void glPointParameterfv (GLenum pname, const GLfloat *params);
+extern void glPointParameteri (GLenum pname, GLint param);
+extern void glPointParameteriv (GLenum pname, const GLint *params);
+extern void glFogCoordf (GLfloat coord);
+extern void glFogCoordfv (const GLfloat *coord);
+extern void glFogCoordd (GLdouble coord);
+extern void glFogCoorddv (const GLdouble *coord);
+extern void glFogCoordPointer (GLenum type, GLsizei stride, const void *pointer);
+extern void glSecondaryColor3b (GLbyte red, GLbyte green, GLbyte blue);
+extern void glSecondaryColor3bv (const GLbyte *v);
+extern void glSecondaryColor3d (GLdouble red, GLdouble green, GLdouble blue);
+extern void glSecondaryColor3dv (const GLdouble *v);
+extern void glSecondaryColor3f (GLfloat red, GLfloat green, GLfloat blue);
+extern void glSecondaryColor3fv (const GLfloat *v);
+extern void glSecondaryColor3i (GLint red, GLint green, GLint blue);
+extern void glSecondaryColor3iv (const GLint *v);
+extern void glSecondaryColor3s (GLshort red, GLshort green, GLshort blue);
+extern void glSecondaryColor3sv (const GLshort *v);
+extern void glSecondaryColor3ub (GLubyte red, GLubyte green, GLubyte blue);
+extern void glSecondaryColor3ubv (const GLubyte *v);
+extern void glSecondaryColor3ui (GLuint red, GLuint green, GLuint blue);
+extern void glSecondaryColor3uiv (const GLuint *v);
+extern void glSecondaryColor3us (GLushort red, GLushort green, GLushort blue);
+extern void glSecondaryColor3usv (const GLushort *v);
+extern void glSecondaryColorPointer (GLint size, GLenum type, GLsizei stride, const void *pointer);
+extern void glWindowPos2d (GLdouble x, GLdouble y);
+extern void glWindowPos2dv (const GLdouble *v);
+extern void glWindowPos2f (GLfloat x, GLfloat y);
+extern void glWindowPos2fv (const GLfloat *v);
+extern void glWindowPos2i (GLint x, GLint y);
+extern void glWindowPos2iv (const GLint *v);
+extern void glWindowPos2s (GLshort x, GLshort y);
+extern void glWindowPos2sv (const GLshort *v);
+extern void glWindowPos3d (GLdouble x, GLdouble y, GLdouble z);
+extern void glWindowPos3dv (const GLdouble *v);
+extern void glWindowPos3f (GLfloat x, GLfloat y, GLfloat z);
+extern void glWindowPos3fv (const GLfloat *v);
+extern void glWindowPos3i (GLint x, GLint y, GLint z);
+extern void glWindowPos3iv (const GLint *v);
+extern void glWindowPos3s (GLshort x, GLshort y, GLshort z);
+extern void glWindowPos3sv (const GLshort *v);
+extern void glBlendColor (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
+extern void glBlendEquation (GLenum mode);
 enum { GL_VERSION_1_5 = 1 };
 typedef khronos_ssize_t GLsizeiptr;
 typedef khronos_intptr_t GLintptr;
@@ -1431,25 +1424,25 @@ typedef void *( * PFNGLMAPBUFFERPROC) (GLenum target, GLenum access);
 typedef GLboolean ( * PFNGLUNMAPBUFFERPROC) (GLenum target);
 typedef void ( * PFNGLGETBUFFERPARAMETERIVPROC) (GLenum target, GLenum pname, GLint *params);
 typedef void ( * PFNGLGETBUFFERPOINTERVPROC) (GLenum target, GLenum pname, void **params);
-extern void gl4es_glGenQueries (GLsizei n, GLuint *ids);
-extern void gl4es_glDeleteQueries (GLsizei n, const GLuint *ids);
-extern GLboolean gl4es_glIsQuery (GLuint id);
-extern void gl4es_glBeginQuery (GLenum target, GLuint id);
-extern void gl4es_glEndQuery (GLenum target);
-extern void gl4es_glGetQueryiv (GLenum target, GLenum pname, GLint *params);
-extern void gl4es_glGetQueryObjectiv (GLuint id, GLenum pname, GLint *params);
-extern void gl4es_glGetQueryObjectuiv (GLuint id, GLenum pname, GLuint *params);
-extern void gl4es_glBindBuffer (GLenum target, GLuint buffer);
-extern void gl4es_glDeleteBuffers (GLsizei n, const GLuint *buffers);
-extern void gl4es_glGenBuffers (GLsizei n, GLuint *buffers);
-extern GLboolean gl4es_glIsBuffer (GLuint buffer);
-extern void gl4es_glBufferData (GLenum target, GLsizeiptr size, const void *data, GLenum usage);
-extern void gl4es_glBufferSubData (GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
-extern void gl4es_glGetBufferSubData (GLenum target, GLintptr offset, GLsizeiptr size, void *data);
-extern void * gl4es_glMapBuffer (GLenum target, GLenum access);
-extern GLboolean gl4es_glUnmapBuffer (GLenum target);
-extern void gl4es_glGetBufferParameteriv (GLenum target, GLenum pname, GLint *params);
-extern void gl4es_glGetBufferPointerv (GLenum target, GLenum pname, void **params);
+extern void glGenQueries (GLsizei n, GLuint *ids);
+extern void glDeleteQueries (GLsizei n, const GLuint *ids);
+extern GLboolean glIsQuery (GLuint id);
+extern void glBeginQuery (GLenum target, GLuint id);
+extern void glEndQuery (GLenum target);
+extern void glGetQueryiv (GLenum target, GLenum pname, GLint *params);
+extern void glGetQueryObjectiv (GLuint id, GLenum pname, GLint *params);
+extern void glGetQueryObjectuiv (GLuint id, GLenum pname, GLuint *params);
+extern void glBindBuffer (GLenum target, GLuint buffer);
+extern void glDeleteBuffers (GLsizei n, const GLuint *buffers);
+extern void glGenBuffers (GLsizei n, GLuint *buffers);
+extern GLboolean glIsBuffer (GLuint buffer);
+extern void glBufferData (GLenum target, GLsizeiptr size, const void *data, GLenum usage);
+extern void glBufferSubData (GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
+extern void glGetBufferSubData (GLenum target, GLintptr offset, GLsizeiptr size, void *data);
+extern void * glMapBuffer (GLenum target, GLenum access);
+extern GLboolean glUnmapBuffer (GLenum target);
+extern void glGetBufferParameteriv (GLenum target, GLenum pname, GLint *params);
+extern void glGetBufferPointerv (GLenum target, GLenum pname, void **params);
 enum { GL_VERSION_2_0 = 1 };
 typedef char GLchar;
 enum { GL_BLEND_EQUATION_RGB = 32777 };
@@ -1629,657 +1622,101 @@ typedef void ( * PFNGLVERTEXATTRIB4UBVPROC) (GLuint index, const GLubyte *v);
 typedef void ( * PFNGLVERTEXATTRIB4UIVPROC) (GLuint index, const GLuint *v);
 typedef void ( * PFNGLVERTEXATTRIB4USVPROC) (GLuint index, const GLushort *v);
 typedef void ( * PFNGLVERTEXATTRIBPOINTERPROC) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
-extern void gl4es_glBlendEquationSeparate (GLenum modeRGB, GLenum modeAlpha);
-extern void gl4es_glDrawBuffers (GLsizei n, const GLenum *bufs);
-extern void gl4es_glStencilOpSeparate (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass);
-extern void gl4es_glStencilFuncSeparate (GLenum face, GLenum func, GLint ref, GLuint mask);
-extern void gl4es_glStencilMaskSeparate (GLenum face, GLuint mask);
-extern void gl4es_glAttachShader (GLuint program, GLuint shader);
-extern void gl4es_glBindAttribLocation (GLuint program, GLuint index, const GLchar *name);
-extern void gl4es_glCompileShader (GLuint shader);
-extern GLuint gl4es_glCreateProgram (void);
-extern GLuint gl4es_glCreateShader (GLenum type);
-extern void gl4es_glDeleteProgram (GLuint program);
-extern void gl4es_glDeleteShader (GLuint shader);
-extern void gl4es_glDetachShader (GLuint program, GLuint shader);
-extern void gl4es_glDisableVertexAttribArray (GLuint index);
-extern void gl4es_glEnableVertexAttribArray (GLuint index);
-extern void gl4es_glGetActiveAttrib (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
-extern void gl4es_glGetActiveUniform (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
-extern void gl4es_glGetAttachedShaders (GLuint program, GLsizei maxCount, GLsizei *count, GLuint *shaders);
-extern GLint gl4es_glGetAttribLocation (GLuint program, const GLchar *name);
-extern void gl4es_glGetProgramiv (GLuint program, GLenum pname, GLint *params);
-extern void gl4es_glGetProgramInfoLog (GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
-extern void gl4es_glGetShaderiv (GLuint shader, GLenum pname, GLint *params);
-extern void gl4es_glGetShaderInfoLog (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
-extern void gl4es_glGetShaderSource (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *source);
-extern GLint gl4es_glGetUniformLocation (GLuint program, const GLchar *name);
-extern void gl4es_glGetUniformfv (GLuint program, GLint location, GLfloat *params);
-extern void gl4es_glGetUniformiv (GLuint program, GLint location, GLint *params);
-extern void gl4es_glGetVertexAttribdv (GLuint index, GLenum pname, GLdouble *params);
-extern void gl4es_glGetVertexAttribfv (GLuint index, GLenum pname, GLfloat *params);
-extern void gl4es_glGetVertexAttribiv (GLuint index, GLenum pname, GLint *params);
-extern void gl4es_glGetVertexAttribPointerv (GLuint index, GLenum pname, void **pointer);
-extern GLboolean gl4es_glIsProgram (GLuint program);
-extern GLboolean gl4es_glIsShader (GLuint shader);
-extern void gl4es_glLinkProgram (GLuint program);
-extern void gl4es_glShaderSource (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
-extern void gl4es_glUseProgram (GLuint program);
-extern void gl4es_glUniform1f (GLint location, GLfloat v0);
-extern void gl4es_glUniform2f (GLint location, GLfloat v0, GLfloat v1);
-extern void gl4es_glUniform3f (GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
-extern void gl4es_glUniform4f (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
-extern void gl4es_glUniform1i (GLint location, GLint v0);
-extern void gl4es_glUniform2i (GLint location, GLint v0, GLint v1);
-extern void gl4es_glUniform3i (GLint location, GLint v0, GLint v1, GLint v2);
-extern void gl4es_glUniform4i (GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
-extern void gl4es_glUniform1fv (GLint location, GLsizei count, const GLfloat *value);
-extern void gl4es_glUniform2fv (GLint location, GLsizei count, const GLfloat *value);
-extern void gl4es_glUniform3fv (GLint location, GLsizei count, const GLfloat *value);
-extern void gl4es_glUniform4fv (GLint location, GLsizei count, const GLfloat *value);
-extern void gl4es_glUniform1iv (GLint location, GLsizei count, const GLint *value);
-extern void gl4es_glUniform2iv (GLint location, GLsizei count, const GLint *value);
-extern void gl4es_glUniform3iv (GLint location, GLsizei count, const GLint *value);
-extern void gl4es_glUniform4iv (GLint location, GLsizei count, const GLint *value);
-extern void gl4es_glUniformMatrix2fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
-extern void gl4es_glUniformMatrix3fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
-extern void gl4es_glUniformMatrix4fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
-extern void gl4es_glValidateProgram (GLuint program);
-extern void gl4es_glVertexAttrib1d (GLuint index, GLdouble x);
-extern void gl4es_glVertexAttrib1dv (GLuint index, const GLdouble *v);
-extern void gl4es_glVertexAttrib1f (GLuint index, GLfloat x);
-extern void gl4es_glVertexAttrib1fv (GLuint index, const GLfloat *v);
-extern void gl4es_glVertexAttrib1s (GLuint index, GLshort x);
-extern void gl4es_glVertexAttrib1sv (GLuint index, const GLshort *v);
-extern void gl4es_glVertexAttrib2d (GLuint index, GLdouble x, GLdouble y);
-extern void gl4es_glVertexAttrib2dv (GLuint index, const GLdouble *v);
-extern void gl4es_glVertexAttrib2f (GLuint index, GLfloat x, GLfloat y);
-extern void gl4es_glVertexAttrib2fv (GLuint index, const GLfloat *v);
-extern void gl4es_glVertexAttrib2s (GLuint index, GLshort x, GLshort y);
-extern void gl4es_glVertexAttrib2sv (GLuint index, const GLshort *v);
-extern void gl4es_glVertexAttrib3d (GLuint index, GLdouble x, GLdouble y, GLdouble z);
-extern void gl4es_glVertexAttrib3dv (GLuint index, const GLdouble *v);
-extern void gl4es_glVertexAttrib3f (GLuint index, GLfloat x, GLfloat y, GLfloat z);
-extern void gl4es_glVertexAttrib3fv (GLuint index, const GLfloat *v);
-extern void gl4es_glVertexAttrib3s (GLuint index, GLshort x, GLshort y, GLshort z);
-extern void gl4es_glVertexAttrib3sv (GLuint index, const GLshort *v);
-extern void gl4es_glVertexAttrib4Nbv (GLuint index, const GLbyte *v);
-extern void gl4es_glVertexAttrib4Niv (GLuint index, const GLint *v);
-extern void gl4es_glVertexAttrib4Nsv (GLuint index, const GLshort *v);
-extern void gl4es_glVertexAttrib4Nub (GLuint index, GLubyte x, GLubyte y, GLubyte z, GLubyte w);
-extern void gl4es_glVertexAttrib4Nubv (GLuint index, const GLubyte *v);
-extern void gl4es_glVertexAttrib4Nuiv (GLuint index, const GLuint *v);
-extern void gl4es_glVertexAttrib4Nusv (GLuint index, const GLushort *v);
-extern void gl4es_glVertexAttrib4bv (GLuint index, const GLbyte *v);
-extern void gl4es_glVertexAttrib4d (GLuint index, GLdouble x, GLdouble y, GLdouble z, GLdouble w);
-extern void gl4es_glVertexAttrib4dv (GLuint index, const GLdouble *v);
-extern void gl4es_glVertexAttrib4f (GLuint index, GLfloat x, GLfloat y, GLfloat z, GLfloat w);
-extern void gl4es_glVertexAttrib4fv (GLuint index, const GLfloat *v);
-extern void gl4es_glVertexAttrib4iv (GLuint index, const GLint *v);
-extern void gl4es_glVertexAttrib4s (GLuint index, GLshort x, GLshort y, GLshort z, GLshort w);
-extern void gl4es_glVertexAttrib4sv (GLuint index, const GLshort *v);
-extern void gl4es_glVertexAttrib4ubv (GLuint index, const GLubyte *v);
-extern void gl4es_glVertexAttrib4uiv (GLuint index, const GLuint *v);
-extern void gl4es_glVertexAttrib4usv (GLuint index, const GLushort *v);
-extern void gl4es_glVertexAttribPointer (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
+extern void glBlendEquationSeparate (GLenum modeRGB, GLenum modeAlpha);
+extern void glDrawBuffers (GLsizei n, const GLenum *bufs);
+extern void glStencilOpSeparate (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass);
+extern void glStencilFuncSeparate (GLenum face, GLenum func, GLint ref, GLuint mask);
+extern void glStencilMaskSeparate (GLenum face, GLuint mask);
+extern void glAttachShader (GLuint program, GLuint shader);
+extern void glBindAttribLocation (GLuint program, GLuint index, const GLchar *name);
+extern void glCompileShader (GLuint shader);
+extern GLuint glCreateProgram (void);
+extern GLuint glCreateShader (GLenum type);
+extern void glDeleteProgram (GLuint program);
+extern void glDeleteShader (GLuint shader);
+extern void glDetachShader (GLuint program, GLuint shader);
+extern void glDisableVertexAttribArray (GLuint index);
+extern void glEnableVertexAttribArray (GLuint index);
+extern void glGetActiveAttrib (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
+extern void glGetActiveUniform (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
+extern void glGetAttachedShaders (GLuint program, GLsizei maxCount, GLsizei *count, GLuint *shaders);
+extern GLint glGetAttribLocation (GLuint program, const GLchar *name);
+extern void glGetProgramiv (GLuint program, GLenum pname, GLint *params);
+extern void glGetProgramInfoLog (GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+extern void glGetShaderiv (GLuint shader, GLenum pname, GLint *params);
+extern void glGetShaderInfoLog (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+extern void glGetShaderSource (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *source);
+extern GLint glGetUniformLocation (GLuint program, const GLchar *name);
+extern void glGetUniformfv (GLuint program, GLint location, GLfloat *params);
+extern void glGetUniformiv (GLuint program, GLint location, GLint *params);
+extern void glGetVertexAttribdv (GLuint index, GLenum pname, GLdouble *params);
+extern void glGetVertexAttribfv (GLuint index, GLenum pname, GLfloat *params);
+extern void glGetVertexAttribiv (GLuint index, GLenum pname, GLint *params);
+extern void glGetVertexAttribPointerv (GLuint index, GLenum pname, void **pointer);
+extern GLboolean glIsProgram (GLuint program);
+extern GLboolean glIsShader (GLuint shader);
+extern void glLinkProgram (GLuint program);
+extern void glShaderSource (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
+extern void glUseProgram (GLuint program);
+extern void glUniform1f (GLint location, GLfloat v0);
+extern void glUniform2f (GLint location, GLfloat v0, GLfloat v1);
+extern void glUniform3f (GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+extern void glUniform4f (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+extern void glUniform1i (GLint location, GLint v0);
+extern void glUniform2i (GLint location, GLint v0, GLint v1);
+extern void glUniform3i (GLint location, GLint v0, GLint v1, GLint v2);
+extern void glUniform4i (GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
+extern void glUniform1fv (GLint location, GLsizei count, const GLfloat *value);
+extern void glUniform2fv (GLint location, GLsizei count, const GLfloat *value);
+extern void glUniform3fv (GLint location, GLsizei count, const GLfloat *value);
+extern void glUniform4fv (GLint location, GLsizei count, const GLfloat *value);
+extern void glUniform1iv (GLint location, GLsizei count, const GLint *value);
+extern void glUniform2iv (GLint location, GLsizei count, const GLint *value);
+extern void glUniform3iv (GLint location, GLsizei count, const GLint *value);
+extern void glUniform4iv (GLint location, GLsizei count, const GLint *value);
+extern void glUniformMatrix2fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+extern void glUniformMatrix3fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+extern void glUniformMatrix4fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+extern void glValidateProgram (GLuint program);
+extern void glVertexAttrib1d (GLuint index, GLdouble x);
+extern void glVertexAttrib1dv (GLuint index, const GLdouble *v);
+extern void glVertexAttrib1f (GLuint index, GLfloat x);
+extern void glVertexAttrib1fv (GLuint index, const GLfloat *v);
+extern void glVertexAttrib1s (GLuint index, GLshort x);
+extern void glVertexAttrib1sv (GLuint index, const GLshort *v);
+extern void glVertexAttrib2d (GLuint index, GLdouble x, GLdouble y);
+extern void glVertexAttrib2dv (GLuint index, const GLdouble *v);
+extern void glVertexAttrib2f (GLuint index, GLfloat x, GLfloat y);
+extern void glVertexAttrib2fv (GLuint index, const GLfloat *v);
+extern void glVertexAttrib2s (GLuint index, GLshort x, GLshort y);
+extern void glVertexAttrib2sv (GLuint index, const GLshort *v);
+extern void glVertexAttrib3d (GLuint index, GLdouble x, GLdouble y, GLdouble z);
+extern void glVertexAttrib3dv (GLuint index, const GLdouble *v);
+extern void glVertexAttrib3f (GLuint index, GLfloat x, GLfloat y, GLfloat z);
+extern void glVertexAttrib3fv (GLuint index, const GLfloat *v);
+extern void glVertexAttrib3s (GLuint index, GLshort x, GLshort y, GLshort z);
+extern void glVertexAttrib3sv (GLuint index, const GLshort *v);
+extern void glVertexAttrib4Nbv (GLuint index, const GLbyte *v);
+extern void glVertexAttrib4Niv (GLuint index, const GLint *v);
+extern void glVertexAttrib4Nsv (GLuint index, const GLshort *v);
+extern void glVertexAttrib4Nub (GLuint index, GLubyte x, GLubyte y, GLubyte z, GLubyte w);
+extern void glVertexAttrib4Nubv (GLuint index, const GLubyte *v);
+extern void glVertexAttrib4Nuiv (GLuint index, const GLuint *v);
+extern void glVertexAttrib4Nusv (GLuint index, const GLushort *v);
+extern void glVertexAttrib4bv (GLuint index, const GLbyte *v);
+extern void glVertexAttrib4d (GLuint index, GLdouble x, GLdouble y, GLdouble z, GLdouble w);
+extern void glVertexAttrib4dv (GLuint index, const GLdouble *v);
+extern void glVertexAttrib4f (GLuint index, GLfloat x, GLfloat y, GLfloat z, GLfloat w);
+extern void glVertexAttrib4fv (GLuint index, const GLfloat *v);
+extern void glVertexAttrib4iv (GLuint index, const GLint *v);
+extern void glVertexAttrib4s (GLuint index, GLshort x, GLshort y, GLshort z, GLshort w);
+extern void glVertexAttrib4sv (GLuint index, const GLshort *v);
+extern void glVertexAttrib4ubv (GLuint index, const GLubyte *v);
+extern void glVertexAttrib4uiv (GLuint index, const GLuint *v);
+extern void glVertexAttrib4usv (GLuint index, const GLushort *v);
+extern void glVertexAttribPointer (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
 ]]
-
-local wrapper = setmetatable({}, {__index = ffi.C}) -- require 'ffi.OpenGLES3' ... all the same in emscripten build
--- now assign our gl4es_gl* to gl*
-for k in ([[
-glAccum
-glAlphaFunc
-glAreTexturesResident
-glArrayElement
-glBegin
-glBindTexture
-glBitmap
-glBlendFunc
-glCallList
-glCallLists
-glClear
-glClearAccum
-glClearColor
-glClearDepth
-glClearIndex
-glClearStencil
-glClipPlane
-glColor3b
-glColor3bv
-glColor3d
-glColor3dv
-glColor3f
-glColor3fv
-glColor3i
-glColor3iv
-glColor3s
-glColor3sv
-glColor3ub
-glColor3ubv
-glColor3ui
-glColor3uiv
-glColor3us
-glColor3usv
-glColor4b
-glColor4bv
-glColor4d
-glColor4dv
-glColor4f
-glColor4fv
-glColor4i
-glColor4iv
-glColor4s
-glColor4sv
-glColor4ub
-glColor4ubv
-glColor4ui
-glColor4uiv
-glColor4us
-glColor4usv
-glColorMask
-glColorMaterial
-glColorPointer
-glCopyPixels
-glCopyTexImage1D
-glCopyTexImage2D
-glCopyTexSubImage1D
-glCopyTexSubImage2D
-glCullFace
-glDeleteLists
-glDeleteTextures
-glDepthFunc
-glDepthMask
-glDepthRange
-glDisable
-glDisableClientState
-glDrawArrays
-glDrawBuffer
-glDrawElements
-glDrawPixels
-glEdgeFlag
-glEdgeFlagPointer
-glEdgeFlagv
-glEnable
-glEnableClientState
-glEnd
-glEndList
-glEvalCoord1d
-glEvalCoord1dv
-glEvalCoord1f
-glEvalCoord1fv
-glEvalCoord2d
-glEvalCoord2dv
-glEvalCoord2f
-glEvalCoord2fv
-glEvalMesh1
-glEvalMesh2
-glEvalPoint1
-glEvalPoint2
-glFeedbackBuffer
-glFinish
-glFlush
-glFogf
-glFogfv
-glFogi
-glFogiv
-glFrontFace
-glFrustum
-glGenLists
-glGenTextures
-glGetBooleanv
-glGetClipPlane
-glGetDoublev
-glGetError
-glGetFloatv
-glGetIntegerv
-glGetLightfv
-glGetLightiv
-glGetMapdv
-glGetMapfv
-glGetMapiv
-glGetMaterialfv
-glGetMaterialiv
-glGetPixelMapfv
-glGetPixelMapuiv
-glGetPixelMapusv
-glGetPointerv
-glGetPolygonStipple
-glGetString
-glGetTexEnvfv
-glGetTexEnviv
-glGetTexGendv
-glGetTexGenfv
-glGetTexGeniv
-glGetTexImage
-glGetTexLevelParameterfv
-glGetTexLevelParameteriv
-glGetTexParameterfv
-glGetTexParameteriv
-glHint
-glIndexMask
-glIndexPointer
-glIndexd
-glIndexdv
-glIndexf
-glIndexfv
-glIndexi
-glIndexiv
-glIndexs
-glIndexsv
-glIndexub
-glIndexubv
-glInitNames
-glInterleavedArrays
-glIsEnabled
-glIsList
-glIsTexture
-glLightModelf
-glLightModelfv
-glLightModeli
-glLightModeliv
-glLightf
-glLightfv
-glLighti
-glLightiv
-glLineStipple
-glLineWidth
-glListBase
-glLoadIdentity
-glLoadMatrixd
-glLoadMatrixf
-glLoadName
-glLogicOp
-glMap1d
-glMap1f
-glMap2d
-glMap2f
-glMapGrid1d
-glMapGrid1f
-glMapGrid2d
-glMapGrid2f
-glMaterialf
-glMaterialfv
-glMateriali
-glMaterialiv
-glMatrixMode
-glMultMatrixd
-glMultMatrixf
-glNewList
-glNormal3b
-glNormal3bv
-glNormal3d
-glNormal3dv
-glNormal3f
-glNormal3fv
-glNormal3i
-glNormal3iv
-glNormal3s
-glNormal3sv
-glNormalPointer
-glOrtho
-glPassThrough
-glPixelMapfv
-glPixelMapuiv
-glPixelMapusv
-glPixelStoref
-glPixelStorei
-glPixelTransferf
-glPixelTransferi
-glPixelZoom
-glPointSize
-glPolygonMode
-glPolygonOffset
-glPolygonStipple
-glPopAttrib
-glPopClientAttrib
-glPopMatrix
-glPopName
-glPrioritizeTextures
-glPushAttrib
-glPushClientAttrib
-glPushMatrix
-glPushName
-glRasterPos2d
-glRasterPos2dv
-glRasterPos2f
-glRasterPos2fv
-glRasterPos2i
-glRasterPos2iv
-glRasterPos2s
-glRasterPos2sv
-glRasterPos3d
-glRasterPos3dv
-glRasterPos3f
-glRasterPos3fv
-glRasterPos3i
-glRasterPos3iv
-glRasterPos3s
-glRasterPos3sv
-glRasterPos4d
-glRasterPos4dv
-glRasterPos4f
-glRasterPos4fv
-glRasterPos4i
-glRasterPos4iv
-glRasterPos4s
-glRasterPos4sv
-glReadBuffer
-glReadPixels
-glRectd
-glRectdv
-glRectf
-glRectfv
-glRecti
-glRectiv
-glRects
-glRectsv
-glRenderMode
-glRotated
-glRotatef
-glScaled
-glScalef
-glScissor
-glSelectBuffer
-glShadeModel
-glStencilFunc
-glStencilMask
-glStencilOp
-glTexCoord1d
-glTexCoord1dv
-glTexCoord1f
-glTexCoord1fv
-glTexCoord1i
-glTexCoord1iv
-glTexCoord1s
-glTexCoord1sv
-glTexCoord2d
-glTexCoord2dv
-glTexCoord2f
-glTexCoord2fv
-glTexCoord2i
-glTexCoord2iv
-glTexCoord2s
-glTexCoord2sv
-glTexCoord3d
-glTexCoord3dv
-glTexCoord3f
-glTexCoord3fv
-glTexCoord3i
-glTexCoord3iv
-glTexCoord3s
-glTexCoord3sv
-glTexCoord4d
-glTexCoord4dv
-glTexCoord4f
-glTexCoord4fv
-glTexCoord4i
-glTexCoord4iv
-glTexCoord4s
-glTexCoord4sv
-glTexCoordPointer
-glTexEnvf
-glTexEnvfv
-glTexEnvi
-glTexEnviv
-glTexGend
-glTexGendv
-glTexGenf
-glTexGenfv
-glTexGeni
-glTexGeniv
-glTexImage1D
-glTexImage2D
-glTexParameterf
-glTexParameterfv
-glTexParameteri
-glTexParameteriv
-glTexSubImage1D
-glTexSubImage2D
-glTranslated
-glTranslatef
-glVertex2d
-glVertex2dv
-glVertex2f
-glVertex2fv
-glVertex2i
-glVertex2iv
-glVertex2s
-glVertex2sv
-glVertex3d
-glVertex3dv
-glVertex3f
-glVertex3fv
-glVertex3i
-glVertex3iv
-glVertex3s
-glVertex3sv
-glVertex4d
-glVertex4dv
-glVertex4f
-glVertex4fv
-glVertex4i
-glVertex4iv
-glVertex4s
-glVertex4sv
-glVertexPointer
-glViewport
-
-
-glDrawRangeElements
-glTexImage3D
-glTexSubImage3D
-glCopyTexSubImage3D
-glActiveTexture
-glSampleCoverage
-glCompressedTexImage3D
-glCompressedTexImage2D
-glCompressedTexImage1D
-glCompressedTexSubImage3D
-glCompressedTexSubImage2D
-glCompressedTexSubImage1D
-glGetCompressedTexImage
-glClientActiveTexture
-glMultiTexCoord1d
-glMultiTexCoord1dv
-glMultiTexCoord1f
-glMultiTexCoord1fv
-glMultiTexCoord1i
-glMultiTexCoord1iv
-glMultiTexCoord1s
-glMultiTexCoord1sv
-glMultiTexCoord2d
-glMultiTexCoord2dv
-glMultiTexCoord2f
-glMultiTexCoord2fv
-glMultiTexCoord2i
-glMultiTexCoord2iv
-glMultiTexCoord2s
-glMultiTexCoord2sv
-glMultiTexCoord3d
-glMultiTexCoord3dv
-glMultiTexCoord3f
-glMultiTexCoord3fv
-glMultiTexCoord3i
-glMultiTexCoord3iv
-glMultiTexCoord3s
-glMultiTexCoord3sv
-glMultiTexCoord4d
-glMultiTexCoord4dv
-glMultiTexCoord4f
-glMultiTexCoord4fv
-glMultiTexCoord4i
-glMultiTexCoord4iv
-glMultiTexCoord4s
-glMultiTexCoord4sv
-glLoadTransposeMatrixf
-glLoadTransposeMatrixd
-glMultTransposeMatrixf
-glMultTransposeMatrixd
-glBlendFuncSeparate
-glMultiDrawArrays
-glMultiDrawElements
-glPointParameterf
-glPointParameterfv
-glPointParameteri
-glPointParameteriv
-glFogCoordf
-glFogCoordfv
-glFogCoordd
-glFogCoorddv
-glFogCoordPointer
-glSecondaryColor3b
-glSecondaryColor3bv
-glSecondaryColor3d
-glSecondaryColor3dv
-glSecondaryColor3f
-glSecondaryColor3fv
-glSecondaryColor3i
-glSecondaryColor3iv
-glSecondaryColor3s
-glSecondaryColor3sv
-glSecondaryColor3ub
-glSecondaryColor3ubv
-glSecondaryColor3ui
-glSecondaryColor3uiv
-glSecondaryColor3us
-glSecondaryColor3usv
-glSecondaryColorPointer
-glWindowPos2d
-glWindowPos2dv
-glWindowPos2f
-glWindowPos2fv
-glWindowPos2i
-glWindowPos2iv
-glWindowPos2s
-glWindowPos2sv
-glWindowPos3d
-glWindowPos3dv
-glWindowPos3f
-glWindowPos3fv
-glWindowPos3i
-glWindowPos3iv
-glWindowPos3s
-glWindowPos3sv
-glBlendColor
-glBlendEquation
-glGenQueries
-glDeleteQueries
-glIsQuery
-glBeginQuery
-glEndQuery
-glGetQueryiv
-glGetQueryObjectiv
-glGetQueryObjectuiv
-glBindBuffer
-glDeleteBuffers
-glGenBuffers
-glIsBuffer
-glBufferData
-glBufferSubData
-glGetBufferSubData
-glMapBuffer
-glUnmapBuffer
-glGetBufferParameteriv
-glGetBufferPointerv
-glBlendEquationSeparate
-glDrawBuffers
-glStencilOpSeparate
-glStencilFuncSeparate
-glStencilMaskSeparate
-glAttachShader
-glBindAttribLocation
-glCompileShader
-glCreateProgram
-glCreateShader
-glDeleteProgram
-glDeleteShader
-glDetachShader
-glDisableVertexAttribArray
-glEnableVertexAttribArray
-glGetActiveAttrib
-glGetActiveUniform
-glGetAttachedShaders
-glGetAttribLocation
-glGetProgramiv
-glGetProgramInfoLog
-glGetShaderiv
-glGetShaderInfoLog
-glGetShaderSource
-glGetUniformLocation
-glGetUniformfv
-glGetUniformiv
-glGetVertexAttribdv
-glGetVertexAttribfv
-glGetVertexAttribiv
-glGetVertexAttribPointerv
-glIsProgram
-glIsShader
-glLinkProgram
-glShaderSource
-glUseProgram
-glUniform1f
-glUniform2f
-glUniform3f
-glUniform4f
-glUniform1i
-glUniform2i
-glUniform3i
-glUniform4i
-glUniform1fv
-glUniform2fv
-glUniform3fv
-glUniform4fv
-glUniform1iv
-glUniform2iv
-glUniform3iv
-glUniform4iv
-glUniformMatrix2fv
-glUniformMatrix3fv
-glUniformMatrix4fv
-glValidateProgram
-glVertexAttrib1d
-glVertexAttrib1dv
-glVertexAttrib1f
-glVertexAttrib1fv
-glVertexAttrib1s
-glVertexAttrib1sv
-glVertexAttrib2d
-glVertexAttrib2dv
-glVertexAttrib2f
-glVertexAttrib2fv
-glVertexAttrib2s
-glVertexAttrib2sv
-glVertexAttrib3d
-glVertexAttrib3dv
-glVertexAttrib3f
-glVertexAttrib3fv
-glVertexAttrib3s
-glVertexAttrib3sv
-glVertexAttrib4Nbv
-glVertexAttrib4Niv
-glVertexAttrib4Nsv
-glVertexAttrib4Nub
-glVertexAttrib4Nubv
-glVertexAttrib4Nuiv
-glVertexAttrib4Nusv
-glVertexAttrib4bv
-glVertexAttrib4d
-glVertexAttrib4dv
-glVertexAttrib4f
-glVertexAttrib4fv
-glVertexAttrib4iv
-glVertexAttrib4s
-glVertexAttrib4sv
-glVertexAttrib4ubv
-glVertexAttrib4uiv
-glVertexAttrib4usv
-glVertexAttribPointer
-
-
-]]):gmatch'%S+' do
-	wrapper[k] = wrapper['gl4es_'..k]
-end
 
 require 'ffi.OpenGLES3'	-- should I add this on there too?
 
-return wrapper
+return ffi.C
