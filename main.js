@@ -76,6 +76,13 @@ import {A, Br, Button, Canvas, Div, Img, Input, Option, Select, Span, TextArea} 
 
 const urlparams = new URLSearchParams(location.search);
 
+// TODO
+// for now I'm throwing it all in /
+// if you keep putting it in root then ... folders /dev /home /proc /tmp already exist ...
+// .. and i'm sure other problems too
+// TODO put it in /opt or somewhere
+const luaPkgRoot = '/';
+
 let rundir = urlparams.get('dir');
 let runfile = urlparams.get('file');
 
@@ -403,7 +410,6 @@ const imgui = {
 		return changed;
 	},
 };
-window.imgui = imgui; 	//debugging
 
 let splitDragging;
 class Split {
@@ -1216,6 +1222,7 @@ const closeCanvas = () => {
 	glappResize(); // refresh split
 };
 
+let loadPackagesForFile;
 const doRun = async () => {
 
 	// we need to make sure the old setInterval is dead before starting the new one ...
@@ -1268,7 +1275,8 @@ const doRun = async () => {
 	lua.newState();
 	luaJsScope = {}
 	luaJsScope.imgui = imgui;	//save it here to pass to js.imgui for ffi/cimgui.lua to use
-window.luaJsScope = luaJsScope;
+	luaJsScope.loadPackagesForFile = loadPackagesForFile;
+window.luaJsScope = luaJsScope;	// debugging
 	luaJsScope.resetWindowListeners = () => {
 		/*
 		This is called right after SDL_CreateWindow, right after emscripten tries to take total control of your JS environment
@@ -1389,8 +1397,6 @@ end
 -- this is only for redirecting errors to output
 -- TODO find where in FS stderr to do this and get rid of this function
 xpcall(function()
-
-	local ffi = require 'ffi'
 	function ffi.stringBuffer(s)
 		local ptr = ffi.new('char[?]', #s+1)
 		ffi.copy(ptr, s, #s)
@@ -1412,6 +1418,29 @@ xpcall(function()
 	-- ok this has become the launcer of everything
 	-- Lua 5.3
 	-- TODO move this into main.js
+
+
+
+	-- how about a 'require' listener that requests packages?
+	-- but can we stall lua execution while a package loades?
+	--[[
+	local oldRequire = _G.require
+	local require = function(f, ...)
+		f = f:gsub('%.', '/')
+		-- search package.path's?
+		-- or just assert they are set below (tho runtime could've changed them...)
+		for path in package.path:gmatch'[^;]*' do
+			local searchpath = path:gsub('%?', f)
+			-- see if there's a package for searchpath
+			luaJsScope:loadPackagesForFile(searchpath)
+			-- and if there is then load it.
+		end
+		return oldRequire(f, ...)
+	end
+	_G.require = require
+	--]]
+
+
 
 	package.path = table.concat({
 		'./?.lua',
@@ -1444,6 +1473,7 @@ xpcall(function()
 		require 'sdl'.SDL_GL_SwapWindow()
 		coroutine.yield()
 	end
+
 
 	-- let glapp-js know when the SDL window is created, so that we can send it resize events:
 	local oldSDLAppInitWindow = SDLApp.initWindow
@@ -1511,9 +1541,48 @@ end)
 
 
 {
-	const addPackageToGUI = (pkgname, pkg) =>
-		addPackage(FS, pkg, path => {
-			// upon file finished ...
+	// shim layer filesystem stuff here:
+	// init shim layer per package upon load ...
+	// this way if we don't request audio then we don't need to shim audio until maybe someday it is requested
+	const onLoadPackageCallbacks = {
+		ext : () => {
+			// override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
+			FS.writeFile('/ext/gcmem.lua', `
+local ffi = require 'ffi'
+return {
+	new = function(T, n)
+		n = math.floor(tonumber(n))			-- get rid of pesky decimals ...
+		return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
+	end,
+	free = function(ptr)
+		-- TODO M._free(ptr)
+	end,
+}
+`, {encoding:'utf8'});
+		},
+		audio : () => {
+			FS.writeFile('/audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
+		},
+		complex : () => {
+			// remove ffi check from complex
+			FS.writeFile(
+				'/complex/complex.lua',
+				FS.readFile('/complex/complex.lua', {encoding:'utf8'}).replace(` = pcall(require, 'ffi')`, ``),
+				{encoding:'binary'});
+		},
+		//clip : () => {},
+	};
+
+	const pkgsLoaded = {};	// insert upon request so we don't get duplicate requests
+	// maybe I'll need another structure for when load is finished?
+	const addPackageToGUI = (pkgname, pkg) => {
+//		if (pkgsLoaded[pkgname]) return true;	// will promises get mad?
+//		pkgsLoaded[pkgname] = true;
+//console.log('pkgname', pkgname);
+//console.log('pkg', pkg);
+//console.log('pkg.map', pkg.map);
+		return addPackage(FS, pkg, path => {
+			// upon file finished ... create a fileInfoForPath[] for the file/parent-folders
 
 			const parts = path.split('/');
 			let parentPath = '/';
@@ -1535,7 +1604,12 @@ end)
 				}
 				parentFileInfo = fileInfoForPath[nextPath];
 			}
+		}).then(() => {
+			// see if there's a shim layer for glapp-js to work
+			const shim = onLoadPackageCallbacks[pkgname];
+			if (shim) shim();
 		});
+	};
 
 	//push local glapp-js package
 	addPackageToGUI('<glapp-builtin>', [
@@ -1550,6 +1624,40 @@ end)
 		{from : './tests', to : 'glapp/tests', files : ['test-js.lua', 'test-ffi.lua']},
 	]);
 
+	const findPackageForFile = function*(searchFilePath) {
+		if (searchFilePath.substring(0, 2) == './') {
+			searchFilePath = FS.cwd() + searchFilePath.substring(1);
+		}
+		if (searchFilePath[0] != '/') throw "absolute paths only";
+		searchFilePath = searchFilePath.substring(1);
+		for (let [pkgname, pkg] of Object.entries(luaPackages)) {
+			for (let folder of pkg) {
+				for (let file of folder.files) {
+					const thisFilePath = folder.to+'/'+file;
+					// TODO just store file path => package map
+					if (thisFilePath == searchFilePath) {
+						yield {pkg:pkg, pkgname:pkgname};
+					}
+				}
+			}
+		}
+	};
+
+	loadPackagesForFile = (searchFilePath) => {
+//console.log("require() requesting file", searchFilePath);
+		for (let pkginfo of findPackageForFile(searchFilePath)) {
+//console.log('...found in package', pkginfo.pkgname);
+			addPackageToGUI(pkginfo.pkgname, pkginfo.pkg);
+		}
+	}
+
+	// TODO to assert that the base dir is the lua-package.js entry name?
+	// but that won't be true for preloaded packages ...
+//console.log("looking for package of", 	rundir+'/'+runfile);
+	const runPkgInfo = findPackageForFile(rundir+'/'+runfile).next().value;
+	const runPkg = runPkgInfo.pkg;
+	const runPkgName = runPkgInfo.pkgname;
+//console.log('runPkgInfo', runPkgInfo);
 	// TODO
 	// for each package
 	// check cfg to see if autoloadj
@@ -1576,6 +1684,9 @@ end)
 /* ... or just load all still */
 	const packageRequestedToLoad = Object.keys(luaPackages);
 /**/
+/* ... or just load the rundir request * /
+	const packageRequestedToLoad = [runPkgName];
+/**/
 
 	// this is usually clip.so
 	// it doesn't go with any packages just yet
@@ -1585,69 +1696,42 @@ return {
 	image = function() end,
 }
 `, {encoding:'utf8'});
+	// TODO there's no UI element associated with this ...
 
-
-	// shim layer filesystem stuff here:
-	// init shim layer per package upon load ...
-	// this way if we don't request audio then we don't need to shim audio until maybe someday it is requested
-	const packageOnLoad = {
-		ext : () => {
-			// override ext.gcmem since emscripten's dlsym is having trouble finding its own malloc and free ...
-			FS.writeFile('/ext/gcmem.lua', `
-local ffi = require 'ffi'
-return {
-	new = function(T, n)
-		n = math.floor(tonumber(n))			-- get rid of pesky decimals ...
-		return ffi.new(T..'['..n..']')		-- no mem leaks here? no ref->0 and immediately free?
-	end,
-	free = function(ptr)
-		-- TODO M._free(ptr)
-	end,
-}
-`, {encoding:'utf8'});
-		},
-		audio : () => {
-			FS.writeFile('/audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
-		},
-		complex : () => {
-			// remove ffi check from complex
-			FS.writeFile(
-				'/complex/complex.lua',
-				FS.readFile('/complex/complex.lua', {encoding:'utf8'}).replace(` = pcall(require, 'ffi')`, ``),
-				{encoding:'binary'});
-		},
-		clip : () => {
-		},
-	};
 
 	//push all other packages
 	Promise.all(
-	packageRequestedToLoad.map(pkgname =>
-		addPackageToGUI(pkgname, luaPackages[pkgname])
-		.then(pkg => {
-			console.log('loaded package', pkgname);
+	packageRequestedToLoad.map(pkgname => {
+		const pkg = luaPackages[pkgname];
 
-			// see if there's a shim layer
-			const shim = packageOnLoad[pkgname];
-			if (shim) shim();
-
+		return addPackageToGUI(pkgname, pkg)
+		.then(() => {
 			// see if this is our on-edit file?
+			// should rundir start with a / or not?
+
+			if (pkg === runPkg) {
+				// TODO once the file has loaded - and grey out the run button until all initial packages are loaded
+				// only once the file has loaded ... and it's the one we want to run ...
+				// make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
+				// in fact, why not do this within doRun?
+				setEditorFilePath(rundir+'/'+runfile);
+			}
 
 			// see if this is our run-on-load file?
 			// or not?
 			// for that, make sure all packages are loaded first.
-		})
-	)).then(() => {
+		});
+	})).then(() => {
 		// all init packages loaded
 
 		if (rundir && runfile) {
+			// once all our initial files have loaded - if we want to run something then run it:
+
 			// TODO once the file has loaded - and grey out the run button until all initial packages are loaded
 			// only once the file has loaded ... and it's the one we want to run ...
 			// make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
 			// in fact, why not do this within doRun?
-			setEditorFilePath(rundir+'/'+runfile);
-
-			// once all our initial files have loaded - if we want to run something then run it:
+			//setEditorFilePath(rundir+'/'+runfile);
 
 			// push initial state ...
 			const newParams = new URLSearchParams();
