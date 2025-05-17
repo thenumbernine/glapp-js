@@ -1426,14 +1426,18 @@ xpcall(function()
 	--[[
 	local oldRequire = _G.require
 	local require = function(f, ...)
+print('require', f)
 		f = f:gsub('%.', '/')
+print('require f path', f)
 		-- search package.path's?
 		-- or just assert they are set below (tho runtime could've changed them...)
 		for path in package.path:gmatch'[^;]*' do
 			local searchpath = path:gsub('%?', f)
+print('require f path gsub', searchpath)
 			-- see if there's a package for searchpath
 			luaJsScope:loadPackagesForFile(searchpath)
 			-- and if there is then load it.
+print('done require f path gsub', searchpath)
 		end
 		return oldRequire(f, ...)
 	end
@@ -1573,11 +1577,15 @@ return {
 		//clip : () => {},
 	};
 
-	const pkgsLoaded = {};	// insert upon request so we don't get duplicate requests
+	const pkgsLoading = {};	// insert upon request so we don't get duplicate requests
+	const pkgsLoaded = {};
 	// maybe I'll need another structure for when load is finished?
 	const addPackageToGUI = (pkgname, pkg) => {
-//		if (pkgsLoaded[pkgname]) return true;	// will promises get mad?
-//		pkgsLoaded[pkgname] = true;
+		if (pkgsLoading[pkgname]) {
+			return true;	// will promises get mad?
+			// TODO here wait until pkgsLoaded[pkgname] triggers or something.
+		}
+		pkgsLoading[pkgname] = true;
 //console.log('pkgname', pkgname);
 //console.log('pkg', pkg);
 //console.log('pkg.map', pkg.map);
@@ -1608,6 +1616,8 @@ return {
 			// see if there's a shim layer for glapp-js to work
 			const shim = onLoadPackageCallbacks[pkgname];
 			if (shim) shim();
+
+			pkgsLoaded[pkgname] = true;
 		});
 	};
 
@@ -1624,37 +1634,58 @@ return {
 		{from : './tests', to : 'glapp/tests', files : ['test-js.lua', 'test-ffi.lua']},
 	]);
 
-	const findPackageForFile = function*(searchFilePath) {
+	const findPackageForFile = searchFilePath => {
+		const pkginfos = [];
+//console.log('findPackageForFile', searchFilePath);
 		if (searchFilePath.substring(0, 2) == './') {
 			searchFilePath = FS.cwd() + searchFilePath.substring(1);
+//console.log('findPackageForFile after rel repl', searchFilePath);
 		}
 		if (searchFilePath[0] != '/') throw "absolute paths only";
 		searchFilePath = searchFilePath.substring(1);
+//console.log('findPackageForFile abs path', searchFilePath);
 		for (let [pkgname, pkg] of Object.entries(luaPackages)) {
 			for (let folder of pkg) {
 				for (let file of folder.files) {
 					const thisFilePath = folder.to+'/'+file;
 					// TODO just store file path => package map
 					if (thisFilePath == searchFilePath) {
-						yield {pkg:pkg, pkgname:pkgname};
+						pkginfos.push({pkg:pkg, pkgname:pkgname});
 					}
 				}
 			}
 		}
+		return pkginfos;
 	};
 
-	loadPackagesForFile = (searchFilePath) => {
-//console.log("require() requesting file", searchFilePath);
-		for (let pkginfo of findPackageForFile(searchFilePath)) {
-//console.log('...found in package', pkginfo.pkgname);
-			addPackageToGUI(pkginfo.pkgname, pkginfo.pkg);
+	loadPackagesForFile = async (searchFilePath) => {
+//console.log("loadPackagesForFile() requesting file", searchFilePath);
+		const pkginfos = findPackageForFile(searchFilePath);
+//console.log('loadPackagesForFile() found in package', pkginfos);
+
+		if (pkginfos.length > 0 && pkginfos[0].pkgname == 'bit') {
+//console.log('HERE1');
 		}
-	}
+
+		// how come this line returns before the function ends?
+		// TODO await causes a "generic error" ... smh ...
+		/// ... and it goes straight to the console, no problems reported here
+		// and then this function returns.  smh.
+		await Promise.all(pkginfos.map(pkginfo =>
+			addPackageToGUI(pkginfo.pkgname, pkginfo.pkg)
+		));
+
+		if (pkginfos.length > 0 && pkginfos[0].pkgname == 'bit') {
+//console.log('HERE2');
+		}
+
+//console.log('loadPackagesForFile() done');
+	};
 
 	// TODO to assert that the base dir is the lua-package.js entry name?
 	// but that won't be true for preloaded packages ...
 //console.log("looking for package of", 	rundir+'/'+runfile);
-	const runPkgInfo = findPackageForFile(rundir+'/'+runfile).next().value;
+	const runPkgInfo = findPackageForFile(rundir+'/'+runfile)[0];
 	const runPkg = runPkgInfo.pkg;
 	const runPkgName = runPkgInfo.pkgname;
 //console.log('runPkgInfo', runPkgInfo);
@@ -1703,7 +1734,6 @@ return {
 	Promise.all(
 	packageRequestedToLoad.map(pkgname => {
 		const pkg = luaPackages[pkgname];
-
 		return addPackageToGUI(pkgname, pkg)
 		.then(() => {
 			// see if this is our on-edit file?
