@@ -103,33 +103,33 @@ if (rundir) {
 rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
 rundir='glapp/tests'; runfile='test_es_directcalls.lua';	-- WORKS README
 rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS README
-rundir='glapp/tests'; runfile='test.lua';					-- fails, glmatrixmode
+rundir='glapp/tests'; runfile='test_gl1.lua';				-- needs emscripten's gl 1 legacy mode to even compile (its bugged, link errors when you enable it)
 rundir='glapp/tests'; runfile='minimal.lua';
 rundir='glapp/tests'; runfile='pointtest.lua';
 rundir='glapp/tests'; runfile='info.lua';
 rundir='line-integral-convolution'; runfile='run.lua';		-- WORKS README
-rundir='rule110'; runfile='rule110.lua';					-- WORKS README ... but mouse click is so-so
-rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README ... 
-rundir='n-points'; runfile='run.lua';						-- WORKS README ... but mouse click is so-so
-rundir='n-points'; runfile='run_orbit.lua';					-- todo esp. glPointSize ... or not, it's kinda dumb i guess
+rundir='rule110'; runfile='rule110.lua';					-- WORKS README
+rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README
+rundir='n-points'; runfile='run.lua';						-- WORKS README
+rundir='n-points'; runfile='run_orbit.lua';					-- WORKS README
 rundir='geographic-charts'; runfile='test.lua';				-- starts up, but gets some gl error
-rundir='prime-spiral'; runfile='run.lua';					-- used to work ... now ffi/cpp/vector-lua.lua
+rundir='prime-spiral'; runfile='run.lua';					-- WORKS README
 rundir='lambda-cdm'; runfile='run.lua';						-- WORKS README
 rundir='seashell'; runfile='run.lua';						-- WORKS README ... I had to scale down the mesh from 2000x2000 to 200x200 or it ran too slow to finish ... TODO needs menubar support
 rundir='SphericalHarmonicGraphs'; runfile='run.lua';		-- very slow (didn't finish)
 rundir='metric'; runfile='run.lua';							-- fails, uses GL_TEXTURE_1D
-rundir='sand-attack'; runfile='run.lua';					-- freezes, needs imgui ImFontAtlas_GetTexDataAsRGBA32
+rundir='sand-attack'; runfile='run.lua';					-- WORKS ... but a bit slow
 rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README ... but slow
 rundir='mesh'; runfile='view.lua'; cmdline=['meshes/cube.obj'];	-- WORKS README
 rundir='sphere-grid'; runfile='run.lua';					-- WORKS README
-rundir='topple'; runfile='topple-glsl.lua';					-- WORKS README ... mouse
+rundir='topple'; runfile='topple-glsl.lua';					-- WORKS README
 rundir='topple'; runfile='topple-gpu-display.lua'; but through cl-cpu ... but webgl doesn't support compute kernels or multithreading so it'd be software-driven ... so it'd be way too slow ...
 rundir='topple'; runfile='topple-gpu-3d-display.lua'; but through cl-cpu
 rundir='earth-magnetic-field';								-- TODO running out of memory ...
 rundir='VectorFieldDecomposition';							-- TODO doesn't run
 rundir='geo-center-earth';									-- TODO ... ?
 rundir='chess-on-manifold';									-- TODO running out of memory ...
-rundir='numo9'; runfile='run.lua';							-- "missing declaration for function/global GL_UNSIGNED_SHORT_1_5_5_5_REV" ... ugh GL has standard 1555 ABGR but not 5551 RGBA ... meanwhile 40 years of hardware supports 5551 RGBA and not 1555 ABGR ...
+rundir='numo9'; runfile='run.lua';							-- I forgot the latest problem
 rundir='chompman'; runfile='run.lua';						-- TODO running out of memory
 TODO tetris-attack
 TODO zeta2d/dumpworld
@@ -141,10 +141,11 @@ TODO waves-in-curved space ... ?
 TODO celestial-gravitomagnetics ... ?
 TODO seismograph-stations ... ?
 TODO gravitational-waves
-TODO cdfmesh
+TODO cfdmesh
 TODO asteroids3d
 TODO tacticslua
 TODO inspiration engine
+TODO glush demos
 TODO ... solarsystem graph ... takes GBs of data ...
 TODO black-hole-skymap, but the lua ver is in a subdir of the js ver ... but maybe i'll put the js vers on here too ...
 */
@@ -1082,7 +1083,7 @@ const doRun = async () => {
 	lua.newState();
 	// make a new js scope obj.... why not just use
 	luaJsScope = {}
-	luaJsScope.M = M
+	luaJsScope.M = M;
 	luaJsScope.loadPackagesForFile = loadPackagesForFile;
 window.luaJsScope = luaJsScope;	// debugging
 	luaJsScope.resetWindowListeners = () => {
@@ -1227,21 +1228,27 @@ xpcall(function()
 
 	-- how about a 'require' listener that requests packages?
 	-- but can we stall lua execution while a package loades?
+	-- no.
+	-- this will do a JS call to an async method.  the moment we do the JS request, it'll do an await, and this call will return a promise.
+	-- if you want to wait on that promise then you'll have to make the lua-interop.js "call_func" async itself and await the "jsValue.apply" call.
+	-- but this suffers the same, so you'll have to go into the Lua .c compiled code, find the metamethod invoker, and make that await with some kind of await on the c-call invocation results.
+	-- and then markup its method with emscripten::async.
+	-- and continue THROUGH TO EVERY SINGLE FUNCTION THAT ANY FUNCTION EVERY TOUCHES.
+	-- until you realize that JavaScript is a shit langauge patched with even more shit and should be pulled out of every browser and set on fire.
+	-- and that's why I'm hacking Lua into Browser in the first place.
+	-- so no, this will not work, you need to load all your files up front before executing any of them.
+	-- or ... use busy-loops.  Genius design there JS, genius design.
 	--[[
 	local oldRequire = _G.require
 	local require = function(f, ...)
-print('require', f)
 		f = f:gsub('%.', '/')
-print('require f path', f)
 		-- search package.path's?
 		-- or just assert they are set below (tho runtime could've changed them...)
 		for path in package.path:gmatch'[^;]*' do
 			local searchpath = path:gsub('%?', f)
-print('require f path gsub', searchpath)
 			-- see if there's a package for searchpath
 			luaJsScope:loadPackagesForFile(searchpath)
 			-- and if there is then load it.
-print('done require f path gsub', searchpath)
 		end
 		return oldRequire(f, ...)
 	end
@@ -1426,7 +1433,7 @@ return {
 	};
 
 	//push local glapp-js package
-	addPackageToGUI('<glapp-builtin>', [
+	luaPackages['<glapp-builtin>'] = [
 		//{from : '.', to : '.', files : ['ffi.lua']},	// now in wasm
 		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'jpeg.lua', 'load.lua', 'libwrapper.lua', 'png.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
 		{from : './ffi/KHR', to : 'ffi/KHR', files : ['khrplatform.lua']},
@@ -1436,7 +1443,8 @@ return {
 		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
 		{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
 		{from : './tests', to : 'glapp/tests', files : ['test-js.lua', 'test-ffi.lua']},
-	]);
+		{from : './clip', to : 'clip', files : ['clip.lua']},
+	];
 
 	const findPackageForFile = searchFilePath => {
 		const pkginfos = [];
@@ -1462,14 +1470,16 @@ return {
 		return pkginfos;
 	};
 
-	loadPackagesForFile = async (searchFilePath) => {
+	// [Currently Disabled]
+	// In the deferred-loading require() method code this is called from Lua.
+	// If we make it 'async' then as soon as it awaits, it will return to Lua empty-handed, and Lua can't await, and nobody in JS can await, because they're all passive-aggressive just waiting for someone else to do the actual work and make a decent language.
+	// So how to get around that?
+	// With busy loops.
+	// That's right, busy loops.
+	const loadPackagesForFile_async = async (searchFilePath) => {
 //console.log("loadPackagesForFile() requesting file", searchFilePath);
 		const pkginfos = findPackageForFile(searchFilePath);
 //console.log('loadPackagesForFile() found in package', pkginfos);
-
-		if (pkginfos.length > 0 && pkginfos[0].pkgname == 'bit') {
-//console.log('HERE1');
-		}
 
 		// how come this line returns before the function ends?
 		// TODO await causes a "generic error" ... smh ...
@@ -1479,11 +1489,16 @@ return {
 			addPackageToGUI(pkginfo.pkgname, pkginfo.pkg)
 		));
 
-		if (pkginfos.length > 0 && pkginfos[0].pkgname == 'bit') {
-//console.log('HERE2');
-		}
-
 //console.log('loadPackagesForFile() done');
+	};
+	loadPackagesForFile = (searchFilePath) => {
+throw 'TODO';
+		const p = loadPackagesForFile_async(searchFilePath);
+		while (!p.resolved) {
+			// wait and hope we aren't the ones blocking (we will block, and that'll prevent the promise from resolving)
+			//
+		}
+		return p.results;
 	};
 
 	// TODO to assert that the base dir is the lua-package.js entry name?
@@ -1504,6 +1519,7 @@ return {
 	// TODO start with just one like 'glapp' then search package dependencies provided in `distinfo` or `.rockspec`
 /* here's the minimum packages to run glapp/tests/test_tex.lua * /
 	const packageRequestedToLoad = [
+		'<glapp-builtin>',
 		'bit',
 		'template',
 		'ext',
@@ -1520,19 +1536,8 @@ return {
 	const packageRequestedToLoad = Object.keys(luaPackages);
 /**/
 /* ... or just load the rundir request * /
-	const packageRequestedToLoad = [runPkgName];
+	const packageRequestedToLoad = ['<glapp-builtin>', runPkgName];
 /**/
-
-	// this is usually clip.so
-	// it doesn't go with any packages just yet
-	FS.writeFile('clip.lua', `
-return {
-	text = function() end,
-	image = function() end,
-}
-`, {encoding:'utf8'});
-	// TODO there's no UI element associated with this ...
-
 
 	//push all other packages
 	Promise.all(
