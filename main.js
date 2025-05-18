@@ -109,7 +109,7 @@ rundir='glapp/tests'; runfile='pointtest.lua';
 rundir='glapp/tests'; runfile='info.lua';
 rundir='line-integral-convolution'; runfile='run.lua';		-- WORKS README
 rundir='rule110'; runfile='rule110.lua';					-- WORKS README ... but mouse click is so-so
-rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README ... but imgui is buggy
+rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README ... 
 rundir='n-points'; runfile='run.lua';						-- WORKS README ... but mouse click is so-so
 rundir='n-points'; runfile='run_orbit.lua';					-- todo esp. glPointSize ... or not, it's kinda dumb i guess
 rundir='geographic-charts'; runfile='test.lua';				-- starts up, but gets some gl error
@@ -134,7 +134,6 @@ rundir='chompman'; runfile='run.lua';						-- TODO running out of memory
 TODO tetris-attack
 TODO zeta2d/dumpworld
 TODO farmgame
-TODO imgui library <-> html shim layer
 TODO hydro-cl ... haha with opencl ...
 TODO zeta3d / zetatron 3d metroidvania voxel
 TODO nbody-gpu
@@ -220,202 +219,6 @@ A({
 	},
 	appendTo : document.body,
 });
-
-// imgui binding code.
-// TODO do this in lua with the js api
-const imgui = {
-	init : function() {
-		this?.div?.parentNode.removeChild(this.div);
-
-		// I was using id, but knowing browser software quality standards, any builtin functions are probably ridiculously slow
-		this.cache = {};
-
-		// TODO make sure this.div is attached too? or trust it's not tampered with ...
-		this.div = Div({
-			style : {
-				position : 'absolute',
-				left : '0px',
-				top : '0px',
-				backgroundColor : '#000000',
-				opacity : .8,
-				border : '1px solid #5f5f5f',
-				padding : '3px',
-				borderRadius : '7px',
-			},
-			appendTo : document.body,
-		});
-	},
-	clear : function() {
-		for (let i = this.div.children.length-1; i >= 0; --i) {
-			const ch = this.div.children[i];
-			this.div.removeChild(ch);
-		}
-		this.cache = {};
-	},
-	newFrame : function() {
-		//clear all taggedThisFrame
-		for (let i = this.div.children.length-1; i >= 0; --i) {
-			const ch = this.div.children[i];
-			ch.taggedThisFrame = false;
-		}
-		this.lastTouchedDom = undefined;
-	},
-	render : function() {
-		//remove old dom elements that didn't get tagged
-		for (let i = this.div.children.length-1; i >= 0; --i) {
-			const ch = this.div.children[i];
-			if (!ch.taggedThisFrame) {
-				this.div.removeChild(ch);
-				this.cache[ch.id] = undefined;
-			}
-		}
-	},
-	create : function(idsuffix, createCB) {
-		// TODO maybe I should be using order of creation instead of text names?
-		const id = 'imgui_'+idsuffix; // ... plus id stack
-		let dom = this.cache[id];
-		if (dom) {
-			// TODO and make sure the dom tag is correct
-			dom.taggedThisFrame = true;
-			this.lastTouchedDom = dom;
-			return dom;
-		}
-//console.log('rebuilding', id);
-		dom = createCB();
-		dom.id = id;
-		this.cache[id] = dom;
-		if (!this.div) throw "imgui.create called before imgui.newFrame...";
-		if (this.lastTouchedDom && this.lastTouchedDom.nextSibling) {
-			this.div.insertBefore(dom, this.lastTouchedDom.nextSibling);
-		} else {
-			this.div.appendChild(dom);
-		}
-		dom.taggedThisFrame = true;
-		this.lastTouchedDom = dom;
-		return dom;
-	},
-
-	text : function(fmt) {
-		this.create(fmt, () => Div({innerText : fmt}));
-	},
-
-	button : function(label, size) {
-		const button = this.create(label, () => {
-			const button = Button({
-				innerText : label,
-				style : {
-					display : 'block',
-				},
-				events : {
-					click : e => {
-						button.imguiClicked = true;
-					},
-				},
-			});
-			return button;
-		});
-		const clicked = button.imguiClicked;
-		button.imguiClicked = false;
-		return clicked;
-	},
-
-	inputFloat : function(label, v, v_min, v_max, format, flags) {
-		this.create(label, () => Span({
-			innerText : label,
-			style : {
-				paddingRight : '20px',
-			},
-		}));
-		// TODO use id stack instead of label, or something, idk
-		const input = this.create(label+'_value', () => Input({
-			value : v,
-		}));
-		// TODO upon creation set this, then monitor its changes and return' true' if found
-		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
-		const iv = parseFloat(input.value);
-		const changed = v !== iv;
-		this.lastValue = iv;
-		this.create(label+'_bf', Br);
-		return changed;
-	},
-
-	inputInt : function(label, v, v_min, v_max, format, flags) {
-		this.create(label, () => Span({
-			innerText : label,
-			style : {
-				paddingRight : '20px',
-			},
-		}));
-		// TODO use id stack instead of label, or something, idk
-		const input = this.create(label+'_value', () => Input({
-			value : v,
-		}));
-		// TODO upon creation set this, then monitor its changes and return' true' if found
-		// TODO this will probably trigger 'change' upon first write/read, or even a few, thanks to string<->float
-		const iv = parseInt(input.value);
-		const changed = v !== iv;
-		this.lastValue = iv;
-		this.create(label+'_bf', Br);
-		return changed;
-	},
-
-	inputText : function(label, v) {
-		this.create(label, () => Span({
-			innerText : label,
-			style : {
-				paddingRight : '20px',
-			},
-		}));
-		const input = this.create(label+'_value', () => Input({
-			value : v,
-		}));
-		const iv = input.value;
-		const changed = v !== iv;
-		this.lastValue = iv;
-		this.create(label+'_bf', Br);
-		return changed;
-	},
-
-	inputCombo : function(label, v, items) {
-		this.create(label, () => Span({
-			innerText : label,
-			style : {
-				paddingRight : '20px',
-			},
-		}));
-		const sel = this.create(label+'_value', () => Select({
-			children : items.map((item, index) => Option({
-				innerText : item,
-				selected : index == v,
-			})),
-		}));
-		const iv = sel.selectedIndex;
-		const changed = v !== iv;
-		this.lastValue = iv;
-		this.create(label+'_bf', Br);
-		return changed;
-	},
-
-	inputRadio : function(label, variableValue, radioValue, radioGroup) {
-		const input = this.create(label+'_value', () => Input({
-			type : 'radio',
-			name : radioGroup,
-			value : radioValue,
-			checked : variableValue == radioValue,
-		}));
-		this.create(label, () => Span({
-			innerText : label,
-			style : {
-				paddingRight : '20px',
-			},
-		}));
-		const inputValue = input.value;
-		const changed = input.checked && variableValue != inputValue;	// value is stored as a string so you gotta coerce
-		this.lastValue = inputValue;
-		this.create(label+'_br', Br);
-		return changed;
-	},
-};
 
 let splitDragging;
 class Split {
@@ -638,7 +441,7 @@ let makeFileDiv;
 		style : {
 			position : 'absolute',
 			display : 'none',
-			zIndex : -1,	//under imgui div
+			zIndex : -1,
 			backgroundColor : '#000000',
 			color : '#ffffff',
 			overflow : 'auto',
@@ -907,7 +710,7 @@ let makeFileDiv;
 			position : 'absolute',
 			display : 'none',
 			//overflow : 'hidden',
-			zIndex : -1,	//under imgui div
+			zIndex : -1,
 		},
 		events : {
 			keydown : async (e) => {
@@ -1060,7 +863,7 @@ let makeFileDiv;
 		style : {
 			position : 'absolute',
 			display : 'none',
-			zIndex : -1,	//under imgui div
+			zIndex : -1,
 		},
 		appendTo : document.body,
 		children : [
@@ -1238,8 +1041,6 @@ const doRun = async () => {
 		luaJsScope.glappMainInterval = undefined;
 	}
 
-	imgui.init();	// make the imgui div
-
 	document.title = runfile;
 
 	//TODO maybe, if our run file is dif from the last run file then window.history.pushState() ?
@@ -1281,7 +1082,6 @@ const doRun = async () => {
 	lua.newState();
 	// make a new js scope obj.... why not just use
 	luaJsScope = {}
-	luaJsScope.imgui = imgui;	//save it here to pass to js.imgui for ffi/cimgui.lua to use
 	luaJsScope.M = M
 	luaJsScope.loadPackagesForFile = loadPackagesForFile;
 window.luaJsScope = luaJsScope;	// debugging
@@ -1374,7 +1174,6 @@ if (listenersForType.length != 1) {
 	glappResize();
 
 
-	imgui.clear();
 	stdoutTA.value = '';
 
 	// ofc you can't push extra args into the call, i guess you only can via global assignments?
@@ -1394,9 +1193,6 @@ local luaJsScope = ...
 local ffi = require 'ffi'
 local js = require 'js'
 local window = js.global
-
--- save these for later
-js.imgui = luaJsScope.imgui	-- for use in ffi/cimgui.lua
 
 ffi.dataToArray = function(ctype, data, ...)
 	return window:dataToArray(ctype, tonumber(ffi.cast('intptr_t', data)), ...)
