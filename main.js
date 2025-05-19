@@ -1457,6 +1457,7 @@ return {
 		searchFilePath = searchFilePath.substring(1);
 //console.log('findPackageForFile abs path', searchFilePath);
 		for (let [pkgname, pkg] of Object.entries(luaPackages)) {
+			if (pkg === false) continue;
 			for (let folder of pkg) {
 				for (let file of folder.files) {
 					const thisFilePath = folder.to+'/'+file;
@@ -1547,6 +1548,7 @@ throw 'TODO';
 	//push all other packages
 	await Promise.all(packageRequestedToLoad.map(pkgname => {
 		const pkg = luaPackages[pkgname];
+		if (pkg === false) return pkg;
 		return loadPackageAndAddToGUI(pkgname, pkg)
 		.then(() => {
 			// see if this is our on-edit file?
