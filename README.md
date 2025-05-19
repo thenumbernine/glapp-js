@@ -29,6 +29,13 @@ I'm only making this for compatability's sake, not as a primary deployment optio
 
 I'm using [Ace](https://github.com/ajaxorg/ace) for the code editor.  No complaints at all, integrating and using it is flawless.
 
+# GET parameters:
+
+- `pkg` = The package-name, referencing collections-of-files per-git-repo to load.  If omitted then it is inferred from the rundir.
+- `dir` = The directory to start in.
+- `file` = The file to run.
+- `args` = JSON-encoded CLI arguments to be passed to the file.
+
 # Last
 
 - TODO maybe - pause button <-> pause the setinterval for the main event loop.

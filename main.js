@@ -69,10 +69,12 @@ const removeAllElemEventListeners = (elem, eventTypes) => {
 };
 
 
-import {addPackage} from '/js/util.js';
+import {addPackage, fetchBytes} from '/js/util.js';
 import {newLua} from '/js/lua-interop.js';
-import {luaPackages} from '/js/lua-packages.js';
 import {A, Br, Button, Canvas, Div, Img, Input, Option, Select, Span, TextArea} from '/js/dom.js';
+
+//import {luaPackages} from '/js/lua-packages.js';
+const luaPackages = {};	// populate as we load distinfo's
 
 const urlparams = new URLSearchParams(location.search);
 
@@ -83,9 +85,9 @@ const urlparams = new URLSearchParams(location.search);
 // TODO put it in /opt or somewhere
 const luaPkgRoot = '/';
 
+let runpkgname = urlparams.get('pkg');
 let rundir = urlparams.get('dir');
 let runfile = urlparams.get('file');
-
 let runargs = urlparams.get('args') || '';	//store it in JSON
 
 let editmode = !!urlparams.get('edit');
@@ -95,8 +97,16 @@ if (!runfile || !rundir) {
 	editmode = true;
 }
 if (rundir) {
+	// make sure rundir starts with /
 	if (rundir.substr(0, 1) != '/') rundir = '/' + rundir;
+	// make sure rundir doesn't end with /
 	if (rundir.substr(-1) == '/') rundir = rundir.substr(0, rundir.length-1);
+}
+
+// Now that I'm defer-loading at least the packages through the GUI (still can't get to Lua doing it cuz I'd have to async/await the entire Lua C function set)
+// Now I need the package-name as well, and if it's not provided, assume it's the run dir
+if (!runpkgname) {
+	runpkgname = rundir.substr(1).split('/')[0];
 }
 
 /* progress so far
@@ -1391,7 +1401,9 @@ return {
 	const pkgsLoading = {};	// insert upon request so we don't get duplicate requests
 	const pkgsLoaded = {};
 	// maybe I'll need another structure for when load is finished?
-	const addPackageToGUI = (pkgname, pkg) => {
+	// TODO filesystem listener that handles GUI
+	// then dont bother with this "AddToGUI" stuff, just read and write to filesystem
+	const loadPackageAndAddToGUI = (pkgname, pkg) => {
 		if (pkgsLoading[pkgname]) {
 			return true;	// will promises get mad?
 			// TODO here wait until pkgsLoaded[pkgname] triggers or something.
@@ -1434,15 +1446,20 @@ return {
 
 	//push local glapp-js package
 	luaPackages['<glapp-builtin>'] = [
-		//{from : '.', to : '.', files : ['ffi.lua']},	// now in wasm
+		{from : './tests', to : 'glapp/tests', files : ['test-js.lua', 'test-ffi.lua']},
+	];
+	luaPackages['ffi'] = [
 		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'jpeg.lua', 'load.lua', 'libwrapper.lua', 'png.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
 		{from : './ffi/KHR', to : 'ffi/KHR', files : ['khrplatform.lua']},
 		{from : './ffi/c', to : 'ffi/c', files : ['ctype.lua', 'errno.lua', 'inttypes.lua', 'math.lua', 'setjmp.lua', 'stdarg.lua', 'stddef.lua', 'stdio.lua', 'stdint.lua', 'stdlib.lua', 'string.lua', 'time.lua', 'wchar.lua']},
 		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua', 'types.lua']},
 		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
 		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
+	];
+	luaPackages['lfs_ffi'] = [
 		{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
-		{from : './tests', to : 'glapp/tests', files : ['test-js.lua', 'test-ffi.lua']},
+	];
+	luaPackages['clip'] = [
 		{from : './clip', to : 'clip', files : ['clip.lua']},
 	];
 
@@ -1486,7 +1503,7 @@ return {
 		/// ... and it goes straight to the console, no problems reported here
 		// and then this function returns.  smh.
 		await Promise.all(pkginfos.map(pkginfo =>
-			addPackageToGUI(pkginfo.pkgname, pkginfo.pkg)
+			loadPackageAndAddToGUI(pkginfo.pkgname, pkginfo.pkg)
 		));
 
 //console.log('loadPackagesForFile() done');
@@ -1500,6 +1517,73 @@ throw 'TODO';
 		}
 		return p.results;
 	};
+
+	//make a temp, initial state for handling loading lua scripts
+	lua.newState();
+
+	// Given a path on the server,
+	// load the distinfo file
+	// parse and check its 'deps'
+	// then load those ones as well.
+	// Bail out if the package is already loaded.
+	const loadDistInfoPackage = async(pkgname) => {
+//console.log('loadDistInfoPackage', pkgname);
+		if (luaPackages[pkgname]) {
+//console.log('...is already loaded');
+			return;
+		}
+
+		// TODO this assumes a package path is in /lua/$pkgname
+		// what about /cpp/Topple or /js/black-hole-skymap ?
+		// and even if I accept a fully qualified path here, still the "distinfo" references aren't fully-qualified...
+		// So I guess I'll just have special rules for those.
+		const dir =
+			pkgname == 'black-hole-skymap' ? '/black-hole-skymap/lua' :
+			pkgname == 'topple' ? '/cpp/Topple' :
+			'/lua/'+pkgname;
+
+		const distinfoBytes = await fetchBytes(dir+'/distinfo');
+//console.log('has distinfoBytes', distinfoBytes);
+		const distinfo = Array.from(distinfoBytes)
+			.map(ch => String.fromCharCode(ch))
+			.join('');
+//console.log('has distinfo', distinfo);
+
+		const files = [];
+		const deps = [];
+		lua.run(`
+local distinfo, files, deps = ...
+local env = {}
+assert(load(distinfo, nil, nil, env))()
+for k,v in pairs(env.files) do
+	-- value = install location, which I'm going to assert is the key + the pkgname, which is the dir pkgname ...
+	-- lots of assertions going on here
+	files:push(k)
+end
+for _,v in ipairs(env.deps or {}) do
+	deps:push(v)
+end
+`, distinfo, files, deps);
+//console.log('has files', files);
+console.log(pkgname, 'has deps', deps);
+
+		const pkg = [
+			{
+				from : dir,
+				to : pkgname,
+				files : files,
+			}
+		];
+		luaPackages[pkgname] = pkg;
+
+		// don't need to load files just yet, we just need distinfo deps.
+		//await loadPackageAndAddToGUI(pkgname, pkg);
+
+		return Promise.all(deps.map(dep =>
+			loadDistInfoPackage(dep)
+		));
+	};
+	await loadDistInfoPackage(runpkgname);
 
 	// TODO to assert that the base dir is the lua-package.js entry name?
 	// but that won't be true for preloaded packages ...
@@ -1532,7 +1616,7 @@ throw 'TODO';
 		'glapp',
 	];
 /**/
-/* ... or just load all still */
+/* ... or just load all still.  now that we're not using lua-packages.js, "all" is going to be all our dependency graph traversal. */
 	const packageRequestedToLoad = Object.keys(luaPackages);
 /**/
 /* ... or just load the rundir request * /
@@ -1540,10 +1624,9 @@ throw 'TODO';
 /**/
 
 	//push all other packages
-	Promise.all(
-	packageRequestedToLoad.map(pkgname => {
+	await Promise.all(packageRequestedToLoad.map(pkgname => {
 		const pkg = luaPackages[pkgname];
-		return addPackageToGUI(pkgname, pkg)
+		return loadPackageAndAddToGUI(pkgname, pkg)
 		.then(() => {
 			// see if this is our on-edit file?
 			// should rundir start with a / or not?
@@ -1560,35 +1643,34 @@ throw 'TODO';
 			// or not?
 			// for that, make sure all packages are loaded first.
 		});
-	})).then(() => {
-		// all init packages loaded
+	}));
+	// all init packages loaded
 
-		if (rundir && runfile) {
-			// once all our initial files have loaded - if we want to run something then run it:
+	if (rundir && runfile) {
+		// once all our initial files have loaded - if we want to run something then run it:
 
-			// TODO once the file has loaded - and grey out the run button until all initial packages are loaded
-			// only once the file has loaded ... and it's the one we want to run ...
-			// make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
-			// in fact, why not do this within doRun?
-			//setEditorFilePath(rundir+'/'+runfile);
+		// TODO once the file has loaded - and grey out the run button until all initial packages are loaded
+		// only once the file has loaded ... and it's the one we want to run ...
+		// make sure to do this after initializing the Splits / editor UI, in case we need to popup the editor
+		// in fact, why not do this within doRun?
+		//setEditorFilePath(rundir+'/'+runfile);
 
-			// push initial state ...
-			const newParams = new URLSearchParams();
-			newParams.set('file', runfile);
-			newParams.set('dir', rundir);
-			newParams.set('args', runargs);
-			if (editmode) newParams.set('edit', editmode);
-			const url = location.origin + location.pathname + '?' + newParams.toString();
-			history.pushState({
-				runfile : runfile,
-				rundir : rundir,
-				runargs : runargs,
-			}, document.title, url);
+		// push initial state ...
+		const newParams = new URLSearchParams();
+		newParams.set('file', runfile);
+		newParams.set('dir', rundir);
+		newParams.set('args', runargs);
+		if (editmode) newParams.set('edit', editmode);
+		const url = location.origin + location.pathname + '?' + newParams.toString();
+		history.pushState({
+			runfile : runfile,
+			rundir : rundir,
+			runargs : runargs,
+		}, document.title, url);
 
-			// TODO only once the file has loaded ... and it's the one we want to run ...
-			doRun();
-		}
-	});
+		// TODO only once the file has loaded ... and it's the one we want to run ...
+		doRun();
+	}
 
 	// TODO and now provide buttons for all non-init packages ...
 }
