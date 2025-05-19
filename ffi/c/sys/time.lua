@@ -1,6 +1,4 @@
-local js = require 'js'
 local ffi = require 'ffi'
-
 ffi.cdef[[
 struct timeval {
 	long tv_sec;	//long int tv_sec;

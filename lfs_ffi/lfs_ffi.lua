@@ -2,8 +2,7 @@ local M = {}
 
 -- https://emscripten.org/docs/api_reference/Filesystem-API.html
 
--- hmm another way to communicate lua<->js other than through window ?
-local FS = require 'js'.global.FS
+local FS = require 'js'.FS
 
 function M.setmode(path, mode)
 	FS:chmod(path, mode)

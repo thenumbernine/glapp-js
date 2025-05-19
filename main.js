@@ -184,7 +184,7 @@ let lua = await newLua({
 const M = lua.lib;
 const FS = M.FS;
 
-//debugging ... or it's also in the js<->lua interop using js.global (TODO a better way to talk between them?)
+//debugging
 window.lua = lua;
 window.M = M;
 window.FS = FS;
@@ -1035,14 +1035,13 @@ refreshEditMode();	// will trigger glappResize()
 
 
 
-let gl;
 const closeCanvas = () => {
 	canvas?.parentNode?.removeChild(canvas);
 	canvas = undefined;
 	glappResize(); // refresh split
 };
 
-let loadPackagesForFile;
+let loadPackagesForFile;	// testing this as a feature, but it's not used atm ...
 const doRun = async () => {
 
 	// we need to make sure the old setInterval is dead before starting the new one ...
@@ -1093,8 +1092,8 @@ const doRun = async () => {
 	lua.newState();
 	// make a new js scope obj.... why not just use
 	luaJsScope = {}
-	luaJsScope.M = M;
-	luaJsScope.loadPackagesForFile = loadPackagesForFile;
+	luaJsScope.FS = FS;	// lfs_ffi needs FS
+	luaJsScope.loadPackagesForFile = loadPackagesForFile;	// me experimenting with deferring package load until it gets require()'d ..  stupid js async/await limitations prevent it because the js/w3c standards were made by not so clever individuals.
 window.luaJsScope = luaJsScope;	// debugging
 	luaJsScope.resetWindowListeners = () => {
 		/*
@@ -1148,18 +1147,6 @@ if (listenersForType.length != 1) {
 		canvas.focus();
 	};
 
-	// useful function , maybe store in luaJsScope?
-	window.dataToArray = (jsArrayClassName, addr, count) => {
-		if (addr == null) return null;	// ???
-		const cl = window[jsArrayClassName];
-		if (count === null || count === undefined) {
-			return new cl(M.HEAPU8.buffer, addr);
-		} else {
-			return new cl(M.HEAPU8.buffer, addr, count);
-		}
-	};
-
-
 	// Would be nice if emscripten's sdl lib had callbacks
 	// I guess I can just wrap my own shim layer in
 	// Sucks that I have to do this in each JS project that wants to use SDL ...
@@ -1203,11 +1190,8 @@ local luaJsScope = ...
 
 local ffi = require 'ffi'
 local js = require 'js'
+js.FS = luaJsScope.FS	-- hand this off for lfs_ffi
 local window = js.global
-
-ffi.dataToArray = function(ctype, data, ...)
-	return window:dataToArray(ctype, tonumber(ffi.cast('intptr_t', data)), ...)
-end
 
 -- this is only for redirecting errors to output
 -- TODO find where in FS stderr to do this and get rid of this function
