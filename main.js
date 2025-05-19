@@ -69,7 +69,8 @@ const removeAllElemEventListeners = (elem, eventTypes) => {
 };
 
 
-import {addPackage, loadDistInfoPackageAndDeps} from '/js/util.js';
+import {addPackage, loadDistInfoPackageAndDeps, removeFromParent} from '/js/util.js';
+import {packageNames} from '/js/lua-packages.js';
 import {newLua} from '/js/lua-interop.js';
 import {A, Br, Button, Canvas, Div, Img, Input, Option, Select, Span, TextArea} from '/js/dom.js';
 
@@ -371,6 +372,7 @@ window.addEventListener('mouseup', e => {
 
 // resize uses this too
 let fsDiv;
+let makeFileDiv;
 let taDiv;
 let titleBarDiv;
 let outDiv;
@@ -443,7 +445,6 @@ const setEditorFilePath = path => {
 
 const isDir = path => FS.lstat(path).mode & 0x4000;
 
-let makeFileDiv;
 {
 	fsDiv = Div({
 		style : {
@@ -485,7 +486,9 @@ let makeFileDiv;
 			sortChildren : function(){
 				const childrenDiv = this.childrenDiv;
 				[...childrenDiv.children].sort((a, b) => {
-					return a.fileInfo.name.localeCompare(b.fileInfo.name);
+					const aname = a?.fileInfo?.name || a.innerText || '';
+					const bname = b?.fileInfo?.name || b.innerText || '';
+					return aname.localeCompare(bname);
 				}).forEach(node => {
 					childrenDiv.removeChild(node);
 					childrenDiv.appendChild(node);
@@ -1505,7 +1508,11 @@ throw 'TODO';
 	//make a temp, initial state for handling loading lua scripts
 	lua.newState();
 
-	await loadDistInfoPackageAndDeps(runpkgname, luaPackages, lua);
+	await Promise.all([
+		loadDistInfoPackageAndDeps(runpkgname, luaPackages, lua),
+		loadDistInfoPackageAndDeps('langfix', luaPackages, lua),	// .rua needs this always
+		// honestly any other packages that the lua.run above are dependent on should go here
+	]);
 
 	// TODO to assert that the base dir is the lua-package.js entry name?
 	// but that won't be true for preloaded packages ...
@@ -1514,36 +1521,8 @@ throw 'TODO';
 	const runPkg = runPkgInfo.pkg;
 	const runPkgName = runPkgInfo.pkgname;
 //console.log('runPkgInfo', runPkgInfo);
-	// TODO
-	// for each package
-	// check cfg to see if autoloadj
-	// if not ... put a button of the package name here ... that upon click ...
-	// if so ...
-	// ... progress bar while each file loads ...
 
-	// TODO customize this so we don't load everything every run
-	// TODO start with just one like 'glapp' then search package dependencies provided in `distinfo` or `.rockspec`
-/* here's the minimum packages to run glapp/tests/test_tex.lua * /
-	const packageRequestedToLoad = [
-		'<glapp-builtin>',
-		'bit',
-		'template',
-		'ext',
-		'sdl',
-		'gl',
-		'struct',
-		'matrix',
-		'vec-ffi',
-		'image',
-		'glapp',
-	];
-/**/
-/* ... or just load all still.  now that we're not using lua-packages.js, "all" is going to be all our dependency graph traversal. */
 	const packageRequestedToLoad = Object.keys(luaPackages);
-/**/
-/* ... or just load the rundir request * /
-	const packageRequestedToLoad = ['<glapp-builtin>', runPkgName];
-/**/
 
 	//push all other packages
 	await Promise.all(packageRequestedToLoad.map(pkgname => {
@@ -1592,8 +1571,42 @@ throw 'TODO';
 		}, document.title, url);
 
 		// TODO only once the file has loaded ... and it's the one we want to run ...
-		doRun();
+		await doRun();
 	}
 
 	// TODO and now provide buttons for all non-init packages ...
+	//const rootDiv = fileInfoForPath['/'].childrenDiv; //attach here and sort to intersperse load buttons and dirs
+	const rootDiv = fsDiv;								// attach here to place at the end
+	const loadButtons = {};
+	for (let pkgname of packageNames) {
+		if (luaPackages[pkgname] !== undefined) {
+//console.log('already added', pkgname);
+			continue;
+		}
+//console.log('adding button for', pkgname);
+		loadButtons[pkgname] = Button({
+			innerText : pkgname+'...',
+			appendTo : rootDiv,
+			style : {
+				display : 'block',
+				backgroundColor : '#000000',
+				color : '#ffffff',
+			},
+			events : {
+				click : async (e) => {
+					const oldPkgNames = new Set(Object.keys(luaPackages));
+					await loadDistInfoPackageAndDeps(pkgname, luaPackages, lua);
+					const newPkgNames = new Set(Object.keys(luaPackages));
+					for (let newPkgName of newPkgNames) {
+						if (oldPkgNames.has(newPkgName)) continue;
+						const pkg = luaPackages[newPkgName];
+						luaPackages[newPkgName] = pkg;
+						removeFromParent(loadButtons[newPkgName]);
+						loadPackageAndAddToGUI(newPkgName, pkg)
+					}
+				},
+			},
+		});
+	}
+	//fileInfoForPath['/'].sortChildren();	// do this if you interspersed
 }
