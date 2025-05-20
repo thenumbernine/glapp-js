@@ -1198,8 +1198,13 @@ if (listenersForType.length != 1) {
 
 	stdoutTA.value = '';
 
+//console.log('before chdir to rundir', rundir,' cwd is', FS.cwd());
+
 	// ofc you can't push extra args into the call, i guess you only can via global assignments?
 	FS.chdir(rundir);
+
+//console.log('after chdir to rundir', rundir,' cwd is', FS.cwd());
+
 	// TODO HERE reset the Lua state altogether
 	let args = [];
 	try {
@@ -1598,6 +1603,8 @@ throw 'TODO';
 			rundir : rundir,
 			runargs : runargs,
 		}, document.title, url);
+
+//console.log('about to run, cwd is', FS.cwd());
 
 		// TODO only once the file has loaded ... and it's the one we want to run ...
 		await doRun();
