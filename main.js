@@ -1605,7 +1605,11 @@ throw 'TODO';
 						if (oldPkgNames.has(newPkgName)) continue;
 						const pkg = luaPackages[newPkgName];
 						luaPackages[newPkgName] = pkg;
-						removeFromParent(loadButtons[newPkgName]);
+						if (!loadButtons[newPkgName]) {	// TODO when would this condition happen ...
+							console.log("tried and failed to remove loadButton for package", newPkgName);
+						} else {
+							removeFromParent(loadButtons[newPkgName]);
+						}
 						promises.push(loadPackageAndAddToGUI(newPkgName, pkg));
 					}
 					await Promise.all(promises);
