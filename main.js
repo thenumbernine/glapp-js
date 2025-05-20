@@ -1548,6 +1548,9 @@ throw 'TODO';
 	}));
 	// all init packages loaded
 
+	// TODO only new enable all fileInfoDiv's
+	// but that's not so straightforward - gotta disable all A's in the div children
+
 	if (rundir && runfile) {
 		// once all our initial files have loaded - if we want to run something then run it:
 
@@ -1597,13 +1600,18 @@ throw 'TODO';
 					const oldPkgNames = new Set(Object.keys(luaPackages));
 					await loadDistInfoPackageAndDeps(pkgname, luaPackages, lua);
 					const newPkgNames = new Set(Object.keys(luaPackages));
+					const promises = [];
 					for (let newPkgName of newPkgNames) {
 						if (oldPkgNames.has(newPkgName)) continue;
 						const pkg = luaPackages[newPkgName];
 						luaPackages[newPkgName] = pkg;
 						removeFromParent(loadButtons[newPkgName]);
-						loadPackageAndAddToGUI(newPkgName, pkg)
+						promises.push(loadPackageAndAddToGUI(newPkgName, pkg));
 					}
+					await Promise.all(promises);
+
+					// TODO only now, enable all fileInfoDiv's
+					// but that's not so straightforward - gotta disable all A's in the div children
 				},
 			},
 		});
