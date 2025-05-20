@@ -445,6 +445,17 @@ const setEditorFilePath = path => {
 
 const isDir = path => FS.lstat(path).mode & 0x4000;
 
+// collect loading fileInfos here and clear them of disabled properties once the UI is finished loading them
+let loadingFileInfos = [];
+const enableAndClearLoadingFileInfos = () => {
+	for (let fileInfo of loadingFileInfos) {
+		fileInfo.fileDiv.style.removeProperty('pointer-events');
+		fileInfo.fileDiv.style.removeProperty('background-color');
+		fileInfo.fileDiv.style.removeProperty('cursor');
+	}
+	loadingFileInfos = [];
+};
+
 {
 	fsDiv = Div({
 		style : {
@@ -464,6 +475,14 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 
 		const fileDiv = Div({
 			style : {
+				// disabled, until finishd loading
+				pointerEvents : 'none',
+				backgroundColor : 'grey',
+				// hmm not working maybe cuz i set titleDiv cursor below?
+				// can i give this property precedence over that one?
+				cursor : 'wait',
+
+
 				border : '1px solid #5f5f5f',
 				borderRadius : '7px',
 				padding : '3px',
@@ -495,6 +514,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 				});
 			},
 		};
+		loadingFileInfos.push(fileInfo);
 		fileDiv.fileInfo = fileInfo;
 		fileInfoForPath[path] = fileInfo;
 
@@ -522,6 +542,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 			} catch (e) {
 				console.log('for path '+path+' thought it was a dir but it wasnt: '+e);
 			}
+
 			titleDiv.style.cursor = 'pointer';
 			titleDiv.addEventListener('click', e => {
 				if (childrenDiv.style.display == 'none') {
@@ -555,6 +576,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 							fileInfo.sortChildren();
 							// TODO will aceEditor screw up binary files if i select them + my auto-save-upon-changing-viewed-file ?
 							//setEditorFilePath(newpath);		// set it as our current file too? or bad idea if it's a binary file ...
+							enableAndClearLoadingFileInfos();
 						});
 						reader.readAsArrayBuffer(filesrc);
 					},
@@ -583,6 +605,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 			makeFileDiv(newpath, newname, fileInfo);
 			fileInfo.sortChildren();
 			setEditorFilePath(newpath);			//auto-open?
+			enableAndClearLoadingFileInfos();
 		};
 
 		const onNewFolder = () => {
@@ -593,6 +616,7 @@ const isDir = path => FS.lstat(path).mode & 0x4000;
 			FS.mkdir(newpath);
 			makeFileDiv(newpath, newname, fileInfo);
 			fileInfo.sortChildren();
+			enableAndClearLoadingFileInfos();
 		};
 
 		const onDelete = () => {
@@ -1493,6 +1517,7 @@ return {
 			loadPackageAndAddToGUI(pkginfo.pkgname, pkginfo.pkg)
 		));
 
+		// TODO only here re-enable the newly added UI's
 //console.log('loadPackagesForFile() done');
 	};
 	loadPackagesForFile = (searchFilePath) => {
@@ -1548,8 +1573,9 @@ throw 'TODO';
 	}));
 	// all init packages loaded
 
-	// TODO only new enable all fileInfoDiv's
+	// only new enable all fileInfoDiv's
 	// but that's not so straightforward - gotta disable all A's in the div children
+	enableAndClearLoadingFileInfos();
 
 	if (rundir && runfile) {
 		// once all our initial files have loaded - if we want to run something then run it:
@@ -1614,8 +1640,9 @@ throw 'TODO';
 					}
 					await Promise.all(promises);
 
-					// TODO only now, enable all fileInfoDiv's
+					// only now, enable all fileInfoDiv's
 					// but that's not so straightforward - gotta disable all A's in the div children
+					enableAndClearLoadingFileInfos();
 				},
 			},
 		});
