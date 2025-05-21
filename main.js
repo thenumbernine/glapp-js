@@ -1547,7 +1547,9 @@ throw 'TODO';
 	// TODO to assert that the base dir is the lua-package.js entry name?
 	// but that won't be true for preloaded packages ...
 //console.log("looking for package of", 	rundir+'/'+runfile);
-	const runPkgInfo = findPackageForFile(rundir+'/'+runfile)[0];
+	const runPkgInfo = findPackageForFile(rundir+'/'+runfile)[0]
+		// should I throw if they give me a bad rundir/runfile?  or meh? idk?
+		|| (() => { throw "failed to find package for file "+rundir+'/'+runfile; })();
 	const runPkg = runPkgInfo.pkg;
 	const runPkgName = runPkgInfo.pkgname;
 //console.log('runPkgInfo', runPkgInfo);
