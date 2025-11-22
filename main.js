@@ -1505,7 +1505,7 @@ end
 	luaPackages['ffi'] = [
 		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'jpeg.lua', 'load.lua', 'libwrapper.lua', 'png.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
 		{from : './ffi/KHR', to : 'ffi/KHR', files : ['khrplatform.lua']},
-		{from : './ffi/c', to : 'ffi/c', files : ['ctype.lua', 'errno.lua', 'inttypes.lua', 'math.lua', 'setjmp.lua', 'stdarg.lua', 'stddef.lua', 'stdio.lua', 'stdint.lua', 'stdlib.lua', 'string.lua', 'time.lua', 'wchar.lua']},
+		{from : './ffi/c', to : 'ffi/c', files : ['ctype.lua', 'errno.lua', 'inttypes.lua', 'math.lua', 'setjmp.lua', 'stdarg.lua', 'stdbool.lua', 'stddef.lua', 'stdint.lua', 'stdio.lua', 'stdlib.lua', 'string.lua', 'time.lua', 'wchar.lua']},
 		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua', 'types.lua']},
 		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
 		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
