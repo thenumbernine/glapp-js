@@ -1288,14 +1288,6 @@ xpcall(function()
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
 
-
-	-- ok so I changed ffi organization
-	-- and that means i have to now rearrange the package<->file system to reflect it
-	-- so in the mean time
-	package.loaded['gl.ffi.OpenGL'] = require 'ffi.OpenGL'
-	package.loaded['gl.ffi.OpenGLES3'] = require 'ffi.OpenGL'
-
-
 	-- ext.timer's getTime() uses gettimeofday because of its high resolution
 	-- but emscripten craps that all the way down to the 1 second resolution
 	-- so ...
@@ -1417,6 +1409,45 @@ return {
 				{encoding:'binary'});
 		},
 		//clip : () => {},
+		gl : () => {
+			FS.writeFile(
+				'/gl/ffi/EGL.lua',
+				`return require 'ffi.EGL'`,
+				{encoding:'binary'});
+			FS.writeFile(
+				'/gl/ffi/OpenGL.lua',
+				`return require 'ffi.OpenGL'`,
+				{encoding:'binary'});
+			FS.writeFile(
+				'/gl/ffi/OpenGLES3.lua',
+				`return require 'ffi.OpenGLES3'`,
+				{encoding:'binary'});
+		},
+		sdl : () => {
+			FS.writeFile(
+				'/sdl/app.lua',
+				`return require 'sdl.app2'`,
+				{encoding:'binary'});
+			FS.writeFile(
+				'/sdl/sdl.lua',
+				`return require 'sdl.ffi.sdl2'`,
+				{encoding:'binary'});
+			// TODO would be nice to just replace one number that stores the default instead of this whole file ....
+			FS.writeFile(
+				'/sdl/setup.lua',
+`
+return function(sdlname)
+	sdlname = sdlname or '2'
+	local sdl = require ('sdl.ffi.sdl'..sdlname)
+	package.loaded.sdl = sdl
+	package.loaded['sdl.sdl'] = sdl
+	local app = require ('sdl.app'..sdlname)
+	package.loaded['sdl.app'] = app
+	return sdl, app
+end
+`,
+				{encoding:'binary'});
+		},
 	};
 
 	const pkgsLoading = {};	// insert upon request so we don't get duplicate requests
