@@ -30,9 +30,7 @@ vector.useIndexOp = false
 
 -- TODO how about a ctor based on ptr and size?
 function vector:init(ctype, arg)
-	self.type = ffi.typeof(ctype)
-	self.typePtr = ffi.typeof('$*', self.type)
-	self.typeArr = ffi.typeof('$[?]', self.type)
+	self.type = ctype
 	self.size = 0
 	self.capacity = 0
 	self:reserve(32)
@@ -98,21 +96,19 @@ function vector:__ipairs()
 	end)
 end
 
+-- [[ return the self.v object as a raw pointer / array
+function vector:alloc(ctype, capacity)
+	return ffi.new(ctype..'[?]', capacity)
+end
+--]]
+-- [[ return the self.v object with bounds-checking
+
+--]]
+
 function vector:reserve(newcap)
 	if newcap <= self.capacity then return end
-
-	-- add 25%, rounded up
-	newcap = newcap
-		+ bit.rshift(newcap, 2)
-		+ (bit.band(newcap, 3) ~= 0 and 1 or 0)
-	-- round up to 16
-	newcap = bit.lshift(
-		bit.rshift(newcap, 4)
-		+ (bit.band(newcap, 15) ~= 0 and 1 or 0)
-		, 4)
-
 	-- so self.capacity < newcap
-	local newv = self.typeArr(newcap)
+	local newv = self:alloc(self.type, newcap)
 	assert.le(self.size, self.capacity)
 	if self.v then ffi.copy(newv, self.v, self:getNumBytes()) end
 	self.v = newv
@@ -121,7 +117,9 @@ end
 
 function vector:resize(newsize)
 	newsize = assert(tonumber(newsize))
-	self:reserve(newsize)
+	-- TODO increase by %age?  like 20% or so? with a min threshold of 32 / increments of 32?
+	self:reserve((math.floor(newsize / 32) + 1) * 32)
+	-- TODO ffi.fill with zero here?
 	self.size = newsize
 end
 
@@ -175,8 +173,8 @@ function vector:insert(...)
 	local n = select('#', ...)
 	if n == 3 then
 		local where, first, last = ...
-		first = ffi.cast(self.typePtr, first)
-		last = ffi.cast(self.typePtr, last)
+		first = ffi.cast(self.type..'*', first)
+		last = ffi.cast(self.type..'*', last)
 
 		local numToCopy = last - first
 		if numToCopy == 0 then return end

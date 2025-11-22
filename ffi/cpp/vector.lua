@@ -8,8 +8,6 @@ local range = require 'ext.range'
 local struct = require 'struct'
 require 'ffi.req' 'c.stdlib'	-- malloc, free
 
-local voidp = ffi.typeof'void*'
-
 -- TODO I want to move functions into one place
 -- but as soon as I switch __index to read the .metatable, struct:isa() stops working ...
 local vectorbase = {}
@@ -80,17 +78,6 @@ function vectorbase:reserve(newcap)
 --DEBUG(ffi.cpp.vector): print('newcap <= oldcap, returning')
 		return
 	end
-
-	-- add 25%, rounded up
-	newcap = newcap
-		+ bit.rshift(newcap, 2)
-		+ (bit.band(newcap, 3) ~= 0 and 1 or 0)
-	-- round up to 16
-	newcap = bit.lshift(
-		bit.rshift(newcap, 4)
-		+ (bit.band(newcap, 15) ~= 0 and 1 or 0)
-		, 4)
-
 	-- so self:capacity() < newcap
 	-- TODO realloc?
 	local bytes = ffi.sizeof(self.T) * newcap
@@ -114,8 +101,12 @@ function vectorbase:reserve(newcap)
 end
 
 function vectorbase:resize(newsize)
+	-- TODO increase by %age?  like 20% or so? with a min threshold of 32 / increments of 32?
+	local newcap = bit.lshift(bit.rshift(ffi.cast('size_t', newsize), 5) + 1, 5)
 --DEBUG(ffi.cpp.vector): print('vectorbase.resize', newsize)
-	self:reserve(newsize)
+--DEBUG(ffi.cpp.vector): print('newcap', newcap)
+	self:reserve(newcap)
+--DEBUG(ffi.cpp.vector): assert.ge(self:capacity(), newcap)
 	-- TODO ffi.fill with zero here?
 	self.finish = self.v + newsize
 --DEBUG(ffi.cpp.vector): assert.ge(self:size(), newsize)
@@ -251,17 +242,14 @@ end
 
 
 local function makeStdVector(T, name)
-	T = ffi.typeof(T)
-	local Tname = tostring(T):match'^ctype<(.*)>$'
-
 	-- TODO std_vector_*
-	name = name or 'vector_'..Tname:gsub('%*', '_ptr'):gsub('%s+', '')
+	name = name or 'vector_'..T:gsub('%*', '_ptr'):gsub('%s+', '')
 
 	-- check types so I don't declare one twice (and error luajit)
 	-- fun fact, if the type hasn't yet been defined, ffi will error instead of fail quietly (and quickly)
 	local ctype = require 'ext.op'.land(pcall(ffi.typeof, name))
 	if not ctype then
-		local Tptr = ffi.typeof('$*', T)
+		local Tptr = T..' *'
 
 		struct{
 			name = name,
@@ -337,10 +325,11 @@ local function makeStdVector(T, name)
 			end,
 		}
 
+-- still broken in emscripten
 		-- stl vector in my gcc / linux is 24 bytes
 		-- template type of our vector ... 8 bytes mind you
-		assert.eq(ffi.sizeof(name), 3*ffi.sizeof(voidp))	-- 24
-		assert.eq(ffi.sizeof(Tptr), ffi.sizeof(voidp))		-- 8
+--		assert.eq(ffi.sizeof(name), 3*ffi.sizeof'void*')	-- 24
+--		assert.eq(ffi.sizeof(Tptr), ffi.sizeof'void*')		-- 8
 		ctype = assert(ffi.typeof(name))
 	end
 
