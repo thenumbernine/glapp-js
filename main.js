@@ -1288,6 +1288,14 @@ xpcall(function()
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
 
+
+	-- ok so I changed ffi organization
+	-- and that means i have to now rearrange the package<->file system to reflect it
+	-- so in the mean time
+	package.loaded['gl.ffi.OpenGL'] = require 'ffi.OpenGL'
+	package.loaded['gl.ffi.OpenGLES3'] = require 'ffi.OpenGL'
+
+
 	-- ext.timer's getTime() uses gettimeofday because of its high resolution
 	-- but emscripten craps that all the way down to the 1 second resolution
 	-- so ...
