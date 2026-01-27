@@ -1398,6 +1398,23 @@ return {
 }
 `, {encoding:'utf8'});
 		},
+		image : () => {
+			FS.writeFile(
+				'/image/ffi/png.lua',
+				`return require 'ffi.png'`,
+				{encoding:'binary'}
+			);
+			FS.writeFile(
+				'/image/ffi/jpeg.lua',
+				`return require 'ffi.jpeg'`,
+				{encoding:'binary'}
+			);	
+			FS.writeFile(
+				'/image/ffi/zlib.lua',
+				`return require 'ffi.zlib'`,
+				{encoding:'binary'}
+			);	
+		},
 		audio : () => {
 			FS.writeFile('/audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
 		},
@@ -1500,21 +1517,61 @@ end
 
 	//push local glapp-js package
 	luaPackages['<glapp-builtin>'] = [
-		{from : './tests', to : 'glapp/tests', files : ['test-js.lua', 'test-ffi.lua']},
+		{
+			from : './tests',
+			to : 'glapp/tests',
+			files : [
+				'test-js.lua',
+				'test-ffi.lua',
+			],
+		},
 	];
 	luaPackages['ffi'] = [
-		{from : './ffi', to : 'ffi', files : ['EGL.lua', 'OpenGL.lua', 'OpenGLES3.lua', 'cimgui.lua', 'jpeg.lua', 'load.lua', 'libwrapper.lua', 'png.lua', 'req.lua', 'sdl2.lua', 'zlib.lua']},
-		{from : './ffi/KHR', to : 'ffi/KHR', files : ['khrplatform.lua']},
+		{
+			from : './ffi', 
+			to : 'ffi', 
+			files : [
+				'load.lua',
+				'libwrapper.lua',
+				'req.lua',
+				'EGL.lua', 			// moved to gl/ffi/EGL.lua
+				'OpenGL.lua',		// moved to gl/ffi/OpenGL.lua
+				'OpenGLES3.lua',	// moved to gl/ffi/OpenGLES3.lua
+				'cimgui.lua',		// moved to imgui/ffi/imgui.lua
+				'sdl2.lua',			// moved to sdl/ffi/sdl2.lua
+				'jpeg.lua',			// moved to image/ffi/jpeg.lua
+				'png.lua',			// moved to image/ffi/png.lua
+				'zlib.lua',			// moved to image/ffi/zlib.lua
+			],
+		},
+		{
+			from : './ffi/KHR', 
+			to : 'ffi/KHR', 
+			files : [
+				'khrplatform.lua',	// moved to gl/ffi/KHR/khrplatform.lua
+			]
+		},
 		{from : './ffi/c', to : 'ffi/c', files : ['ctype.lua', 'errno.lua', 'inttypes.lua', 'math.lua', 'setjmp.lua', 'stdarg.lua', 'stdbool.lua', 'stddef.lua', 'stdint.lua', 'stdio.lua', 'stdlib.lua', 'string.lua', 'time.lua', 'wchar.lua']},
 		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua', 'types.lua']},
 		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
-		{from : './ffi/gcwrapper', to : 'ffi/gcwrapper', files : ['gcwrapper.lua']},
 	];
 	luaPackages['lfs_ffi'] = [
-		{from : './lfs_ffi', to : 'lfs_ffi', files : ['lfs_ffi.lua']},
+		{
+			from : './lfs_ffi',
+			to : 'lfs_ffi',
+			files : [
+				'lfs_ffi.lua',
+			],
+		},
 	];
 	luaPackages['clip'] = [
-		{from : './clip', to : 'clip', files : ['clip.lua']},
+		{
+			from : './clip', 
+			to : 'clip', 
+			files : [
+				'clip.lua',
+			],
+		},
 	];
 
 	const findPackageForFile = searchFilePath => {
