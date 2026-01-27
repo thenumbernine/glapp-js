@@ -1425,21 +1425,6 @@ return {
 				FS.readFile('/complex/complex.lua', {encoding:'utf8'}).replace(` = pcall(require, 'ffi')`, ``),
 				{encoding:'binary'});
 		},
-		//clip : () => {},
-		gl : () => {
-			FS.writeFile(
-				'/gl/ffi/EGL.lua',
-				`return require 'ffi.EGL'`,
-				{encoding:'binary'});
-			FS.writeFile(
-				'/gl/ffi/OpenGL.lua',
-				`return require 'ffi.OpenGL'`,
-				{encoding:'binary'});
-			FS.writeFile(
-				'/gl/ffi/OpenGLES3.lua',
-				`return require 'ffi.OpenGLES3'`,
-				{encoding:'binary'});
-		},
 		sdl : () => {
 			FS.writeFile(
 				'/sdl/app.lua',
@@ -1525,6 +1510,28 @@ end
 				'test-ffi.lua',
 			],
 		},
+		{
+			from : './gl/ffi',
+			to : 'gl/ffi',
+			files : [
+				'EGL.lua',
+				'OpenGLES3.lua',
+			],
+		},
+		{
+			from : './gl/ffi/Browser',
+			to : 'gl/ffi/Browser',
+			files : [
+				'OpenGL.lua',
+			],
+		},
+		{
+			from : './imgui/ffi',
+			to : 'imgui/ffi',
+			files : [
+				'imgui.lua',
+			],
+		},
 	];
 	luaPackages['ffi'] = [
 		{
@@ -1534,10 +1541,6 @@ end
 				'load.lua',
 				'libwrapper.lua',
 				'req.lua',
-				'EGL.lua', 			// moved to gl/ffi/EGL.lua
-				'OpenGL.lua',		// moved to gl/ffi/OpenGL.lua
-				'OpenGLES3.lua',	// moved to gl/ffi/OpenGLES3.lua
-				'cimgui.lua',		// moved to imgui/ffi/imgui.lua
 				'sdl2.lua',			// moved to sdl/ffi/sdl2.lua
 				'jpeg.lua',			// moved to image/ffi/jpeg.lua
 				'png.lua',			// moved to image/ffi/png.lua

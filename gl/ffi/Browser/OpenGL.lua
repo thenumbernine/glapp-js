@@ -1717,6 +1717,6 @@ extern void glVertexAttrib4usv (GLuint index, const GLushort *v);
 extern void glVertexAttribPointer (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
 ]]
 
-require 'ffi.OpenGLES3'	-- should I add this on there too?
+require 'gl.ffi.OpenGLES3'	-- should I add this on there too?
 
 return ffi.C
