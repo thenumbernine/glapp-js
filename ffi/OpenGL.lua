@@ -967,7 +967,7 @@ typedef void ( * PFNGLGETCOLORTABLEPARAMETERFVEXTPROC) (GLenum target, GLenum pn
 
 
 /* and this is a subset of glext.h hopefully up to version 3 */
-]] require 'ffi.KHR.khrplatform' ffi.cdef[[
+]] require 'gl.ffi.KHR.khrplatform' ffi.cdef[[
 enum { GL_VERSION_1_2 = 1 };
 enum { GL_UNSIGNED_BYTE_3_3_2 = 32818 };
 enum { GL_UNSIGNED_SHORT_4_4_4_4 = 32819 };

@@ -3,14 +3,14 @@ ffi.cdef[[
 /* + BEGIN /usr/include/GLES3/gl3.h */
 /* ++ BEGIN /usr/include/GLES3/gl3platform.h */
 /* +++ BEGIN /usr/include/KHR/khrplatform.h */
-]] require 'ffi.req' 'KHR.khrplatform' ffi.cdef[[
+]] require 'gl.ffi.KHR.khrplatform' ffi.cdef[[
 /* +++ END   /usr/include/KHR/khrplatform.h */
 /* ++ END   /usr/include/GLES3/gl3platform.h */
 /* #define GL_APIENTRYP GL_APIENTRY* ### string, not number "GL_APIENTRY*" */
 enum { GL_GLES_PROTOTYPES = 1 };
 enum { GL_ES_VERSION_2_0 = 1 };
 /* ++ BEGIN /usr/include/KHR/khrplatform.h */
-]] require 'ffi.req' 'KHR.khrplatform' ffi.cdef[[
+]] require 'gl.ffi.KHR.khrplatform' ffi.cdef[[
 /* ++ END   /usr/include/KHR/khrplatform.h */
 typedef khronos_int8_t GLbyte;
 typedef khronos_float_t GLclampf;

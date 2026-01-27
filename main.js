@@ -1545,15 +1545,41 @@ end
 			],
 		},
 		{
-			from : './ffi/KHR', 
-			to : 'ffi/KHR', 
+			from : './ffi/c', 
+			to : 'ffi/c', 
 			files : [
-				'khrplatform.lua',	// moved to gl/ffi/KHR/khrplatform.lua
-			]
+				'ctype.lua', 
+				'errno.lua', 
+				'inttypes.lua', 
+				'math.lua', 
+				'setjmp.lua', 
+				'stdarg.lua', 
+				'stdbool.lua', 
+				'stddef.lua', 
+				'stdint.lua', 
+				'stdio.lua', 
+				'stdlib.lua', 
+				'string.lua', 
+				'time.lua', 
+				'wchar.lua',
+			],
 		},
-		{from : './ffi/c', to : 'ffi/c', files : ['ctype.lua', 'errno.lua', 'inttypes.lua', 'math.lua', 'setjmp.lua', 'stdarg.lua', 'stdbool.lua', 'stddef.lua', 'stdint.lua', 'stdio.lua', 'stdlib.lua', 'string.lua', 'time.lua', 'wchar.lua']},
-		{from : './ffi/c/sys', to : 'ffi/c/sys', files : ['time.lua', 'types.lua']},
-		{from : './ffi/cpp', to : 'ffi/cpp', files : ['vector-lua.lua', 'vector.lua']},
+		{
+			from : './ffi/c/sys', 
+			to : 'ffi/c/sys', 
+			files : [
+				'time.lua', 
+				'types.lua',
+			],
+		},
+		{
+			from : './ffi/cpp', 
+			to : 'ffi/cpp', 
+			files : [
+				'vector-lua.lua',
+				'vector.lua',
+			],
+		},
 	];
 	luaPackages['lfs_ffi'] = [
 		{
