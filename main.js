@@ -540,7 +540,7 @@ const enableAndClearLoadingFileInfos = () => {
 					fileInfo.sortChildren();
 				}
 			} catch (e) {
-				console.log('for path '+path+' thought it was a dir but it wasnt: '+e);
+				console.log('for path', path, 'thought it was a dir but it wasnt:', e);
 			}
 
 			titleDiv.style.cursor = 'pointer';
