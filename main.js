@@ -126,7 +126,7 @@ rundir='lambda-cdm'; runfile='run.lua';						-- WORKS README
 rundir='seashell'; runfile='run.lua';						-- WORKS README ... I had to scale down the mesh from 2000x2000 to 200x200 or it ran too slow to finish ... TODO needs menubar support
 rundir='SphericalHarmonicGraphs'; runfile='run.lua';		-- very slow (didn't finish)
 rundir='metric'; runfile='run.lua';							-- fails, uses GL_TEXTURE_1D
-rundir='sand-attack'; runfile='run.lua';					-- WORKS ... but a bit slow
+rundir='sand-attack'; runfile='run.lua';					-- WORKS with ["sdl=2", "gl=OpenGLES3", "nosound", "skipCustomFont", "skipHighScores"]
 rundir='surface-from-connection'; runfile='run.lua';		-- WORKS README ... but slow
 rundir='mesh'; runfile='view.lua'; cmdline=['meshes/cube.obj'];	-- WORKS README
 rundir='sphere-grid'; runfile='run.lua';					-- WORKS README
