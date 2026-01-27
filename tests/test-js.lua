@@ -2,6 +2,7 @@
 --[[
 print sdl/js events while they happen
 --]]
+local ffi = require 'ffi'
 local table = require 'ext.table'
 local string = require 'ext.string'
 local op = require 'ext.op'
@@ -74,7 +75,6 @@ for typename,fields in pairs{
 	SDL_DropEvent = {'type', 'timestamp', 'file', 'windowID'},
 	SDL_SensorEvent = {'type', 'timestamp', 'which', 'data', 'timestamp_us'},
 	SDL_QuitEvent = {'type', 'timestamp'},
-	SDL_OSEvent = {'type', 'timestamp'},
 	SDL_UserEvent = {'type', 'timestamp', 'windowID', 'code', 'data1', 'data2'},
 	SDL_SysWMEvent = {'type', 'timestamp', 'msg'},
 } do

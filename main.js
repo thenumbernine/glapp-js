@@ -1401,19 +1401,19 @@ return {
 		image : () => {
 			FS.writeFile(
 				'/image/ffi/png.lua',
-				`return require 'ffi.png'`,
+				`return require 'image.ffi.Browser.png'`,
 				{encoding:'binary'}
 			);
 			FS.writeFile(
 				'/image/ffi/jpeg.lua',
-				`return require 'ffi.jpeg'`,
+				`return require 'image.ffi.Browser.jpeg'`,
 				{encoding:'binary'}
-			);	
+			);
 			FS.writeFile(
 				'/image/ffi/zlib.lua',
-				`return require 'ffi.zlib'`,
+				`return require 'image.ffi.Browser.zlib'`,
 				{encoding:'binary'}
-			);	
+			);
 		},
 		audio : () => {
 			FS.writeFile('/audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
@@ -1432,7 +1432,7 @@ return {
 				{encoding:'binary'});
 			FS.writeFile(
 				'/sdl/sdl.lua',
-				`return require 'sdl.ffi.sdl2'`,
+				`return require 'sdl.ffi.Browser.sdl2'`,
 				{encoding:'binary'});
 			// TODO would be nice to just replace one number that stores the default instead of this whole file ....
 			FS.writeFile(
@@ -1440,7 +1440,7 @@ return {
 `
 return function(sdlname)
 	sdlname = sdlname or '2'
-	local sdl = require ('sdl.ffi.sdl'..sdlname)
+	local sdl = require ('sdl.ffi.Browser.sdl'..sdlname)
 	package.loaded.sdl = sdl
 	package.loaded['sdl.sdl'] = sdl
 	local app = require ('sdl.app'..sdlname)
@@ -1502,18 +1502,29 @@ end
 
 	//push local glapp-js package
 	luaPackages['<glapp-builtin>'] = [
-		{
-			from : './tests',
-			to : 'glapp/tests',
+		{	// in image's case, the original is winning,
+			// so I'll put these in image/ffi/Browser/
+			// and then redirect the originals above
+			from : './image/ffi/Browser',
+			to : 'image/ffi/Browser',
 			files : [
-				'test-js.lua',
-				'test-ffi.lua',
+				'jpeg.lua',
+				'png.lua',
+				'zlib.lua',
+			],
+		},
+		{
+			from : './sdl/ffi/Browser',
+			to : 'sdl/ffi/Browser',
+			files : [
+				'sdl2.lua',
 			],
 		},
 		{
 			from : './gl/ffi',
 			to : 'gl/ffi',
 			files : [
+				// will distinfo's gl/ffi/EGL.lua overwrite this or vice versa? who wins?
 				'EGL.lua',
 				'OpenGLES3.lua',
 			],
@@ -1526,6 +1537,14 @@ end
 			],
 		},
 		{
+			from : './tests',
+			to : 'glapp/tests',
+			files : [
+				'test-js.lua',
+				'test-ffi.lua',
+			],
+		},
+		{
 			from : './imgui/ffi',
 			to : 'imgui/ffi',
 			files : [
@@ -1535,49 +1554,45 @@ end
 	];
 	luaPackages['ffi'] = [
 		{
-			from : './ffi', 
-			to : 'ffi', 
+			from : './ffi',
+			to : 'ffi',
 			files : [
 				'load.lua',
 				'libwrapper.lua',
 				'req.lua',
-				'sdl2.lua',			// moved to sdl/ffi/sdl2.lua
-				'jpeg.lua',			// moved to image/ffi/jpeg.lua
-				'png.lua',			// moved to image/ffi/png.lua
-				'zlib.lua',			// moved to image/ffi/zlib.lua
 			],
 		},
 		{
-			from : './ffi/c', 
-			to : 'ffi/c', 
+			from : './ffi/c',
+			to : 'ffi/c',
 			files : [
-				'ctype.lua', 
-				'errno.lua', 
-				'inttypes.lua', 
-				'math.lua', 
-				'setjmp.lua', 
-				'stdarg.lua', 
-				'stdbool.lua', 
-				'stddef.lua', 
-				'stdint.lua', 
-				'stdio.lua', 
-				'stdlib.lua', 
-				'string.lua', 
-				'time.lua', 
+				'ctype.lua',
+				'errno.lua',
+				'inttypes.lua',
+				'math.lua',
+				'setjmp.lua',
+				'stdarg.lua',
+				'stdbool.lua',
+				'stddef.lua',
+				'stdint.lua',
+				'stdio.lua',
+				'stdlib.lua',
+				'string.lua',
+				'time.lua',
 				'wchar.lua',
 			],
 		},
 		{
-			from : './ffi/c/sys', 
-			to : 'ffi/c/sys', 
+			from : './ffi/c/sys',
+			to : 'ffi/c/sys',
 			files : [
-				'time.lua', 
+				'time.lua',
 				'types.lua',
 			],
 		},
 		{
-			from : './ffi/cpp', 
-			to : 'ffi/cpp', 
+			from : './ffi/cpp',
+			to : 'ffi/cpp',
 			files : [
 				'vector-lua.lua',
 				'vector.lua',
@@ -1595,8 +1610,8 @@ end
 	];
 	luaPackages['clip'] = [
 		{
-			from : './clip', 
-			to : 'clip', 
+			from : './clip',
+			to : 'clip',
 			files : [
 				'clip.lua',
 			],
