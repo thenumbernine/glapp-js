@@ -1634,6 +1634,7 @@ end
 				for (let file of folder.files) {
 					const thisFilePath = folder.to+'/'+file;
 					// TODO just store file path => package map
+//console.log('checking', folder.to, '/', file);
 					if (thisFilePath == searchFilePath) {
 						pkginfos.push({pkg:pkg, pkgname:pkgname});
 					}
