@@ -1590,14 +1590,6 @@ end
 				'types.lua',
 			],
 		},
-		{
-			from : './ffi/cpp',
-			to : 'ffi/cpp',
-			files : [
-				'vector-lua.lua',
-				'vector.lua',
-			],
-		},
 	];
 	luaPackages['lfs_ffi'] = [
 		{
