@@ -90,7 +90,7 @@ let runargs = urlparams.get('args') || '';	//store it in JSON
 
 let editmode = !!urlparams.get('edit');
 if (!runfile || !rundir) {
-	rundir = 'glapp/tests';
+	rundir = 'gl/tests';
 	runfile = 'test_tex.lua';
 	editmode = true;
 }
@@ -108,13 +108,15 @@ if (!runpkgname) {
 }
 
 /* progress so far
-rundir='glapp/tests'; runfile='test_es.lua';				-- WORKS README
-rundir='glapp/tests'; runfile='test_es_directcalls.lua';	-- WORKS README
-rundir='glapp/tests'; runfile='test_tex.lua';				-- WORKS README
-rundir='glapp/tests'; runfile='test_gl1.lua';				-- needs emscripten's gl 1 legacy mode to even compile (its bugged, link errors when you enable it)
-rundir='glapp/tests'; runfile='minimal.lua';
-rundir='glapp/tests'; runfile='pointtest.lua';
-rundir='glapp/tests'; runfile='info.lua';
+rundir='sdl/tests'; runfile='events.lua';
+rundir='sdl/tests'; runfile='minimal.lua';
+rundir='gl/tests'; runfile='test_es.lua';				-- WORKS README
+rundir='gl/tests'; runfile='test_es_directcalls.lua';	-- WORKS README
+rundir='gl/tests'; runfile='test_tex.lua';				-- WORKS README
+rundir='gl/tests'; runfile='test_gl1.lua';				-- needs emscripten's gl 1 legacy mode to even compile (its bugged, link errors when you enable it)
+rundir='gl/tests'; runfile='pointtest.lua';
+rundir='gl/tests'; runfile='info.lua';
+rundir='gl/tests'; runfile='test_uniformblock.lua';
 rundir='line-integral-convolution'; runfile='run.lua';		-- WORKS README
 rundir='rule110'; runfile='rule110.lua';					-- WORKS README
 rundir='fibonacci-modulo'; runfile='run.lua';				-- WORKS README
@@ -202,7 +204,7 @@ const refreshEditMode = () => {
 		outDiv.style.display = 'none';
 		rootSplit.setVisible(false);
 	}
-	glappResize();
+	app3DResize();
 };
 
 // edit button
@@ -1044,7 +1046,7 @@ const rootSplit = new Split({
 	}),
 });
 window.rootSplit = rootSplit;	// debugging
-const glappResize = e => {
+const app3DResize = e => {
 	//hide/show the split if canvas is present
 	// i'm 50/50 on giving the splits child divs themselves and not resizing based on the child bounds
 	// and then i could dynamically add/remove this split ...
@@ -1052,8 +1054,8 @@ const glappResize = e => {
 
 	rootSplit.resizeBounds(0, 0, window.innerWidth, window.innerHeight);
 };
-window.addEventListener('resize', glappResize);
-refreshEditMode();	// will trigger glappResize()
+window.addEventListener('resize', app3DResize);
+refreshEditMode();	// will trigger app3DResize()
 
 
 
@@ -1062,7 +1064,7 @@ refreshEditMode();	// will trigger glappResize()
 const closeCanvas = () => {
 	canvas?.parentNode?.removeChild(canvas);
 	canvas = undefined;
-	glappResize(); // refresh split
+	app3DResize(); // refresh split
 };
 
 let loadPackagesForFile;	// testing this as a feature, but it's not used atm ...
@@ -1070,9 +1072,9 @@ const doRun = async () => {
 
 	// we need to make sure the old setInterval is dead before starting the new one ...
 	// ... or else the next update could kill us ...
-	if (luaJsScope && luaJsScope.glappMainInterval) {
-		clearInterval(luaJsScope.glappMainInterval);
-		luaJsScope.glappMainInterval = undefined;
+	if (luaJsScope && luaJsScope.app3DMainInterval) {
+		clearInterval(luaJsScope.app3DMainInterval);
+		luaJsScope.app3DMainInterval = undefined;
 	}
 
 	document.title = runfile;
@@ -1105,10 +1107,10 @@ const doRun = async () => {
 		removeAllElemEventListeners(window, ['beforeunload', 'blur', 'focus', 'keydown', 'keypress', 'keyup', 'resize']);
 
 		// re-add my resize listener
-		window.addEventListener('resize', glappResize);	// now re-add mine
+		window.addEventListener('resize', app3DResize);	// now re-add mine
 	};
 	resetListeners();
-	glappResize();
+	app3DResize();
 
 
 
@@ -1133,7 +1135,7 @@ window.luaJsScope = luaJsScope;	// debugging
 
 		// Remove emscripten's resize event.  what was it doing anyways?  I had to call SDL_SetWindowSize myself upon resize.
 		removeAllElemEventListeners(window, ['resize']);
-		window.addEventListener('resize', glappResize);	// now re-add mine
+		window.addEventListener('resize', app3DResize);	// now re-add mine
 
 		// save emscripten's window listeners
 		const saveEmscriptenListeners = {};
@@ -1193,7 +1195,7 @@ if (listenersForType.length != 1) {
 		prependTo : document.body,
 	});
 	M.canvas = canvas;	// simple as that to make Emscripten work?  Yes but good luck resizing it.
-	glappResize();
+	app3DResize();
 
 
 	stdoutTA.value = '';
@@ -1307,13 +1309,14 @@ xpcall(function()
 	SDLApp.postUpdate = function()
 		coroutine.yield()
 	end
-	require 'glapp'.postUpdate = function()
+	-- insert a yield into the main loop
+	require 'gl.app'.postUpdate = function()
 		require 'sdl'.SDL_GL_SwapWindow()
 		coroutine.yield()
 	end
 
 
-	-- let glapp-js know when the SDL window is created, so that we can send it resize events:
+	-- let main-js know when the SDL window is created, so that we can send it resize events:
 	local oldSDLAppInitWindow = SDLApp.initWindow
 	function SDLApp:initWindow(...)
 		oldSDLAppInitWindow(self, ...)
@@ -1349,7 +1352,7 @@ print'running langfix...'
 			print('__SDLMainLuaThread coroutine.resume failed.')
 			print(err)
 			print(debug.traceback(__SDLMainLuaThread))
-			luaJsScope.glappMainInterval = nil
+			luaJsScope.app3DMainInterval = nil
 			window:clearInterval(interval)
 		end
 	end
@@ -1363,7 +1366,7 @@ print'running langfix...'
 		tryToResume()
 	end, 10)
 
-	luaJsScope.glappMainInterval = interval
+	luaJsScope.app3DMainInterval = interval
 
 end, function(err)
 	print(err)
@@ -1490,7 +1493,7 @@ end
 				parentFileInfo = fileInfoForPath[nextPath];
 			}
 		}).then(() => {
-			// see if there's a shim layer for glapp-js to work
+			// see if there's a shim layer for main-js to work
 			const shim = onLoadPackageCallbacks[pkgname];
 			if (shim) shim();
 
@@ -1500,8 +1503,8 @@ end
 
 	const luaPackages = {};	// populate as we load distinfo's
 
-	//push local glapp-js package
-	luaPackages['<glapp-builtin>'] = [
+	//push local main-js package
+	luaPackages['<app3d-builtin>'] = [
 		{	// in image's case, the original is winning,
 			// so I'll put these in image/ffi/Browser/
 			// and then redirect the originals above
@@ -1538,7 +1541,7 @@ end
 		},
 		{
 			from : './tests',
-			to : 'glapp/tests',
+			to : 'gl/tests',
 			files : [
 				'test-js.lua',
 				'test-ffi.lua',

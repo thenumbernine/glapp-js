@@ -103,7 +103,7 @@ window:eval[[
 .forEach(k => window.addEventListener(k, e => console.log(e)));
 ]]
 
-return require 'glapp':subclass{
+return require 'gl.app':subclass{
 	event = function(self, e)
 		local info = eventInfo[e.type]
 		if info then
