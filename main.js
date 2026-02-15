@@ -1288,13 +1288,21 @@ xpcall(function()
 	}, ';')
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
-	
-	local land = function(a,b) return a and b end
+
+	local function saferequire(...)
+		local result
+		xpcall(function()
+			result = require(...)
+		end, function(err)
+			print(err..'\\n'..debug.traceback())
+		end)
+		return result
+	end
 
 	-- ext.timer's getTime() uses gettimeofday because of its high resolution
 	-- but emscripten craps that all the way down to the 1 second resolution
 	-- so ...
-	local extTimer = land(pcall(require, 'ext.timer'))
+	local extTimer = saferequire 'ext.timer'
 	if extTimer then
 		extTimer.getTime = function()
 			return js.global.Date.now() / 1000
@@ -1306,13 +1314,13 @@ xpcall(function()
 	-- TODO just build my own competing wasm libraries to emscripten's
 
 	-- set to emscripten's libpng version
-	local imagePng = land(pcall(require, 'image.luajit.png'))
+	local imagePng = saferequire 'image.luajit.png'
 	if imagePng then
 		imagePng.libpngVersion = '1.6.18'
 	end
 
 	-- force emscripten to yield sometimes
-	local SDLApp = land(pcall(require, 'sdl.app'))
+	local SDLApp = saferequire 'sdl.app'
 	if SDLApp then
 		SDLApp.postUpdate = function()
 			coroutine.yield()
@@ -1320,7 +1328,7 @@ xpcall(function()
 	end
 
 	-- insert a yield into the main loop
-	local GLApp = land(pcall(require, 'gl.app'))
+	local GLApp = saferequire 'gl.app'
 	if GLApp then
 		GLApp.postUpdate = function()
 			require 'sdl'.SDL_GL_SwapWindow()
@@ -1414,23 +1422,6 @@ return {
 }
 `, {encoding:'utf8'});
 		},
-		image : () => {
-			FS.writeFile(
-				'/image/ffi/png.lua',
-				`return require 'image.ffi.Browser.png'`,
-				{encoding:'binary'}
-			);
-			FS.writeFile(
-				'/image/ffi/jpeg.lua',
-				`return require 'image.ffi.Browser.jpeg'`,
-				{encoding:'binary'}
-			);
-			FS.writeFile(
-				'/image/ffi/zlib.lua',
-				`return require 'image.ffi.Browser.zlib'`,
-				{encoding:'binary'}
-			);
-		},
 		audio : () => {
 			FS.writeFile('/audio/currentsystem.lua', `return 'null'\n`, {encoding:'binary'});
 		},
@@ -1439,31 +1430,6 @@ return {
 			FS.writeFile(
 				'/complex/complex.lua',
 				FS.readFile('/complex/complex.lua', {encoding:'utf8'}).replace(` = pcall(require, 'ffi')`, ``),
-				{encoding:'binary'});
-		},
-		sdl : () => {
-			FS.writeFile(
-				'/sdl/app.lua',
-				`return require 'sdl.app2'`,
-				{encoding:'binary'});
-			FS.writeFile(
-				'/sdl/sdl.lua',
-				`return require 'sdl.ffi.Browser.sdl2'`,
-				{encoding:'binary'});
-			// TODO would be nice to just replace one number that stores the default instead of this whole file ....
-			FS.writeFile(
-				'/sdl/setup.lua',
-`
-return function(sdlname)
-	sdlname = sdlname or '2'
-	local sdl = require ('sdl.ffi.Browser.sdl'..sdlname)
-	package.loaded.sdl = sdl
-	package.loaded['sdl.sdl'] = sdl
-	local app = require ('sdl.app'..sdlname)
-	package.loaded['sdl.app'] = app
-	return sdl, app
-end
-`,
 				{encoding:'binary'});
 		},
 	};
@@ -1518,24 +1484,6 @@ end
 
 	//push local main-js package
 	luaPackages['<app3d-builtin>'] = [
-		{	// in image's case, the original is winning,
-			// so I'll put these in image/ffi/Browser/
-			// and then redirect the originals above
-			from : './image/ffi/Browser',
-			to : 'image/ffi/Browser',
-			files : [
-				'jpeg.lua',
-				'png.lua',
-				'zlib.lua',
-			],
-		},
-		{
-			from : './sdl/ffi/Browser',
-			to : 'sdl/ffi/Browser',
-			files : [
-				'sdl2.lua',
-			],
-		},
 		{
 			from : './gl/ffi',
 			to : 'gl/ffi',
@@ -1558,13 +1506,6 @@ end
 			files : [
 				'test-js.lua',
 				'test-ffi.lua',
-			],
-		},
-		{
-			from : './imgui/ffi',
-			to : 'imgui/ffi',
-			files : [
-				'imgui.lua',
 			],
 		},
 	];
