@@ -1234,7 +1234,6 @@ xpcall(function()
 		return ptr
 	end
 
-	-- TODO this in luaffifb
 	local oldffistring = ffi.string
 	ffi.string = function(ptr, ...)
 		if type(ptr) == 'string' then return ptr end
@@ -1289,12 +1288,17 @@ xpcall(function()
 	}, ';')
 
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
+	
+	local land = function(a,b) return a and b end
 
 	-- ext.timer's getTime() uses gettimeofday because of its high resolution
 	-- but emscripten craps that all the way down to the 1 second resolution
 	-- so ...
-	require 'ext.timer'.getTime = function()
-		return js.global.Date.now() / 1000
+	local extTimer = land(pcall(require, 'ext.timer'))
+	if extTimer then
+		extTimer.getTime = function()
+			return js.global.Date.now() / 1000
+		end
 	end
 
 	-- emscripten's own gl / glsl versioning are so horrid that how about we patch in the getters here instead of rewriting all my gl libraries to deal with them?
@@ -1302,30 +1306,39 @@ xpcall(function()
 	-- TODO just build my own competing wasm libraries to emscripten's
 
 	-- set to emscripten's libpng version
-	require 'image.luajit.png'.libpngVersion = '1.6.18'
+	local imagePng = land(pcall(require, 'image.luajit.png'))
+	if imagePng then
+		imagePng.libpngVersion = '1.6.18'
+	end
 
 	-- force emscripten to yield sometimes
-	local SDLApp = require 'sdl.app'
-	SDLApp.postUpdate = function()
-		coroutine.yield()
-	end
-	-- insert a yield into the main loop
-	require 'gl.app'.postUpdate = function()
-		require 'sdl'.SDL_GL_SwapWindow()
-		coroutine.yield()
+	local SDLApp = land(pcall(require, 'sdl.app'))
+	if SDLApp then
+		SDLApp.postUpdate = function()
+			coroutine.yield()
+		end
 	end
 
+	-- insert a yield into the main loop
+	local GLApp = land(pcall(require, 'gl.app'))
+	if GLApp then
+		GLApp.postUpdate = function()
+			require 'sdl'.SDL_GL_SwapWindow()
+			coroutine.yield()
+		end
+	end
 
 	-- let main-js know when the SDL window is created, so that we can send it resize events:
-	local oldSDLAppInitWindow = SDLApp.initWindow
-	function SDLApp:initWindow(...)
-		oldSDLAppInitWindow(self, ...)
-		luaJsScope.sdlWindow = tonumber(ffi.cast('intptr_t', self.window))
-		-- TODO what if it's more than 32bit ...
-		-- I need a function for converting lua_touserdata / lua pointers overall to WASM addresses for just this reason.
-		luaJsScope:resetWindowListeners()
+	if SDLApp then
+		local oldSDLAppInitWindow = SDLApp.initWindow
+		function SDLApp:initWindow(...)
+			oldSDLAppInitWindow(self, ...)
+			luaJsScope.sdlWindow = tonumber(ffi.cast('intptr_t', self.window))
+			-- TODO what if it's more than 32bit ...
+			-- I need a function for converting lua_touserdata / lua pointers overall to WASM addresses for just this reason.
+			luaJsScope:resetWindowListeners()
+		end
 	end
-
 
 	-- If it's a langfix file then route it through langfix ...
 	-- TODO this here or outside the lua.run() or indicate in the UI or flags?
