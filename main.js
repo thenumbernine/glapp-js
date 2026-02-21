@@ -1290,9 +1290,10 @@ xpcall(function()
 	bit = require 'bit'		-- provide a luajit-equivalent bit library for the Lua 5.4 operators
 
 	local function saferequire(...)
+		local args = table.pack(...)
 		local result
 		xpcall(function()
-			result = require(...)
+			result = require(table.unpack(args, args.n))
 		end, function(err)
 			print(err..'\\n'..debug.traceback())
 		end)
@@ -1520,12 +1521,13 @@ return {
 			],
 		},
 		{
-			from : './ffi/c',
-			to : 'ffi/c',
+			from : './ffi/Browser/c',
+			to : 'ffi/Browser/c',
 			files : [
 				'ctype.lua',
 				'errno.lua',
 				'inttypes.lua',
+				'limits.lua',
 				'math.lua',
 				'setjmp.lua',
 				'stdarg.lua',
@@ -1540,8 +1542,8 @@ return {
 			],
 		},
 		{
-			from : './ffi/c/sys',
-			to : 'ffi/c/sys',
+			from : './ffi/Browser/c/sys',
+			to : 'ffi/Browser/c/sys',
 			files : [
 				'time.lua',
 				'types.lua',
@@ -1636,7 +1638,7 @@ throw 'TODO';
 
 	// TODO to assert that the base dir is the lua-package.js entry name?
 	// but that won't be true for preloaded packages ...
-//console.log("looking for package of", 	rundir+'/'+runfile);
+//console.log("looking for package of",rundir+'/'+runfile);
 	const runPkgInfo = findPackageForFile(rundir+'/'+runfile)[0]
 		// should I throw if they give me a bad rundir/runfile?  or meh? idk?
 		|| (() => { throw "failed to find package for file "+rundir+'/'+runfile; })();
