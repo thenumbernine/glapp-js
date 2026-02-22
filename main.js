@@ -174,17 +174,20 @@ const luaPrint = s => {
 	}
 	console.log('#', s);	//log here too?
 };
+const luaPrintErr = s => {
+	if (stdoutTA) {
+		stdoutTA.value += s + '\n';
+		stdoutTA.scrollTop = stdoutTA.scrollHeight;
+	}
+	console.log('#1>', s);	//log here too?
+	console.log(new Error().stack);
+};
 let lua = await newLua({
 	print : luaPrint,
-	printErr : s => {
-		if (stdoutTA) {
-			stdoutTA.value += s + '\n';
-			stdoutTA.scrollTop = stdoutTA.scrollHeight;
-		}
-		console.log('#1>', s);	//log here too?
-		console.log(new Error().stack);
-	},
+	printErr : luaPrintErr,
 });
+const luaCmdHistory = [];
+let luaCmdHistoryIndex = 0;
 // lua = lua<->js interop layer
 // lua.M = lua wasm lib
 
@@ -943,18 +946,70 @@ const enableAndClearLoadingFileInfos = () => {
 					overflow : 'hidden',
 				},
 				events : {
-					keypress : e => {
+					keydown : e => {	// keypress doesn't work with TextArea + Arrow* keys
 						// what should execute? enter or shift+enter ?
 						if (e.code == 'Enter') {
 							e.preventDefault();
 							const txt = stdinTA.value;
-							luaPrint('> '+txt);
 							stdinTA.value = '';
 							if (lua) {
-								lua.run(txt);
+								luaPrint('> '+txt);
+								luaCmdHistory.push(txt);
+								luaCmdHistoryIndex = luaCmdHistory.length;
+
+								const [success, result] = lua.run(`
+local l = ...
+local f, err
+xpcall(function()
+	f, err = assert(load('return '..l))
+end, function(err)
+end)
+if not f then
+	f, err = load(l)
+end
+if not f then
+	return false, err
+end
+
+local success, out
+xpcall(function()
+	local t = table.pack(f())
+	for i=1,t.n do
+		t[i] = tostring(t[i])
+	end
+	if t.n > 0 then
+		out = table.concat(t, '\\t')
+	end
+	success = true
+end, function(err)
+	out = err..'\\n'..debug.traceback()
+end)
+return success, out
+`, txt);
+								if (success) {
+									if (typeof(result) == 'string') {
+										luaPrint(result);
+									}
+								} else {
+									luaPrintErr(result);
+								}
 							} else {
 								M.printErr('lua state not present');
 							}
+						} else if (e.code == 'ArrowUp') {
+							if (luaCmdHistory.length) {
+								luaCmdHistoryIndex--;
+								if (luaCmdHistoryIndex < 0) luaCmdHistoryIndex = luaCmdHistory.length-1;
+								stdinTA.value = luaCmdHistory[luaCmdHistoryIndex];
+							}
+							e.preventDefault();
+						} else if (e.code == 'ArrowDown') {
+							if (luaCmdHistory.length) {
+								luaCmdHistoryIndex++;
+								if (luaCmdHistoryIndex >= luaCmdHistory.length) luaCmdHistoryIndex = 0;
+								stdinTA.value = luaCmdHistory[luaCmdHistoryIndex];
+							}
+							e.preventDefault();
 						}
 					},
 				},
