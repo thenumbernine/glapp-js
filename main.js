@@ -1497,6 +1497,22 @@ return {
 				FS.readFile('/complex/complex.lua', {encoding:'utf8'}).replace(` = pcall(require, 'ffi')`, ``),
 				{encoding:'binary'});
 		},
+		gl : () => {
+			// gl/ffi/Browser/OpenGL.lua is copied from this project
+			// gl/ffi/Browser/OpenGLES3.lua is copied from this project
+			// gl/ffi/OpenGL.lua looks for Browser/OpenGL.lua
+			// gl/ffi/OpenGLES3.lua does not but should, because it has GLES3.2 defs that WebGL2 cannot handle
+			// so here copy gl/ffi/Browser/OpenGLES3.lua over gl/ffi/OpenGLES3.lua
+			FS.writeFile(
+				'/gl/ffi/OpenGLES3.lua',
+				FS.readFile('/gl/ffi/Browser/OpenGLES3.lua', {encoding:'utf8'}),
+				{encoding:'binary'});
+			// same trick for EGL
+			FS.writeFile(
+				'/gl/ffi/EGL.lua',
+				FS.readFile('/gl/ffi/Browser/EGL.lua', {encoding:'utf8'}),
+				{encoding:'binary'});
+		},
 	};
 
 	const pkgsLoading = {};	// insert upon request so we don't get duplicate requests
@@ -1550,19 +1566,12 @@ return {
 	//push local main-js package
 	luaPackages['<app3d-builtin>'] = [
 		{
-			from : './gl/ffi',
-			to : 'gl/ffi',
-			files : [
-				// will distinfo's gl/ffi/EGL.lua overwrite this or vice versa? who wins?
-				'EGL.lua',
-				'OpenGLES3.lua',
-			],
-		},
-		{
 			from : './gl/ffi/Browser',
 			to : 'gl/ffi/Browser',
 			files : [
+				'EGL.lua',
 				'OpenGL.lua',
+				'OpenGLES3.lua',
 			],
 		},
 		{
