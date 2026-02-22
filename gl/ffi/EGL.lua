@@ -48,7 +48,7 @@ function egl.eglQueryString(dpy, name)
 	elseif name == egl.EGL_EXTENSIONS then
 		return ffi.stringBuffer''
 	else
-		return ffi.null
+		return nil
 	end
 end
 
