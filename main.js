@@ -167,14 +167,15 @@ TODO black-hole-skymap, but the lua ver is in a subdir of the js ver ... but may
 
 let stdoutTA;
 let luaJsScope;
+const luaPrint = s => {
+	if (stdoutTA) stdoutTA.value += s + '\n';
+	console.log('#', s);	//log here too?
+};
 let lua = await newLua({
-	print : s => {
-		if (stdoutTA) stdoutTA.value += s + '\n';
-		console.log('>', s);	//log here too?
-	},
+	print : luaPrint,
 	printErr : s => {
 		if (stdoutTA) stdoutTA.value += s + '\n';
-		console.log('1>', s);	//log here too?
+		console.log('#1>', s);	//log here too?
 		console.log(new Error().stack);
 	},
 });
@@ -941,6 +942,7 @@ const enableAndClearLoadingFileInfos = () => {
 						if (e.code == 'Enter') {
 							e.preventDefault();
 							const txt = stdinTA.value;
+							luaPrint('> '+txt);
 							stdinTA.value = '';
 							if (lua) {
 								lua.run(txt);
@@ -1320,34 +1322,96 @@ xpcall(function()
 		imagePng.libpngVersion = '1.6.18'
 	end
 
-	-- force emscripten to yield sometimes
 	local SDLApp = saferequire 'sdl.app'
 	if SDLApp then
+		-- force emscripten to yield sometimes
 		SDLApp.postUpdate = function()
 			coroutine.yield()
 		end
-	end
 
-	-- insert a yield into the main loop
-	local GLApp = saferequire 'gl.app'
-	if GLApp then
-		GLApp.postUpdate = function()
-			require 'sdl'.SDL_GL_SwapWindow()
-			coroutine.yield()
-		end
-	end
-
-	-- let main-js know when the SDL window is created, so that we can send it resize events:
-	if SDLApp then
+		-- let main-js know when the SDL window is created, so that we can send it resize events:
 		local oldSDLAppInitWindow = SDLApp.initWindow
 		function SDLApp:initWindow(...)
+			local sdl = require 'sdl'
+			--[[
+			-- In my sdl.app implementation I have it calling sdl.SDL_CreateWindow
+			-- This works for desktop GL, Vulkan, and WebGPU Dawn
+			-- However it doesn't for Emscripten SDL3
 			oldSDLAppInitWindow(self, ...)
+			--]]
+			-- [[
+			-- What does work for Emscripten SDL3 is SDL_CreateWindowAndRenderer
+			-- however this gives a warning for desktop GL and it errors altogether for Vulkan
+			-- so I'll just do the Emscripten-safe method here:
+			self.windowPtr = ffi.new'SDL_Window*[1]'
+			self.rendererPtr = ffi.new'SDL_Renderer*[1]'
+			self.sdlAssert(sdl.SDL_CreateWindowAndRenderer(
+				self.title,
+				self.width,
+				self.height,
+				self.sdlCreateWindowFlags,
+				self.windowPtr,
+				self.rendererPtr))
+			self.window = self.windowPtr[0]
+			self.renderer = self.rendererPtr[0]
+			self.windowPtr = nil
+			self.rendererPtr = nil
+print('SDL3App self.window', self.window)
+print('SDL3App self.renderer', self.renderer)
+			--]]
+
 			luaJsScope.sdlWindow = tonumber(ffi.cast('intptr_t', self.window))
+
 			-- TODO what if it's more than 32bit ...
 			-- I need a function for converting lua_touserdata / lua pointers overall to WASM addresses for just this reason.
 			luaJsScope:resetWindowListeners()
 		end
 	end
+
+	local GLApp = saferequire 'gl.app'
+	if GLApp then
+		-- insert a yield into the main loop
+		GLApp.postUpdate = function()
+			local sdl = require 'sdl'
+			sdl.SDL_GL_SwapWindow()
+			coroutine.yield()
+		end
+
+		-- same as SDLApp, GLApp's initWindow's creating GL context works on desktop GL, vulkan, webgpu
+		-- but not in emscripten, so ...
+		-- this is the same as GLApp:initWindow except using the SDL_GL_GetCurrentContext to get the sdlCtx
+		function GLApp:initWindow()
+			local sdl = require 'sdl'
+			self:sdlGLSetAttributes()
+			GLApp.super.initWindow(self)
+
+			self.sdlCtx = sdl.SDL_GL_GetCurrentContext()
+print('GLApp self.sdlCtx', self.sdlCtx)
+
+			sdl.SDL_GL_SetSwapInterval(0)
+
+			if self.gldebug then
+				self.glDebugCallback = function(source, gltype, id, severity, length, message, userParam)
+					print('!!! glDebugCallback source='..tostring(source)
+						..' gltype='..tostring(gltype)
+						..' id='..tostring(id)
+						..' severity='..tostring(severity)
+						..' '..ffi.string(message, length)
+					)
+					print(debug.traceback())
+				end
+				self.glDebugClosure = ffi.cast('GLDEBUGPROC', self.glDebugCallback)
+
+				gl.glDebugMessageCallback(self.glDebugClosure, nil)
+				gl.glDebugMessageControl(gl.GL_DONT_CARE, gl.GL_DONT_CARE, gl.GL_DONT_CARE, 0, nil, gl.GL_TRUE)
+				gl.glEnable(gl.GL_DEBUG_OUTPUT)
+				gl.glEnable(gl.GL_DEBUG_OUTPUT_SYNCHRONOUS)
+			end
+
+			if self.initGL then self:initGL() end
+		end
+	end
+
 
 	-- If it's a langfix file then route it through langfix ...
 	-- TODO this here or outside the lua.run() or indicate in the UI or flags?
