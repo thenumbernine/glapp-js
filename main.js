@@ -168,13 +168,19 @@ TODO black-hole-skymap, but the lua ver is in a subdir of the js ver ... but may
 let stdoutTA;
 let luaJsScope;
 const luaPrint = s => {
-	if (stdoutTA) stdoutTA.value += s + '\n';
+	if (stdoutTA) {
+		stdoutTA.value += s + '\n';
+		stdoutTA.scrollTop = stdoutTA.scrollHeight;
+	}
 	console.log('#', s);	//log here too?
 };
 let lua = await newLua({
 	print : luaPrint,
 	printErr : s => {
-		if (stdoutTA) stdoutTA.value += s + '\n';
+		if (stdoutTA) {
+			stdoutTA.value += s + '\n';
+			stdoutTA.scrollTop = stdoutTA.scrollHeight;
+		}
 		console.log('#1>', s);	//log here too?
 		console.log(new Error().stack);
 	},
