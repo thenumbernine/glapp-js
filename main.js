@@ -1643,6 +1643,13 @@ return {
 				'test-ffi.lua',
 			],
 		},
+		{
+			from : './gui',
+			to : 'gui',
+			files : [
+				'Roboto-Regular.ttf',
+			],
+		}
 	];
 	luaPackages['ffi'] = [
 		{
