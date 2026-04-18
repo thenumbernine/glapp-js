@@ -1429,6 +1429,11 @@ print('SDL3App self.renderer', self.renderer)
 		end
 	end
 
+	local glsetup = saferequire 'gl.setup'
+	if glsetup then
+		glsetup.default = 'OpenGLES3'
+	end
+
 	local GLApp = saferequire 'gl.app'
 	if GLApp then
 		-- insert a yield into the main loop
