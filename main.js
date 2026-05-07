@@ -468,6 +468,40 @@ const enableAndClearLoadingFileInfos = () => {
 	loadingFileInfos = [];
 };
 
+// path and arg, and fileInfo lookup
+const onUploadForPath = (path) => {
+	const fileInfo = fileInfoForPath[path];
+	if (!fileInfo) {
+		console.log("!!! fileInfoForPath["+path+"] failed !!! the UI won't reflect the upload !!!");
+	}
+	const input = Input({
+		type : 'file',
+		events : {
+			change : e => {
+				const filesrc = e.target.files[0];
+				const reader = new FileReader();
+				reader.addEventListener('load', e => {
+					const result = e.target.result;
+					const newname = filesrc.name;
+					const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
+					FS.writeFile(newpath, new Uint8Array(result), {encoding:'binary'});
+
+					if (fileInfo) {
+						makeFileDiv(newpath, newname, fileInfo);
+						fileInfo.sortChildren();
+					}
+					// TODO will aceEditor screw up binary files if i select them + my auto-save-upon-changing-viewed-file ?
+					//setEditorFilePath(newpath);		// set it as our current file too? or bad idea if it's a binary file ...
+					enableAndClearLoadingFileInfos();
+				});
+				reader.readAsArrayBuffer(filesrc);
+			},
+		},
+	});
+	input.click();
+	return input;
+};
+
 {
 	fsDiv = Div({
 		style : {
@@ -571,29 +605,9 @@ const enableAndClearLoadingFileInfos = () => {
 		}
 		titleDiv.innerText = name;	//update name if it's a dir
 
+		// captured path
 		const onUpload = () => {
-			Input({
-				type : 'file',
-				events : {
-					change : e => {
-						const filesrc = e.target.files[0];
-						const reader = new FileReader();
-						reader.addEventListener('load', e => {
-							const result = e.target.result;
-							const newname = filesrc.name;
-							const newpath = path == '/' ? ('/' + newname) : (path + '/' + newname);
-							FS.writeFile(newpath, new Uint8Array(result), {encoding:'binary'});
-
-							makeFileDiv(newpath, newname, fileInfo);
-							fileInfo.sortChildren();
-							// TODO will aceEditor screw up binary files if i select them + my auto-save-upon-changing-viewed-file ?
-							//setEditorFilePath(newpath);		// set it as our current file too? or bad idea if it's a binary file ...
-							enableAndClearLoadingFileInfos();
-						});
-						reader.readAsArrayBuffer(filesrc);
-					},
-				},
-			}).click();
+			onUploadForPath(path);
 		};
 
 		const onDownload = () => {
@@ -1236,6 +1250,31 @@ if (listenersForType.length != 1) {
 		canvas.focus();
 	};
 
+	// helper function
+	//  oh wait, javascript sucks
+	// this will have to block
+	//  but this cna't block, because lua can't block
+	//  not without making every single thing in the js lua implementation async
+	//  because javascript is a shit trash language.
+	//
+	// however I could have this async prompt for file
+	//  and then return the file as a SDL event in the main loop ... hmm
+	luaJsScope.promptForUpload = () => {
+		const input = onUploadForPath(FS.cwd());
+		/* fails for now becuase js is trash
+		const waitForFile = (input) =>
+			new Promise((resolve) => {
+				input.addEventListener('change', (e) => {
+					resolve(e.target.files);
+				}, {
+					once: true
+				});
+			});
+		const files = await waitForFile(input);
+		return files[0].name;
+		*/
+	};
+
 	// Would be nice if emscripten's sdl lib had callbacks
 	// I guess I can just wrap my own shim layer in
 	// Sucks that I have to do this in each JS project that wants to use SDL ...
@@ -1285,6 +1324,7 @@ local luaJsScope = ...
 local ffi = require 'ffi'
 local js = require 'js'
 js.FS = luaJsScope.FS	-- hand this off for lfs_ffi
+js.promptForUpload = luaJsScope.promptForUpload	-- useful for CLI <-> file upload
 local window = js.global
 
 -- this is only for redirecting errors to output
