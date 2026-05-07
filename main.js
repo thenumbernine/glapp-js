@@ -1259,8 +1259,50 @@ if (listenersForType.length != 1) {
 	//
 	// however I could have this async prompt for file
 	//  and then return the file as a SDL event in the main loop ... hmm
-	luaJsScope.promptForUpload = () => {
+	//
+	// so now this
+	luaJsScope.SDL_ShowOpenFileDialog = () => {
 		const input = onUploadForPath(FS.cwd());
+		input.addEventListener('change', (e) => {
+			const files = e.target.files;
+			if (!files) {
+			}
+			const filename = files[0].name;
+			lua.run(`
+local filename = ...
+local ffi = require 'ffi'
+local sdl = require 'sdl'
+local cb = sdl.__currentSDLShowOpenFileDialogCallback
+if not cb then
+	error("SDL_ShowOpenFileDialog: couldn't find callback")
+end
+filename = tostring(filename)
+print("SDL_ShowOpenFileDialog: got", filename)
+
+local filenames = ffi.new('char*[2]')
+filenames[0] = filename
+cb(nil, filenames, nil)
+`, filename);
+		}, {
+			once: true
+		});
+		input.addEventListener('cancel', (e) => {
+			if (luaJsScope.currentSDLShowOpenFileDialogCallback) {
+				// call this with null for filelist
+				lua.run(`
+local sdl = require 'sdl'
+local cb = sdl.__currentSDLShowOpenFileDialogCallback
+if not cb then
+	error("SDL_ShowOpenFileDialog: couldn't find callback")
+end
+if not cb then
+	error("SDL_ShowOpenFileDialog: couldn't find callback")
+end
+cb(nil, nil, nil)
+`);
+			}
+		});
+
 		/* fails for now becuase js is trash
 		const waitForFile = (input) =>
 			new Promise((resolve) => {
@@ -1323,8 +1365,8 @@ local luaJsScope = ...
 
 local ffi = require 'ffi'
 local js = require 'js'
+js.luaJsScope = luaJsScope
 js.FS = luaJsScope.FS	-- hand this off for lfs_ffi
-js.promptForUpload = luaJsScope.promptForUpload	-- useful for CLI <-> file upload
 local window = js.global
 
 -- this is only for redirecting errors to output
@@ -1434,6 +1476,13 @@ xpcall(function()
 		local oldSDLAppInitWindow = SDLApp.initWindow
 		function SDLApp:initWindow(...)
 			local sdl = require 'sdl'
+print('adding sdl.SDL_ShowOpenFileDialog')
+			sdl.SDL_ShowOpenFileDialog = function(callback, userdata, window, filters, nfilters, default_location, allow_many)
+				assert(callback, "SDL_ShowOpenFileDialog needs a callback")
+				sdl.__currentSDLShowOpenFileDialogCallback = callback
+				luaJsScope.SDL_ShowOpenFileDialog()	-- this will not block.  that's what the clalback is for.
+			end
+
 			--[[
 			-- In my sdl.app implementation I have it calling sdl.SDL_CreateWindow
 			-- This works for desktop GL, Vulkan, and WebGPU Dawn
@@ -1617,6 +1666,18 @@ return {
 			FS.writeFile(
 				'/gl/ffi/EGL.lua',
 				FS.readFile('/gl/ffi/Browser/EGL.lua', {encoding:'utf8'}),
+				{encoding:'binary'});
+		},
+		sdl : () => {
+			FS.writeFile(
+				'/sdl/sdl.lua',
+				`
+-- add a shim layer for lua-ffi-wasm
+-- need this to wrap my own SDL_ShowOpenFileDialog
+-- it won't cause a horrible performance hit, right?
+local oldsdl = require 'sdl.ffi.sdl3'
+return setmetatable({}, {__index = oldsdl})
+`,
 				{encoding:'binary'});
 		},
 	};
