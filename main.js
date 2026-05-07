@@ -1471,12 +1471,6 @@ xpcall(function()
 		local oldSDLAppInitWindow = SDLApp.initWindow
 		function SDLApp:initWindow(...)
 			local sdl = require 'sdl'
-print('adding sdl.SDL_ShowOpenFileDialog')
-			sdl.SDL_ShowOpenFileDialog = function(callback, userdata, window, filters, nfilters, default_location, allow_many)
-				assert(callback, "SDL_ShowOpenFileDialog needs a callback")
-				sdl.__currentSDLShowOpenFileDialogCallback = callback
-				luaJsScope.SDL_ShowOpenFileDialog()	-- this will not block.  that's what the clalback is for.
-			end
 
 			--[[
 			-- In my sdl.app implementation I have it calling sdl.SDL_CreateWindow
@@ -1666,12 +1660,19 @@ return {
 		sdl : () => {
 			FS.writeFile(
 				'/sdl/sdl.lua',
-				`
--- add a shim layer for lua-ffi-wasm
+`-- add a shim layer for lua-ffi-wasm
 -- need this to wrap my own SDL_ShowOpenFileDialog
 -- it won't cause a horrible performance hit, right?
 local oldsdl = require 'sdl.ffi.sdl3'
-return setmetatable({}, {__index = oldsdl})
+local sdl = setmetatable({}, {__index = oldsdl})
+
+sdl.SDL_ShowOpenFileDialog = function(callback, userdata, window, filters, nfilters, default_location, allow_many)
+	assert(callback, "SDL_ShowOpenFileDialog needs a callback")
+	sdl.__currentSDLShowOpenFileDialogCallback = callback
+	require 'js'.luaJsScope.SDL_ShowOpenFileDialog()	-- this will not block.  that's what the clalback is for.
+end
+
+return sdl
 `,
 				{encoding:'binary'});
 		},
