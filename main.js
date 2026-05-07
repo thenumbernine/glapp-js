@@ -474,6 +474,7 @@ const onUploadForPath = (path) => {
 	if (!fileInfo) {
 		console.log("!!! fileInfoForPath["+path+"] failed !!! the UI won't reflect the upload !!!");
 	}
+	const onChangeCallbacks = [];
 	const input = Input({
 		type : 'file',
 		events : {
@@ -495,11 +496,17 @@ const onUploadForPath = (path) => {
 					enableAndClearLoadingFileInfos();
 				});
 				reader.readAsArrayBuffer(filesrc);
+
+				// i'm sure there's a proper way to do this
+				// I want it to trigger in order so
+				if (onChangeCallbacks[0]) {
+					onChangeCallbacks[0](e);
+				}
 			},
 		},
 	});
 	input.click();
-	return input;
+	return [input, onChangeCallbacks];
 };
 
 {
@@ -1262,29 +1269,30 @@ if (listenersForType.length != 1) {
 	//
 	// so now this
 	luaJsScope.SDL_ShowOpenFileDialog = () => {
-		const input = onUploadForPath(FS.cwd());
-		input.addEventListener('change', (e) => {
+		const [input, onChangeCallbacks] = onUploadForPath(FS.cwd());
+		onChangeCallbacks.push((e) => {
 			const files = e.target.files;
 			if (!files) {
 			}
 			const filename = files[0].name;
-			lua.run(`
+			// can't find file immediately... I have to wait for FS to reflect changes or something:
+			setTimeout(() => {
+				lua.run(`
 local filename = ...
+filename = filename and tostring(filename) or nil
 local ffi = require 'ffi'
 local sdl = require 'sdl'
 local cb = sdl.__currentSDLShowOpenFileDialogCallback
 if not cb then
 	error("SDL_ShowOpenFileDialog: couldn't find callback")
 end
-filename = tostring(filename)
-print("SDL_ShowOpenFileDialog: got", filename)
 
 local filenames = ffi.new('char*[2]')
-filenames[0] = filename
+filenames[0] = ffi.cast('char*', filename)
+filenames[1] = nil
 cb(nil, filenames, nil)
 `, filename);
-		}, {
-			once: true
+			}, 100);
 		});
 		input.addEventListener('cancel', (e) => {
 			if (luaJsScope.currentSDLShowOpenFileDialogCallback) {
@@ -1302,19 +1310,6 @@ cb(nil, nil, nil)
 `);
 			}
 		});
-
-		/* fails for now becuase js is trash
-		const waitForFile = (input) =>
-			new Promise((resolve) => {
-				input.addEventListener('change', (e) => {
-					resolve(e.target.files);
-				}, {
-					once: true
-				});
-			});
-		const files = await waitForFile(input);
-		return files[0].name;
-		*/
 	};
 
 	// Would be nice if emscripten's sdl lib had callbacks
