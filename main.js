@@ -1692,6 +1692,7 @@ return sdl
 //console.log('pkgname', pkgname);
 //console.log('pkg', pkg);
 //console.log('pkg.map', pkg.map);
+		if (pkg === false) return false;
 		return addPackage(FS, pkg, path => {
 			// upon file finished ... create a fileInfoForPath[] for the file/parent-folders
 
