@@ -1202,6 +1202,7 @@ const doRun = async () => {
 	lua.newState();
 	// make a new js scope obj.... why not just use
 	luaJsScope = {}
+	luaJsScope.M = M;	// for when lua needs to access js's view of lua ... so far only used for getting emscripten builtin functions , namely `_emscripten_webgl_enable_extension`
 	luaJsScope.FS = FS;	// lfs_ffi needs FS
 	luaJsScope.loadPackagesForFile = loadPackagesForFile;	// me experimenting with deferring package load until it gets require()'d ..  stupid js async/await limitations prevent it because the js/w3c standards were made by not so clever individuals.
 window.luaJsScope = luaJsScope;	// debugging
@@ -1376,8 +1377,11 @@ xpcall(function()
 
 	local oldffistring = ffi.string
 	ffi.string = function(ptr, ...)
-		if type(ptr) == 'string' then return ptr end
 		if ptr == nil then return '(null)' end	-- but in vanilla luajit it segfaults ...
+
+		-- TODO this in luaffifb ...
+		if type(ptr) == 'string' then ptr = ffi.cast('char*', ptr) end
+
 		return oldffistring(ptr, ...)
 	end
 
