@@ -1538,6 +1538,7 @@ print('GLApp self.sdlCtx', self.sdlCtx)
 
 			sdl.SDL_GL_SetSwapInterval(0)
 
+			-- NOTICE in GLES this isn't until 3.2, so not webgl2 <-> gles3.0 ...
 			if self.gldebug then
 				self.glDebugCallback = function(source, gltype, id, severity, length, message, userParam)
 					print('!!! glDebugCallback source='..tostring(source)
