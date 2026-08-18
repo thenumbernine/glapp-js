@@ -1375,23 +1375,12 @@ xpcall(function()
 		return ptr
 	end
 
-	local oldffistring = ffi.string
-	ffi.string = function(ptr, ...)
-		if ptr == nil then return '(null)' end	-- but in vanilla luajit it segfaults ...
-
-		-- TODO this in luaffifb ...
-		if type(ptr) == 'string' then ptr = ffi.cast('char*', ptr) end
-
-		return oldffistring(ptr, ...)
-	end
-
 	local rundir = '`+rundir+`'
 	local runfile = '`+runfile+`'
 	_G.arg = {`+args.map(arg => '"'+arg+'"')+`}
 	-- ok this has become the launcer of everything
 	-- Lua 5.3
 	-- TODO move this into main.js
-
 
 
 	-- how about a 'require' listener that requests packages?
@@ -1545,7 +1534,7 @@ print('GLApp self.sdlCtx', self.sdlCtx)
 						..' gltype='..tostring(gltype)
 						..' id='..tostring(id)
 						..' severity='..tostring(severity)
-						..' '..ffi.string(message, length)
+						..' '..(message == nil and 'nil' or ffi.string(message, length))
 					)
 					print(debug.traceback())
 				end
